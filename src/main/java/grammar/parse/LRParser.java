@@ -150,11 +150,6 @@ public abstract class LRParser {
 		 */
 		private static final long serialVersionUID = 1L;
 
-		int push(int item) {
-			push(new Integer(item));
-			return item;
-		}
-
 		int popInt() {
 			return ((Integer) pop()).intValue();
 		}

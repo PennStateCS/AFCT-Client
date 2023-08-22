@@ -197,9 +197,9 @@ public class FirstFollowModel extends AbstractTableModel {
 	 */
 	private String removeDuplicateCharacters(String s) {
 		Set<Character> characters = new HashSet<>();
-		StringBuffer sb = new StringBuffer();
+		StringBuilder sb = new StringBuilder();
 		for (int i = 0; i < s.length(); i++) {
-			Character c = new Character(s.charAt(i));
+			Character c = s.charAt(i);
 			if (characters.add(c))
 				sb.append(c.charValue());
 		}

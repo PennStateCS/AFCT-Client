@@ -71,12 +71,12 @@ import java.util.Vector;
 	 public void makeSet(State state) {
 		 
 		 // Make sure we can track the actual state.
-		 stateToIndex.put(state, new Integer(counter));
+		 stateToIndex.put(state, counter);
 		 indexToState.add(state); // automatically adds to the next available slot
 		 
 		 // Create the parent and rank for the tree node
-		 parent.add(new Integer(counter));
-		 rank.add(new Integer(0));
+		 parent.add(counter);
+		 rank.add(0);
 		 
 		 counter++;
 	 }
@@ -131,7 +131,7 @@ import java.util.Vector;
 		 int parentVal = currParent.intValue();
 		 if (currIndex != parentVal) {
 			 parentVal = findSet(parentVal);
-			 parent.set(currIndex, new Integer(parentVal));
+			 parent.set(currIndex, parentVal);
 		 }
 		 return parentVal;
 	 }
@@ -149,11 +149,11 @@ import java.util.Vector;
 		 Integer rank2 = rank.get(root2);
 		 
 		 if (rank1 > rank2) {
-			 parent.set(root2, new Integer(root1));
+			 parent.set(root2, root1);
 		 } else {
-			 parent.set(root1, new Integer(root2));
+			 parent.set(root1, root2);
 			 
-			 if (rank1 == rank2) {
+			 if (rank1.equals(rank2)) {
 				 rank2++;
 				 rank.set(root2, rank2);
 			 }	 

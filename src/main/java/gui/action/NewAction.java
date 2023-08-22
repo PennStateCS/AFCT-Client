@@ -246,7 +246,7 @@ public class NewAction extends RestrictedAction {
 					if (INTS == null) {
 						INTS = new Integer[4];
 						for (int i = 0; i < INTS.length; i++)
-							INTS[i] = new Integer(i + 2);
+							INTS[i] = i + 2;
 					}
 					Number n = (Number) JOptionPane.showInputDialog(
 							NewDialog.this.getContentPane(), "How many tapes?",

@@ -206,7 +206,7 @@ class Turtle implements Cloneable, Serializable {
 	 */
 	public final void setAngleChange(double change) {
 		angleChange = Math.IEEEremainder(change, 360.0);
-		parametersToNumbers.put("angle", new Double(change));
+		parametersToNumbers.put("angle", change);
 	}
 
 	// METHODS RELATING TO POSITION
@@ -219,7 +219,7 @@ class Turtle implements Cloneable, Serializable {
 	 */
 	public final void setDistance(double distance) {
 		this.distance = distance;
-		parametersToNumbers.put("distance", new Double(distance));
+		parametersToNumbers.put("distance", distance);
 	}
 
 	/**
@@ -372,7 +372,7 @@ class Turtle implements Cloneable, Serializable {
 	 */
 	public void setHueChange(double change) {
 		hueChange = Math.IEEEremainder(change, 360.0);
-		parametersToNumbers.put("hueChange", new Double(change));
+		parametersToNumbers.put("hueChange", change);
 	}
 
 	/**
@@ -430,7 +430,7 @@ class Turtle implements Cloneable, Serializable {
 	 */
 	public final void setLineIncrement(double increment) {
 		incrementWidth = increment;
-		parametersToNumbers.put("lineIncrement", new Double(increment));
+		parametersToNumbers.put("lineIncrement", increment);
 	}
 
 	/**
@@ -465,7 +465,7 @@ class Turtle implements Cloneable, Serializable {
 	 */
 	public final void setLineWidth(double width) {
 		lineWidth = width;
-		parametersToNumbers.put("lineWidth", new Double(width));
+		parametersToNumbers.put("lineWidth", width);
 		stroke = null;
 	}
 
@@ -538,9 +538,9 @@ class Turtle implements Cloneable, Serializable {
 		StreamTokenizer st = new StreamTokenizer(reader);
 		st.ordinaryChar('/');
 		ArrayList<Object> list = new ArrayList<>();
-		Number zero = new Integer(0);
+		Number zero = 0;
 		boolean number = false;
-		Character plus = new Character('+');
+		Character plus = '+';
 
 		try {
 			while (st.nextToken() != StreamTokenizer.TT_EOF) {
@@ -557,19 +557,19 @@ class Turtle implements Cloneable, Serializable {
 					if (number)
 						list.add(plus);
 					number = true;
-					list.add(new Double(st.nval));
+					list.add(st.nval);
 					break;
 				case StreamTokenizer.TT_EOL:
 					// Who cares?
 					break;
 				default:
 					number = false;
-					list.add(new Character((char) st.ttype));
+					list.add((char) st.ttype);
 					break;
 				}
 			}
 		} catch (IOException e) {
-			return new Double(Double.NaN); // We canna do it, captain!
+			return Double.NaN; // We canna do it, captain!
 		}
 		// So now we have all these symbols in a list... great!
 		Iterator<Object> it = list.iterator();
@@ -585,7 +585,7 @@ class Turtle implements Cloneable, Serializable {
 	private static Number valueOf(Iterator<Object> it) {
 		Stack<Object> values = new Stack<>();
 		Stack<Character> operators = new Stack<>();
-		values.push(new Double(0.0));
+		values.push(0.0);
 
 		while (it.hasNext()) {
 			Object o = it.next();
@@ -594,7 +594,7 @@ class Turtle implements Cloneable, Serializable {
 				continue;
 			}
 			Character character = (Character) o;
-			char c = character.charValue();
+			char c = character;
 			if (c == ')')
 				break; // Done!
 			if (c == '(') {
@@ -603,7 +603,7 @@ class Turtle implements Cloneable, Serializable {
 			}
 			while (!operators.isEmpty()) {
 				boolean toCollapse = false;
-				char last = ((Character) operators.peek()).charValue();
+				char last = operators.peek();
 				switch (c) {
 				case '+':
 				case '-':
@@ -646,7 +646,7 @@ class Turtle implements Cloneable, Serializable {
 				default:
 				// Eh.
 				}
-				values.push(new Double(a));
+				values.push(a);
 			}
 			operators.push(character);
 			continue;
@@ -656,7 +656,7 @@ class Turtle implements Cloneable, Serializable {
 
 		while (!operators.isEmpty()) {
 			// Collapse!
-			char last = ((Character) operators.pop()).charValue();
+			char last = operators.pop();
 			double b = ((Number) values.pop()).doubleValue(), a = ((Number) values
 					.pop()).doubleValue();
 			switch (last) {
@@ -678,7 +678,7 @@ class Turtle implements Cloneable, Serializable {
 			default:
 			// Eh.
 			}
-			values.push(new Double(a));
+			values.push(a);
 		}
 		return (Number) values.pop();
 	}

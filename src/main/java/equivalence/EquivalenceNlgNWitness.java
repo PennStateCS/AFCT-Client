@@ -216,7 +216,7 @@ public class EquivalenceNlgNWitness extends EquivalenceWitness {
 
 				 if (fsa[fsaNum].isFinalState(states[i])) {
 					 partition0.add(states[i]);
-					 currBlock.put(states[i], new Integer(0));
+					 currBlock.put(states[i], 0);
 					 if (fsa[fsaNum].isInitialState(states[i])) {
 						 startState[fsaNum] = states[i];
 						 startStatePartitionSets[fsaNum] = 0;
@@ -224,7 +224,7 @@ public class EquivalenceNlgNWitness extends EquivalenceWitness {
 						 
 				 } else {
 					 partition1.add(states[i]);
-					 currBlock.put(states[i], new Integer(1));
+					 currBlock.put(states[i], 1);
 					 if (fsa[fsaNum].isInitialState(states[i])) {
 						 startState[fsaNum] = states[i];
 						 startStatePartitionSets[fsaNum] = 1;
@@ -378,7 +378,7 @@ public class EquivalenceNlgNWitness extends EquivalenceWitness {
 	 			 
 	 			 // Add dead state to non-accepting block.
 	 			 partitionSets.get(1).add(deadState);
-	 			 currBlock.put(deadState, new Integer(1));
+	 			 currBlock.put(deadState, 1);
 	 			 
 	 			 // Put missing transitions in (including dead state to itself).		 			 
 				 for (int j = 0; j < alphabet.size(); j++) {
@@ -496,13 +496,13 @@ public class EquivalenceNlgNWitness extends EquivalenceWitness {
 			 HashSet<State> set1 = ai[j].get(partitionNum1);
 			 HashSet<State> set2 = ai[j].get(partitionNum2);
 			 if (set1.size() <= set2.size() && 
-					 (0 < set1.size() || !isInitialized) &&
+					 (!set1.isEmpty() || !isInitialized) &&
 					 !La[j].contains(partitionNum1)) {
-				 La[j].add(new Integer (partitionNum1));
+				 La[j].add(partitionNum1);
 			 } else {
-				 La[j].add(new Integer (partitionNum2));
+				 La[j].add(partitionNum2);
 			 }
-			 unprocessed.add(new Integer(j));
+			 unprocessed.add(j);
 		 }		 
 	 }
 	 
@@ -597,8 +597,8 @@ public class EquivalenceNlgNWitness extends EquivalenceWitness {
 			 for (int blockIter = 0; blockIter < blocksToSplit.size() && !done; blockIter++) {
 				 
 				 int j = blocksToSplit.get(blockIter);
-				 HashSet<State> splitStates = blockSplitStates.get(new Integer(j));
-				 HashSet<State> unsplitStates = blockUnsplitStates.get(new Integer(j));
+				 HashSet<State> splitStates = blockSplitStates.get(j);
+				 HashSet<State> unsplitStates = blockUnsplitStates.get(j);
 				 
 				 // Detailed output
 				 if (verbose) {

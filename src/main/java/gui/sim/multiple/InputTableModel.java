@@ -209,7 +209,7 @@ public class InputTableModel extends GrowableTableModel {
 	 */
 	public static InputTableModel getModel(Automaton automaton, boolean multipleFile) {        
 		InputTableModel model = (InputTableModel) INPUTS_TO_MODELS
-				.get(new Integer(inputsForMachine(automaton)));
+				.get(inputsForMachine(automaton));
 		if (model != null && (model.isMultiple == multipleFile)) {
 			model = new InputTableModel(model);
 			// Clear out the results column.
@@ -230,7 +230,7 @@ public class InputTableModel extends GrowableTableModel {
 	}
 	public static InputTableModel getModel(Grammar gram, boolean multipleFile) {        
 		InputTableModel model = (InputTableModel) INPUTS_TO_MODELS
-				.get(new Integer(1));
+				.get(1);
 		if (model != null) {
 			model = new InputTableModel(model);
 			// Clear out the results column.
@@ -325,9 +325,9 @@ public class InputTableModel extends GrowableTableModel {
 		setValueAt(result, row, getColumnCount() - 1);
 		// Store the accepting configuration at this entry.
 		if (config == null)
-			rowToAssociatedConfiguration.remove(new Integer(row));
+			rowToAssociatedConfiguration.remove(row);
 		else
-			rowToAssociatedConfiguration.put(new Integer(row), config);
+			rowToAssociatedConfiguration.put(row, config);
 	}
 
 	/**
@@ -351,8 +351,7 @@ public class InputTableModel extends GrowableTableModel {
 	 *         if there is no associated accepting configuration
 	 */
 	public Configuration getAssociatedConfigurationForRow(int row) {
-		return (Configuration) rowToAssociatedConfiguration
-				.get(new Integer(row));
+		return rowToAssociatedConfiguration.get(row);
 	}
 
 	/** The static table model listener for caching inputs. */
@@ -362,8 +361,7 @@ public class InputTableModel extends GrowableTableModel {
 			if (event.getColumn() != TableModelEvent.ALL_COLUMNS
 					&& event.getColumn() >= model.getInputCount())
 				return; // If the inputs weren't changed, don't bother.
-			Integer inputs = new Integer(model.getInputCount());
-			INPUTS_TO_MODELS.put(inputs, model);
+			INPUTS_TO_MODELS.put(model.getInputCount(), model);
 		}
 	};
     

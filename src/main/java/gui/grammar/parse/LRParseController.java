@@ -292,7 +292,7 @@ class LRParseController {
 					node.insert(c, 0);
 					// Pops the symbol.
 				}
-				if (red.getRHS().length() == 0) {
+				if (red.getRHS().isEmpty()) {
 					// Lambda.
 					MutableTreeNode lambda = new DefaultMutableTreeNode(
 							Universe.curProfile.getEmptyString());
@@ -354,11 +354,6 @@ class LRParseController {
 		 * 
 		 */
 		private static final long serialVersionUID = 1L;
-
-		int push(int item) {
-			push(new Integer(item));
-			return item;
-		}
 
 		int popInt() {
 			return ((Integer) pop()).intValue();

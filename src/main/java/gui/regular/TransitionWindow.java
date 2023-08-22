@@ -34,7 +34,6 @@ import javax.swing.event.ListSelectionEvent;
  * actions happen in the window.
  * 
  * @see gui.regular.FSAToREController#finalizeStateRemove
- * @see gui.regular.FSAToREController#finalize
  * 
  * @author Thomas Finley
  */

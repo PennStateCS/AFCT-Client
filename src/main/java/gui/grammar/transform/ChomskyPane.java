@@ -133,7 +133,7 @@ public class ChomskyPane extends JPanel {
 		ArrayList<Integer> list = new ArrayList<>();
 		for (int i = 0; i < editingGrammarModel.getRowCount() - 1; i++)
 			if (!converter.isChomsky(editingGrammarModel.getProduction(i)))
-				list.add(new Integer(i));
+				list.add(i);
 		int[] ret = new int[list.size()];
 		for (int i = 0; i < ret.length; i++)
 			ret[i] = ((Integer) list.get(i)).intValue();
@@ -238,8 +238,7 @@ public class ChomskyPane extends JPanel {
 			editingGrammarModel.deleteRow(r[i]);
 			for (int j = ps.length - 1; j >= 0; j--) {
 				editingGrammarModel.addProduction(ps[j], r[i]);
-				Integer integer = new Integer(r[i]);
-				list.add(0, integer);
+				list.add(0, r[i]);
 			}
 		}
 		if (unneeded > 0) {
