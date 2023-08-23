@@ -35,9 +35,7 @@ import javax.swing.Icon;
 import javax.swing.KeyStroke;
 
 import automata.State;
-import automata.turing.TuringMachine;
 import automata.turing.TuringMachineBuildingBlocks;
-import automata.turing.TMState;
 
 /**
  * @author Andrew

@@ -32,7 +32,6 @@ import javax.swing.KeyStroke;
 import automata.State;
 import automata.Transition;
 
-import debug.EDebug;
 /**
  * A tool that handles the deletion of states and transitions.
  * 

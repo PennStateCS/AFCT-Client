@@ -29,8 +29,6 @@ import java.awt.event.MouseEvent;
 import javax.swing.Icon;
 import javax.swing.KeyStroke;
 
-import debug.EDebug;
-
 /**
  * First, let's make it work, then we'll make the interface so you don't have to click undo and then click randomly.
  * 

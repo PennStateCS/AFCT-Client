@@ -57,6 +57,8 @@ import org.xml.sax.SAXException;
 public class Main {
 	
 	private static boolean dontQuit;  // Don't quit when Quit selected
+
+	public static String testingPath = "src\\main\\resources";
 	
 	public static boolean getDontQuit() {
 		return dontQuit;

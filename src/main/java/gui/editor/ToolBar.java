@@ -22,8 +22,6 @@ package gui.editor;
 
 import javax.swing.*;
 
-import debug.EDebug;
-
 import java.awt.Component;
 import java.awt.Cursor;
 import java.awt.Graphics;

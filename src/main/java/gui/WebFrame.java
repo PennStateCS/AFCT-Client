@@ -20,17 +20,20 @@
 
 package gui;
 
+import java.awt.*;
 import java.net.URL;
 import java.io.IOException;
 import javax.swing.*;
 import javax.swing.event.HyperlinkListener;
 import javax.swing.event.HyperlinkEvent;
-import java.awt.BorderLayout;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
+import java.util.Objects;
 import javax.swing.text.html.HTMLFrameHyperlinkEvent;
 import javax.swing.text.html.HTMLDocument;
+
+import static gui.Helper.getImageIcon;
 
 /**
  * The <TT>WebFrame</TT> class provides a simple method for poping up a
@@ -132,10 +135,8 @@ public class WebFrame extends JFrame {
 	 * @param tooltip
 	 *            the tool tip for the button
 	 */
-	private JButton makeButton(String label, String iconName,
-			ActionListener listener, String tooltip) {
-		ImageIcon icon = new ImageIcon(getClass().getResource(
-				"/ICON/web/" + iconName));
+	private JButton makeButton(String label, String iconName, ActionListener listener, String tooltip) {
+		ImageIcon icon = getImageIcon("/ICON/web/" + iconName);
 		JButton button = new JButton(label, icon);
 		button.addActionListener(listener);
 		button.setToolTipText(tooltip);
@@ -148,7 +149,7 @@ public class WebFrame extends JFrame {
 	private void goBack() {
 		try {
 			myCurrentPosition--;
-			String url = (String) myURLHistory.get(myCurrentPosition);
+			String url = myURLHistory.get(myCurrentPosition);
 			setDisplay(url);
 		} catch (Throwable e) {
 			myCurrentPosition++;
@@ -162,7 +163,7 @@ public class WebFrame extends JFrame {
 		int oldIndex = myCurrentPosition;
 		try {
 			myCurrentPosition = 0;
-			String url = (String) myURLHistory.get(myCurrentPosition);
+			String url = myURLHistory.get(myCurrentPosition);
 			setDisplay(url);
 		} catch (Throwable e) {
 			myCurrentPosition = oldIndex;
