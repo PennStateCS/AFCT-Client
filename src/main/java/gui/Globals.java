@@ -15,7 +15,7 @@ import static java.lang.Math.floor;
 
 public class Globals {
     public static String testingPath = "src\\main\\resources";
-    public final static String currentVersion = "v" + gui.Globals.class.getPackage().getSpecificationVersion();
+    public final static String currentVersion = "v" + gui.Globals.class.getPackage().getImplementationVersion();
     public static final String JUST_NAME = "AFCT ";
     public final static String APP_NAME = JUST_NAME + currentVersion;
 
