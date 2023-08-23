@@ -87,6 +87,9 @@ public class Main {
 		} catch (SecurityException e) {
 			// Eh, that shouldn't happen.
 		}
+
+		//TODO add the updater creation here maybe?
+		// also add updater button to gui menu bar
 		
 		// Set the AWT exception handler. This may not work in future
 		// Java versions.

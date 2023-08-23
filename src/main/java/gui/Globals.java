@@ -15,11 +15,12 @@ import static java.lang.Math.floor;
 
 public class Globals {
     public static String testingPath = "src\\main\\resources";
-    public final static String currentVersion = "v" + Globals.class.getPackage().getImplementationVersion();
+    public final static String currentVersion = "v" + gui.Globals.class.getPackage().getSpecificationVersion();
     public static final String JUST_NAME = "AFCT ";
     public final static String APP_NAME = JUST_NAME + currentVersion;
 
     // TODO: add URL and path
+    //  need to find out where files will actually be hosted that anyone can access so the updater can download them...
     public static final String APP_URL = "TODO";
     public static final String LATEST_RELEASE_PATH = "/releases/latest";
     public static String JAR_PATH = "TODO";
