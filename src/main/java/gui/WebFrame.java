@@ -29,11 +29,10 @@ import javax.swing.event.HyperlinkEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.ActionEvent;
 import java.util.ArrayList;
-import java.util.Objects;
 import javax.swing.text.html.HTMLFrameHyperlinkEvent;
 import javax.swing.text.html.HTMLDocument;
 
-import static gui.Helper.getImageIcon;
+import static gui.Globals.getImageIcon;
 
 /**
  * The <TT>WebFrame</TT> class provides a simple method for poping up a

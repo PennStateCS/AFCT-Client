@@ -1,0 +1,140 @@
+package gui;
+
+import gui.components.SaveFileDialog;
+import gui.popups.UpdatePopup;
+
+import javax.swing.*;
+import java.io.File;
+import java.io.IOException;
+import java.io.InputStream;
+import java.net.HttpURLConnection;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
+import java.net.http.HttpClient;
+import java.net.http.HttpRequest;
+import java.net.http.HttpResponse;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.StandardCopyOption;
+import java.util.Map;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+
+import static gui.Globals.*;
+
+public class Updater {
+    private String[] headers;
+    public UpdatePopup updatePopup;
+    public static final Pattern versionRegex = Pattern.compile("v(\\d+)\\.(\\d+)\\.(\\d+)");
+
+    public Updater() {
+        // TODO update headers
+        headers = new String[]{"X-GitHub-Api-Version", "2022-11-28",
+                "Authorization", "",
+                "Accept", "application/vnd.github.v3+json"};
+
+        updatePopup = new UpdatePopup();
+
+        print("Updater loaded.");
+    }
+
+    public enum Version {
+        SAME, OLDER, NEWER, ERROR
+    }
+
+    private static String addUrlParams(String url, Map<String, String> parameters) {
+        StringBuilder paramUrl = new StringBuilder(url);
+        paramUrl.append("?");
+        for (String key : parameters.keySet()) {
+            paramUrl.append(key).append("=").append(parameters.get(key)).append("&");
+        }
+        paramUrl.deleteCharAt(paramUrl.length()-1);
+        return paramUrl.toString();
+    }
+
+    public Result downloadApp(JFrame frame, String latestVersion) throws IOException {
+        String url = addUrlParams(APP_URL + JAR_PATH + JAR_NAME, Map.of("ref", latestVersion));
+        HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
+        connection.setRequestMethod("GET");
+        connection.setRequestProperty("Authorization", headers[3]);
+        connection.setRequestProperty("Accept", "application/vnd.github.VERSION.raw");
+
+        Result result = new Result(Status.GOOD);
+
+        if (connection.getResponseCode() == 200) {
+            String jarPath = Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
+            File targetFile = new SaveFileDialog(frame, new File(jarPath)).display();
+            if (targetFile != null) {
+                try (InputStream inputStream = connection.getInputStream()) {
+                    Path targetPath = targetFile.toPath();
+                    Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                }
+            } else {
+                result.status = Status.WARNING;
+            }
+        } else {
+            String message = "Error downloading JAR file. Response Code: " + connection.getResponseCode();
+            result = new Result(Status.ERROR, message, connection.getResponseMessage());
+            errorPrint(message);
+        }
+        connection.disconnect();
+
+        return result;
+    }
+
+    /**
+     *
+     *
+     * @param currentVersion
+     * @param otherVersion
+     * @return Version.OLDER if currentVersion is older than otherVersion,
+     *         Version.NEWER if currentVersion is newer than otherVersion,
+     *         Version.SAME if currentVersion equals otherVersion,
+     *         Version.ERROR if either currentVersion or otherVersion does not contain a substring like:
+     *                       vMAJOR.MINOR.PATCH
+     *                       where MAJOR, MINOR, and PATCH are all integers
+     */
+    public static Version compareVersions(String currentVersion, String otherVersion) {
+        Matcher current = versionRegex.matcher(currentVersion);
+        Matcher other = versionRegex.matcher(otherVersion);
+        if (current.find() && other.find()) {
+            for (int i = 1; i <= 3; i++) {
+                int versionDiff = Integer.parseInt(current.group(i)) - Integer.parseInt(other.group(i));
+                if (versionDiff != 0) {
+                    if (versionDiff < 0) {
+                        return Version.OLDER;
+                    } else {
+                        return Version.NEWER;
+                    }
+                }
+            }
+            return Version.SAME;
+        } else {
+            return Version.ERROR;
+        }
+    }
+
+    public HttpResponse<String> getUrl(String url) {
+        HttpRequest request;
+        try {
+            request = HttpRequest.newBuilder().uri(new URI(url)).headers(headers).GET().build();
+        } catch (URISyntaxException e) {
+            throw new RuntimeException(e);
+        }
+        HttpClient client = HttpClient.newHttpClient();
+        HttpResponse<String> response;
+        try {
+            response = client.send(request, HttpResponse.BodyHandlers.ofString());
+        } catch (IOException | InterruptedException e) {
+            throw new RuntimeException(e);
+        }
+
+        return response;
+    }
+
+    public HttpResponse<String> getUrl(String url, String branch) {
+        Map<String, String> params = Map.of("ref", branch);
+        return getUrl(addUrlParams(url, params));
+    }
+}
