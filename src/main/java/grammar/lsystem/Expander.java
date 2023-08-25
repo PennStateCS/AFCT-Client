@@ -123,9 +123,8 @@ public class Expander {
 						.nextInt(replacements.length)];
 				break;
 			}
-			Iterator<String> it2 = replacement.iterator();
-			while (it2.hasNext())
-				ne.add(it2.next()); // Add replacements!
+			// Add replacements!
+			ne.addAll(replacement);
 		}
 		return ne;
 	}
@@ -147,8 +146,7 @@ public class Expander {
 			for (int j = 0; j < contexts.length; j++) {
 				List<String>[] l = contexts[j].matches(symbols, i);
 				contexts[j].matches(symbols, i);
-				for (int k = 0; k < l.length; k++)
-					replacementsList.add(l[k]);
+				replacementsList.addAll(Arrays.asList(l));
 			}
 			List<String>[] replacements = (List<String>[]) replacementsList
 					.toArray(EMPTY_ARRAY);
@@ -169,9 +167,8 @@ public class Expander {
 						.nextInt(replacements.length)];
 				break;
 			}
-			Iterator<String> it2 = replacement.iterator();
-			while (it2.hasNext())
-				ne.add(it2.next()); // Add replacements!
+			// Add replacements!
+			ne.addAll(replacement);
 		}
 		return ne;
 	}

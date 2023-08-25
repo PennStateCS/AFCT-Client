@@ -209,7 +209,7 @@ public class NDTMSimulator extends AutomatonSimulator {
     public List<TMConfiguration> stepBlock(TMConfiguration config){
     	//EDebug.print("Inside StepBlock");
     	while (((TuringMachine)(config = (TMConfiguration) stepConfiguration(config).get(0)).getCurrentState().getAutomaton()).getParent() != null);
-    	return Arrays.asList(config);
+    	return List.of(config);
     }
     public String[] getInputStrings() {
     		return inputStrings;

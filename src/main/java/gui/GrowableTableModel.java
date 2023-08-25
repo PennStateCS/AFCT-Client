@@ -85,8 +85,7 @@ public abstract class GrowableTableModel extends AbstractTableModel implements
 		while (it.hasNext()) {
 			Object[] oldRow = (Object[]) it.next();
 			Object[] row = new Object[columns];
-			for (int i = 0; i < oldRow.length; i++)
-				row[i] = oldRow[i];
+            System.arraycopy(oldRow, 0, row, 0, oldRow.length);
 			data.add(row);
 		}
 		fireTableDataChanged();

@@ -94,9 +94,8 @@ public class UselessStatesDetector {
 	 * @return the set of state that can lead to a final state
 	 */
 	private static Set<State> findFinal(Automaton a) {
-		Set<State> finalized = new HashSet<>();
-		finalized.addAll(Arrays.asList(a.getFinalStates()));
-		boolean added = finalized.size() != 0;
+        Set<State> finalized = new HashSet<>(Arrays.asList(a.getFinalStates()));
+		boolean added = !finalized.isEmpty();
 		Transition[] t = a.getTransitions();
 		while (added) {
 			added = false;

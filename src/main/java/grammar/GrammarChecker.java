@@ -21,6 +21,7 @@
 package grammar;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashSet;
 
 /**
@@ -276,9 +277,7 @@ public class GrammarChecker {
 	 */
 	public static String[] getUnresolvedVariables(Grammar grammar) {
 		String[] variables = grammar.getVariables();
-		HashSet<String> variableSet = new HashSet<String>();
-		for (int i = 0; i < variables.length; i++)
-			variableSet.add(variables[i]);
+        HashSet<String> variableSet = new HashSet<>(Arrays.asList(variables));
 		Production[] productions = grammar.getProductions();
 		for (int i = 0; i < productions.length; i++) {
 			String[] lhsVariables = productions[i].getVariablesOnLHS();

@@ -495,19 +495,16 @@ class Turtle implements Cloneable, Serializable {
 	 * @return a string representation of this turtle
 	 */
 	public final String toString() {
-		StringBuffer sb = new StringBuffer();
-		sb.append("{ " + super.toString());
-		sb.append(", distance=" + distance);
-		sb.append(", position=(" + position.getX() + "," + position.getY()
-				+ ")");
-		sb.append(", lineWidth=" + lineWidth);
-		sb.append(", incrementWidth=" + incrementWidth);
-		sb.append(", angleChange=" + angleChange);
-		sb.append(", color=" + color);
-		sb.append(", polygonColor=" + polygonColor);
-		sb.append(" }");
-
-		return sb.toString();
+        return "{ " + super.toString() +
+				", distance=" + distance +
+				", position=(" + position.getX() + "," + position.getY()
+				+ ")" +
+				", lineWidth=" + lineWidth +
+				", incrementWidth=" + incrementWidth +
+				", angleChange=" + angleChange +
+				", color=" + color +
+				", polygonColor=" + polygonColor +
+				" }";
 	}
 
 	/**

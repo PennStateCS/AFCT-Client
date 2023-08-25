@@ -190,7 +190,9 @@ public class TMSimulator extends AutomatonSimulator {
                 }
                 if (characters[i].charAt(0) == underHead) flag = true;; //take care of assignment somewhere else //here, it's only alphabet letters
             }
-            if (flag) return flag;
+            if (flag) {
+                return true;
+            }
         }
         else{
             assert bangIndex == 0;
@@ -212,7 +214,7 @@ public class TMSimulator extends AutomatonSimulator {
     public List<Configuration> stepBlock(TMConfiguration config){
         EDebug.print("Inside StepBlock");
            while (((TuringMachine)(config = (TMConfiguration) stepConfiguration(config).get(0)).getCurrentState().getAutomaton()).getParent() != null);
-           return Arrays.asList(config);
+           return List.of(config);
     }
 
 	/**

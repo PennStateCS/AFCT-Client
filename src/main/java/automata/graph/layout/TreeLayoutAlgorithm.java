@@ -116,8 +116,7 @@ public class TreeLayoutAlgorithm extends LayoutAlgorithm {
 			}});					
 		
 		// Finally, add the vertices to levels and adjust them so all vertices are on the screen
-		ArrayList<Object> notPlaced = new ArrayList<>();		
-		notPlaced.addAll(vertices);
+        ArrayList<Object> notPlaced = new ArrayList<>(vertices);
 		Level firstLevel, counter;
 		firstLevel = new Level();		
 		while (notPlaced.size() > 0) {

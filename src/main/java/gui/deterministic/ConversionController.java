@@ -271,9 +271,8 @@ public class ConversionController {
 	 * This method will expand all states in an automaton.
 	 */
 	public void complete() {
-		final LinkedList<State> stateQueue = new LinkedList<>();
-		// Add all states to the state queue.
-		stateQueue.addAll(Arrays.asList(dfa.getStates()));
+        // Add all states to the state queue.
+        final LinkedList<State> stateQueue = new LinkedList<>(Arrays.asList(dfa.getStates()));
 		// When a state is added to the DFA, make sure we know about it.
 		AutomataStateListener listener = new AutomataStateListener() {
 			public void automataStateChange(AutomataStateEvent e) {

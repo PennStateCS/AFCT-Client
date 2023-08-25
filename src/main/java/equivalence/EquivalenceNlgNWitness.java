@@ -322,13 +322,13 @@ public class EquivalenceNlgNWitness extends EquivalenceWitness {
 			 done = true;
 			 hasInputError = true;
 		 } else {
-			 for (int j = 0; j < alphabet.size(); j++) {
-				 String a = alphabet.get(j);
-				 if (!alphabet2.contains(a)) {
-					 done = true;
-					 hasInputError = true;
-				 }
-			 }
+             for (String a : alphabet) {
+                 if (!alphabet2.contains(a)) {
+                     done = true;
+                     hasInputError = true;
+                     break;
+                 }
+             }
 		 }
 		 if (hasInputError) {
 			 inputErrorMsg = "Different alphabets; cannot be compared.";
@@ -573,13 +573,13 @@ public class EquivalenceNlgNWitness extends EquivalenceWitness {
 					 }
 				
 					 HashSet<State> splitSet = new HashSet<State>();
-					 HashSet<State> unsplitSet = new HashSet<State>();
+					 HashSet<State> unsplitSet;
 					 
 					 if (!blocksToSplit.contains(blockNum)) {
 						 blocksToSplit.add(blockNum);			 
 						 splitSet.add(currStateT);						 
 						 blockSplitStates.put(blockNum, splitSet);
-						 unsplitSet.addAll(partitionSets.get(blockNum));
+						 unsplitSet = new HashSet<>(partitionSets.get(blockNum));
 						 unsplitSet.remove(currStateT);
 						 blockUnsplitStates.put(blockNum, unsplitSet);
 					 } else {

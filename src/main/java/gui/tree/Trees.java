@@ -145,9 +145,8 @@ public class Trees {
 		ArrayList<TreeNode> leaves = new ArrayList<>();
 		for (int i = 0; i < children.length; i++) {
 			TreeNode[] subleaves = leaves(children[i]);
-			for (int j = 0; j < subleaves.length; j++)
-				leaves.add(subleaves[j]);
+			leaves.addAll(Arrays.asList(subleaves));
 		}
-		return (TreeNode[]) leaves.toArray(new TreeNode[0]);
+		return leaves.toArray(new TreeNode[0]);
 	}
 }

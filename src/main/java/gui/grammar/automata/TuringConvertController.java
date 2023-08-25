@@ -243,19 +243,14 @@ public class TuringConvertController extends ConvertController {
 		} 
 		try {
 			ConvertedUnrestrictedGrammar g=getGrammar();
-			ArrayList <Production> prods=new ArrayList <Production>();
-			Production[] temp=g.getProductions();
-			for (int i=0; i<temp.length; i++) {
-				prods.add(temp[i]);
-			}
+            Production[] temp=g.getProductions();
+            ArrayList<Production> prods = new ArrayList<>(Arrays.asList(temp));
 			//original comparator
-			Collections.sort(prods, new Comparator<Production>(){
-		            public int compare(Production o1, Production o2) {
-		            	if (o1.getLHS().equals("S"))
-		            		return -1;
-		            	return (o1.getRHS().length()-o2.getRHS().length());
-		            }
-		    });
+			prods.sort((o1, o2) -> {
+                if (o1.getLHS().equals("S"))
+                    return -1;
+                return (o1.getRHS().length() - o2.getRHS().length());
+            });
 
 			ConvertedUnrestrictedGrammar gg=new ConvertedUnrestrictedGrammar();
 			for (int i=0; i<temp.length; i++)

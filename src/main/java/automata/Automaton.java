@@ -403,11 +403,7 @@ public class Automaton implements Serializable, Cloneable {
 	 * @return
 	 */
 	public static List<Object> makeListFromArray(Object[] array) {
-		List<Object> list = new ArrayList<>();
-		for (int k = 0; k < array.length; k++) {
-			list.add(array[k]);
-		}
-		return list;
+        return new ArrayList<>(Arrays.asList(array));
 	}
 
 	/**

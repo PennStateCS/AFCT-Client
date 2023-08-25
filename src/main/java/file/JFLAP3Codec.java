@@ -399,8 +399,7 @@ public class JFLAP3Codec extends Codec {
 			groups[s] = new String[tokens.length / groupSize][];
 			for (int g = 0; g < groups[s].length; g++) {
 				groups[s][g] = new String[groupSize];
-				for (int i = 0; i < groupSize; i++)
-					groups[s][g][i] = tokens[groupSize * g + i];
+                System.arraycopy(tokens, groupSize * g, groups[s][g], 0, groupSize);
 				try {
 					int i = Integer.parseInt(groups[s][g][idPosition]);
 					if (i < 1 || i > numStates)

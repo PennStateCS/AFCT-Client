@@ -264,8 +264,7 @@ public class ConfigurationPane extends JPanel implements ActionListener {
 	 */
 	public void clearFinal() {
 		// Avoid concurrent modification exceptions.
-		ArrayList<ConfigurationButton> list = new ArrayList<>();
-		list.addAll(configurationToButtonMap.values());
+        ArrayList<ConfigurationButton> list = new ArrayList<>(configurationToButtonMap.values());
 		Iterator<ConfigurationButton> it = list.iterator();
 
 		while (it.hasNext()) {
@@ -281,8 +280,7 @@ public class ConfigurationPane extends JPanel implements ActionListener {
 	 */
 	public void clearThawed() {
 		// Avoid concurrent modification exceptions.
-		ArrayList<ConfigurationButton> list = new ArrayList<>();
-		list.addAll(configurationToButtonMap.values());
+        ArrayList<ConfigurationButton> list = new ArrayList<>(configurationToButtonMap.values());
 		Iterator<ConfigurationButton> it = list.iterator();
 
 		while (it.hasNext()) {

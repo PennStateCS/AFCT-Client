@@ -88,8 +88,7 @@ public class LRParseTable extends AbstractTableModel implements Serializable,
 		grammar = table.grammar;
 		entries = new String[table.entries.length][table.entries[0].length];
 		for (int i = 0; i < entries.length; i++)
-			for (int j = 0; j < entries[i].length; j++)
-				entries[i][j] = table.entries[i][j];
+            System.arraycopy(table.entries[i], 0, entries[i], 0, entries[i].length);
 		symbolsToColumn = table.symbolsToColumn;
 	}
 

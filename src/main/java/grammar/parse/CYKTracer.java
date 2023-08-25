@@ -173,16 +173,15 @@ public class CYKTracer {
 			
 			Grammar unitless=remover.getUnitProductionlessGrammar(controller.getGrammar(), remover.getVariableDependencyGraph(g));
 			Production[] temp=unitless.getProductions();
-			ArrayList <Production> productionsToAdd=new ArrayList <Production>();
-			for (int i=0; i<temp.length; i++)
-				productionsToAdd.add(temp[i]);
+            ArrayList<Production> productionsToAdd = new ArrayList<>(Arrays.asList(temp));
 			// Now the grammar without unit productions
 			g=controller.getGrammar();
 			Production[] p=g.getProductions();
 			for (int i=0; i<p.length; i++)
 			{
-				if (productionsToAdd.contains(p[i]))
+				if (productionsToAdd.contains(p[i])) {
 					productionsToAdd.remove(p[i]);
+				}
 			}
 			//System.out.println(productionsToAdd);
 			
@@ -211,23 +210,20 @@ public class CYKTracer {
 							}
 						}
 					}
-					while (isDone==false && removedUnitProductions.keySet().contains(var2))
+					while (!isDone && removedUnitProductions.containsKey(var2))
 					{
 						tempToAdd.add(removedUnitProductions.get(var2));
 						var2=removedUnitProductions.get(var2).getRHS();
-						for (int pp=0; pp<p.length; pp++)
-						{
-							if (p[pp].getLHS().equals(var2))
-							{
-								String tempStr=p[pp].getRHS();
-								if (tempStr.equals(productionsToAdd.get(i).getRHS()))
-								{
-									tempToAdd.add(p[pp]);
-									isDone=true;
-									break;
-								}
-							}
-						}
+                        for (Production production : p) {
+                            if (production.getLHS().equals(var2)) {
+                                String tempStr = production.getRHS();
+                                if (tempStr.equals(productionsToAdd.get(i).getRHS())) {
+                                    tempToAdd.add(production);
+                                    isDone = true;
+                                    break;
+                                }
+                            }
+                        }
 					}
 				}
 				myUnitStepMap.put(tempToAdd, productionsToAdd.get(i));

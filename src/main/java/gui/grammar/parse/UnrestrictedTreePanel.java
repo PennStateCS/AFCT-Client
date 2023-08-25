@@ -90,11 +90,9 @@ public class UnrestrictedTreePanel extends TreePanel {
 		List<UnrestrictedTreeNode> list = new ArrayList<>();
         if(top[level] != null){
             for (int i = 0; i < top[level].length; i++)
-                for (int j = 0; j < top[level][i].length; j++)
-                    list.add(top[level][i][j]);
+				list.addAll(Arrays.asList(top[level][i]));
         }
-		return (UnrestrictedTreeNode[]) list
-				.toArray(new UnrestrictedTreeNode[0]);
+		return list.toArray(new UnrestrictedTreeNode[0]);
 	}
 
 	private void bridgeTo(int level) {

@@ -84,8 +84,7 @@ public class LambdaController {
 						p[i], lambdaVariables);
 				desiredProductions.add(p[i]);
 				productionsToExpansion.put(p[i], p2);
-				for (int j = 0; j < p2.length; j++)
-					desiredProductions.add(p2[j]);
+				desiredProductions.addAll(Arrays.asList(p2));
 			}
 			pane.editingActive = true;
 			updateDisplay();

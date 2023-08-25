@@ -115,8 +115,7 @@ public class UnitController {
 			Grammar desiredGrammar = remover.getUnitProductionlessGrammar(
 					grammar, vdg);
 			p = desiredGrammar.getProductions();
-			for (int i = 0; i < p.length; i++)
-				desiredProductions.add(p[i]);
+			desiredProductions.addAll(Arrays.asList(p));
 			updateDisplay();
 			pane.editingActive = true;
 			break;

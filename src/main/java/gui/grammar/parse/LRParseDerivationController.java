@@ -399,10 +399,8 @@ public class LRParseDerivationController extends LLParseDerivationController {
 					.getItemSet(to, "Goto on " + symbol);
 			if (items == null)
 				return;
-			Set<Production> itemSet = new HashSet<>();
-			for (int i = 0; i < items.length; i++)
-				itemSet.add(items[i]);
-			second = (State) itemsToState.get(itemSet);
+            Set<Production> itemSet = new HashSet<>(Arrays.asList(items));
+			second = itemsToState.get(itemSet);
 			if (second == null) {
 				second = dfa.createState(point);
 				assignItemsToState(items, second);

@@ -113,9 +113,9 @@ public class ParseNode extends DefaultMutableTreeNode {
 	 * @return a string representation of those object
 	 */
 	public String toString() {
-		StringBuffer sb = new StringBuffer(derivation);
+		StringBuilder sb = new StringBuilder(derivation);
 		sb.append(", ");
-		sb.append(Arrays.asList(productions) + ", ");
+		sb.append(Arrays.asList(productions)).append(", ");
 		sb.append('[');
 		for (int j = 0; j < subs.length; j++) {
 			if (j != 0)

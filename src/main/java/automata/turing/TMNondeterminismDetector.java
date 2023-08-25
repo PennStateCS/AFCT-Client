@@ -97,7 +97,7 @@ public class TMNondeterminismDetector extends NondeterminismDetector {
 					return false;
 				}
 				String firstWordsLetter = "";
-				Boolean foundMatch = false; 
+				boolean foundMatch = false;
 				if (read1.startsWith("!") && !read2.startsWith(("!"))) { //read1 starts with ! and read2 does not
 					for (int k = 0; k < read2.length(); k++) {
 						firstWordsLetter = read2.substring(k, k + 1);

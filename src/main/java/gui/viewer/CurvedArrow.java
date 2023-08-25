@@ -215,7 +215,7 @@ public class CurvedArrow {
 			String sublabel = label.substring(i, Math.min(i + CHARS_PER_STEP,
 					label.length()));
 			g2.drawString(sublabel, -dx, dy);
-			dx -= metrics.getStringBounds(sublabel, g2).getWidth();
+			dx -= (float) metrics.getStringBounds(sublabel, g2).getWidth();
 		}
 		// g2.drawString(label, -dx, dy);
 		g2.dispose();

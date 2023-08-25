@@ -167,7 +167,7 @@ import java.util.Vector;
 	  * @return  a String representation of this object.
 	  */
 	 public String toString() {
-		 StringBuffer buff = new StringBuffer("The disjoint sets:\n\n");
+		 StringBuilder buff = new StringBuilder("The disjoint sets:\n\n");
 		 
 		 for (int i = 0; i < indexToState.size(); i++) {
 			buff.append("State " + i + " (" + indexToState.get(i).getName() +

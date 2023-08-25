@@ -61,7 +61,7 @@ public class InputTableModel extends GrowableTableModel {
 	}
 	
 	public InputTableModel(Grammar gram, int add) {
-		super(2 * 1 + 1+add);
+		super(3 + add);
 	}
 
 	/**

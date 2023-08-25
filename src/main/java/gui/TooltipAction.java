@@ -48,7 +48,7 @@ public abstract class TooltipAction extends AbstractAction {
 	 */
 	public void setTip(String tip) {
 		if (tip == null) {
-			putValue(SHORT_DESCRIPTION, tip);
+			putValue(SHORT_DESCRIPTION, null);
 			return;
 		}
 		if (tip.equals(getValue(SHORT_DESCRIPTION)))

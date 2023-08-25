@@ -229,13 +229,13 @@ public class EquivalenceMergeWitness extends EquivalenceWitness {
 			 done = true;
 			 hasInputError = true;
 		 } else {
-			 for (int j = 0; j < alphabet.size(); j++) {
-				 String a = alphabet.get(j);
-				 if (!alphabet2.contains(a)) {
-					 done = true;
-					 hasInputError = true;
-				 }
-			 }
+             for (String a : alphabet) {
+                 if (!alphabet2.contains(a)) {
+                     done = true;
+                     hasInputError = true;
+                     break;
+                 }
+             }
 		 }
 		 if (hasInputError) {
 			 inputErrorMsg = "Different alphabets; cannot be compared.";

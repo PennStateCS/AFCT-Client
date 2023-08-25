@@ -109,9 +109,11 @@ public class LemmaMath {
     	boolean found = false;
     	for (int i=0; i<s.length(); i++) {
     		found = false;
-    		for (int j=0; j<c.length; j++)
-    			if (s.charAt(i)== c[j])
-    				found = true;
+            for (char value : c)
+                if (s.charAt(i) == value) {
+                    found = true;
+                    break;
+                }
     		if (!found)
     			return true;
     	}

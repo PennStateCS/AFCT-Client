@@ -142,10 +142,7 @@ public class Graph {
 
 	/** Returns a string description of the graph. */
 	public String toString() {
-		StringBuffer sb = new StringBuffer();
-		sb.append(super.toString() + "\n");
-		sb.append(verticesToPoints);
-		return sb.toString();
+        return super.toString() + "\n" + verticesToPoints;
 	}
 
 	protected Map<Object, Object> verticesToPoints = new HashMap<>();

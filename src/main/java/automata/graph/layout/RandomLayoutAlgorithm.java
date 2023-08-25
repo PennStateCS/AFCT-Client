@@ -119,9 +119,9 @@ public class RandomLayoutAlgorithm extends LayoutAlgorithm {
 	 */
 	private void lessenVertexOverlap() {				
 		//First, sort the vertices by their x and y values
-		ArrayList<Object> xOrder, yOrder;				
-		xOrder = new ArrayList<>();   yOrder = new ArrayList<>();
-		xOrder.addAll(points);      yOrder.addAll(points);
+		ArrayList<Object> xOrder, yOrder;
+        xOrder = new ArrayList<>(points);
+		yOrder = new ArrayList<>(points);
 		Collections.sort(xOrder, new Comparator<Object>() {			
 			public int compare(Object o1, Object o2) {				
 				if (((Point2D) o1).getX() == ((Point2D) o2).getX())
@@ -176,8 +176,7 @@ public class RandomLayoutAlgorithm extends LayoutAlgorithm {
 		anchor = new Point2D.Double(0,0);
 		anchorTheta = 0;		
 		newPointOrder = new ArrayList<>();
-		notProcessedPoints = new ArrayList<>();		
-		notProcessedPoints.addAll(points);
+        notProcessedPoints = new ArrayList<>(points);
 		
 		//Find the angle of all points relative to the last point placed and "anchorTheta".  Then place
 		//the point with the minimum angle.  "anchorTheta" will slowly rotate around a circle counterclockwise.

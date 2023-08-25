@@ -404,9 +404,7 @@ public class LambdaProductionRemover {
 		for (int k = 0; k < productions.length; k++) {
 			Production[] prods = getProductionsToAddForProduction(
 					productions[k], lambdaSet);
-			for (int j = 0; j < prods.length; j++) {
-				list.add(prods[j]);
-			}
+			list.addAll(Arrays.asList(prods));
 		}
 		return (Production[]) list.toArray(new Production[0]);
 	}
@@ -426,7 +424,7 @@ public class LambdaProductionRemover {
 			if (!ProductionChecker.isLambdaProduction(productions[k]))
 				list.add(productions[k]);
 		}
-		return (Production[]) list.toArray(new Production[0]);
+		return list.toArray(new Production[0]);
 	}
 
 	/**

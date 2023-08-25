@@ -383,8 +383,7 @@ public class Minimizer {
 	public ArrayList<State[]> split(State[] group, Automaton automaton,
 			DefaultTreeModel tree) {
 		String terminal = getTerminalToSplit(group, automaton, tree);
-		ArrayList<State[]> list = new ArrayList<>();
-		list.addAll(splitOnTerminal(group, terminal, automaton, tree));
+        ArrayList<State[]> list = new ArrayList<>(splitOnTerminal(group, terminal, automaton, tree));
 		return list;
 	}
 
@@ -621,9 +620,8 @@ public class Minimizer {
 		MinimizeTreeNode root = (MinimizeTreeNode) tree.getRoot();
 		while (!isMinimized(automaton, tree)) {
 			State[] group = getDistinguishableGroup(automaton, tree);
-			ArrayList<State[]> children = new ArrayList<>();
-			String terminal = getTerminalToSplit(group, automaton, tree);
-			children.addAll(splitOnTerminal(group, terminal, automaton, tree));
+            String terminal = getTerminalToSplit(group, automaton, tree);
+            ArrayList<State[]> children = new ArrayList<>(splitOnTerminal(group, terminal, automaton, tree));
 			// children.addAll(split(group, automaton));
 			MinimizeTreeNode parent = getTreeNodeForObject(tree, root, group);
 			parent.setTerminal(terminal);

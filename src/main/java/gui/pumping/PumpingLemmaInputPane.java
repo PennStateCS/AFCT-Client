@@ -599,12 +599,12 @@ public abstract class PumpingLemmaInputPane extends JPanel
                 else
                 {
                     ret.append("<i>");
-                    ret.append(s.substring(i, i + 1));
+                    ret.append(s.charAt(i));
                     ret.append("</i>");
                     if(count > 1)
                     {
                         ret.append("<sup>");
-                        ret.append("" + count);
+                        ret.append(count);
                         ret.append("</sup>");
                     }
                     
@@ -619,7 +619,7 @@ public abstract class PumpingLemmaInputPane extends JPanel
                     if(count > 1)
                     {
                         ret.append("<sup>");
-                        ret.append("" + count);
+                        ret.append(count);
                         ret.append("</sup>");
                     }
                     return ret.toString();

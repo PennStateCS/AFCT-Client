@@ -103,8 +103,10 @@ public class W1VVrW2 extends ContextFreePumpingLemma {
 				if ((end-start) % 2 == 1 && s.charAt(start) == s.charAt(end)) {					
 					match = true;
 					for (int i=0; i<=(end-start)/2; i++)
-						if (s.charAt(start+i) != s.charAt(end-i))
-							match = false;
+                        if (s.charAt(start + i) != s.charAt(end - i)) {
+                            match = false;
+                            break;
+                        }
 					if (match && LemmaMath.countInstances(s.substring(0, start), 'a') == 
 			    		LemmaMath.countInstances(s.substring(end+1), 'a'))
 						return new int[] {start, end};				
