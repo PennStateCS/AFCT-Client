@@ -166,7 +166,7 @@ public class TestAction extends  RestrictedAction{
     public void performAction(Component source){
     	ArrayList<Object> files = null;
     	boolean sameType = false;
-    	while(files == null || sameType == false){
+    	while(files == null || !sameType){
     		if(myEnvFrame != null){
     			 myEnvFrame.getEnvironment().myObjects.clear();
     		}

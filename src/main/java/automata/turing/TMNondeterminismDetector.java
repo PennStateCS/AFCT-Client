@@ -102,11 +102,11 @@ public class TMNondeterminismDetector extends NondeterminismDetector {
 					for (int k = 0; k < read2.length(); k++) {
 						firstWordsLetter = read2.substring(k, k + 1);
 						if (!firstWordsLetter.equals(",")) {
-							if (read1.indexOf(firstWordsLetter) == -1) {
+							if (!read1.contains(firstWordsLetter)) {
 								foundMatch = true;
 							}
 						}
-						if (k == (read2.length() -1) && foundMatch == false) { //iterated through all letters and no matches
+						if (k == (read2.length() -1) && !foundMatch) { //iterated through all letters and no matches
 							return false;
 						}
 					}
@@ -115,11 +115,11 @@ public class TMNondeterminismDetector extends NondeterminismDetector {
 					for (int k = 0; k < read1.length(); k++) {
 						firstWordsLetter = read1.substring(k, k + 1);
 						if (!firstWordsLetter.equals(",")) {
-							if (read2.indexOf(firstWordsLetter) == -1) {
+							if (!read2.contains(firstWordsLetter)) {
 								foundMatch = true;
 							}
 						}
-						if (k == (read1.length() -1) && foundMatch == false) { //iterated through all letters and no matches
+						if (k == (read1.length() -1) && !foundMatch) { //iterated through all letters and no matches
 							return false;
 						}
 					}
