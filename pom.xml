@@ -101,7 +101,6 @@
                 <artifactId>maven-assembly-plugin</artifactId>
                 <version>3.5.0</version>
                 <configuration>
-                    <finalName>${project.name}</finalName>
                     <appendAssemblyId>false</appendAssemblyId>
                     <archive>
                         <manifest>
@@ -115,11 +114,27 @@
                     </descriptorRefs>
                 </configuration>
                 <executions>
+                    <!-- Execution for jar without version -->
                     <execution>
+                        <id>make-assembly-no-version</id>
                         <phase>package</phase>
                         <goals>
                             <goal>single</goal>
                         </goals>
+                        <configuration>
+                            <finalName>${project.name}</finalName>
+                        </configuration>
+                    </execution>
+                    <!-- Execution for jar with version -->
+                    <execution>
+                        <id>make-assembly-with-version</id>
+                        <phase>package</phase>
+                        <goals>
+                            <goal>single</goal>
+                        </goals>
+                        <configuration>
+                            <finalName>${project.name}-${project.version}</finalName>
+                        </configuration>
                     </execution>
                 </executions>
             </plugin>
