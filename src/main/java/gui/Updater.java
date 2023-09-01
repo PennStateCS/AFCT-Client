@@ -73,6 +73,7 @@ public class Updater {
                 command.add("-jar");
                 command.add(currentJar.getPath());
 
+                // TODO: before quitting and starting new process, PROMPT USER TO SAVE ALL ACTIVE WORK before restarting
                 ProcessBuilder builder = new ProcessBuilder(command);
                 builder.start();
                 System.exit(0);
