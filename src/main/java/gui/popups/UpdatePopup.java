@@ -1,11 +1,11 @@
 package gui.popups;
 
-import gui.Updater;
 import gui.components.LinkLabel;
 import gui.Globals;
 import com.google.gson.JsonObject;
 
 import javax.swing.*;
+import javax.swing.tree.DefaultMutableTreeNode;
 import java.awt.*;
 import java.awt.event.WindowAdapter;
 import java.io.IOException;
@@ -13,10 +13,14 @@ import java.net.NoRouteToHostException;
 import java.net.http.HttpResponse;
 import java.text.DateFormat;
 import java.text.ParseException;
-import java.util.Arrays;
-import java.util.Calendar;
-import java.util.Date;
+import java.util.*;
 import java.util.regex.Matcher;
+import java.util.stream.Collectors;
+
+import org.jsoup.Jsoup;
+import org.jsoup.nodes.Document;
+import org.jsoup.nodes.Element;
+import org.jsoup.select.Elements;
 
 import static gui.Globals.*;
 import static gui.Updater.*;
@@ -278,10 +282,27 @@ public class UpdatePopup implements ExtensionPopup {
     }
 
     private UpdateStatus checkAppVersion() {
-        HttpResponse<String> response = updater.getUrl(APP_URL + LATEST_RELEASE_PATH);
-        JsonObject json = stringToJson(response.body());
-        latestVersion = json.get("tag_name").getAsString();
 
+        // Fetch the HTML document from the given URL
+        Document doc = null;
+        try {
+            doc = Jsoup.connect(APP_URL + LATEST_RELEASE_PATH).get();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
+        }
+
+        // Select the links within the directory listing
+        Elements links = doc.select("a");
+
+        // lambda to get a list of all file urls
+        ArrayList<String> fileUrls = links.stream().map(x -> x.attr("href")).filter(x -> x.contains("afct-") && x.contains("-v")).sorted().collect(Collectors.toCollection(ArrayList::new));
+        String latestUrl = fileUrls.get(fileUrls.size()-1);
+        Matcher latest = extractVersionRegex.matcher(latestUrl);
+        if (latest.find()) {
+            latestVersion = latest.group(1);
+        } else {
+            latestVersion = "none";
+        }
         Version comp = compareVersions(currentVersion, latestVersion);
         // if currentVersion is newer than latestVersion, or they are the same, return
         if (comp == Version.NEWER || comp == Version.SAME) {
@@ -289,7 +310,7 @@ public class UpdatePopup implements ExtensionPopup {
         }
 
         version.setText(JUST_NAME + " " + latestVersion);
-        String url = json.get("html_url").getAsString();
+        String url = APP_URL + LATEST_RELEASE_PATH + latestUrl;
         releaseLink.update(url, url);
 
         Matcher m;

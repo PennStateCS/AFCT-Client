@@ -1,5 +1,6 @@
 package gui;
 
+import com.sun.tools.javac.Main;
 import gui.components.SaveFileDialog;
 import gui.popups.UpdatePopup;
 
@@ -27,12 +28,12 @@ public class Updater {
     private String[] headers;
     public UpdatePopup updatePopup;
     public static final Pattern versionRegex = Pattern.compile("v(\\d+)\\.(\\d+)\\.(\\d+)");
+    public static final Pattern extractVersionRegex = Pattern.compile(".*?-(v\\d+\\.\\d+\\.\\d+)\\..*?");
 
     public Updater() {
         // TODO update headers
-        headers = new String[]{"X-GitHub-Api-Version", "2022-11-28",
-                "Authorization", "",
-                "Accept", "application/vnd.github.v3+json"};
+        headers = new String[]{"Authorization", "",
+                "Accept", "application/jar"};
 
         updatePopup = new UpdatePopup();
 
