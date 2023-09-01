@@ -34,6 +34,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.util.Arrays;
 
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
@@ -46,8 +47,7 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
-import static gui.Globals.errorPrint;
-import static gui.Globals.updater;
+import static gui.Globals.*;
 
 /**
  * This is the class that starts JFLAP.
@@ -74,17 +74,6 @@ public class Main {
 	 *            the command line arguments, which may hold files to open
 	 */
 	public static void main(String[] args) {
-		if (args.length >= 2) {
-			if(args[0].equals("update")){
-				File oldJar = new File(args[1]);
-				File rename = new File(oldJar.getParent() + "/BACKUP-" + oldJar.getName());
-				if (!oldJar.renameTo(rename)) {
-					errorPrint("Unable to rename old application jar file.");
-				}
-			}
-		}
-
-
 		// Make sure we're not some old version.
 		try {
 			String v = System.getProperty("java.specification.version");
@@ -154,6 +143,17 @@ public class Main {
 		}		
 		loadPreferences();
 		updater.updatePopup.showOnLoad();
+
+		if (args.length >= 2) {
+			print(Arrays.toString(args));
+			if(args[0].equals("update")){
+				File oldJar = new File(args[1]);
+				File rename = new File(oldJar.getParent() + "/BACKUP-" + oldJar.getName());
+				if (!oldJar.renameTo(rename)) {
+					errorPrint("Unable to rename old application jar file.");
+				}
+			}
+		}
 	}
 	
 	/**

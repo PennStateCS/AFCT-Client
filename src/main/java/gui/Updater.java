@@ -5,6 +5,7 @@ import gui.components.SaveFileDialog;
 import gui.popups.UpdatePopup;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.io.BufferedInputStream;
 import java.io.File;
@@ -57,22 +58,24 @@ public class Updater {
         return paramUrl.toString();
     }
 
+
     private void downloadFile(HttpURLConnection connection, Path targetPath) throws IOException {
         //TODO add a loading bar that displays download progress
+        Component parent = updatePopup.getComponent();
+        int contentLength = connection.getContentLength();
         try (InputStream in = connection.getInputStream()) {
+            ProgressMonitor progressMonitor = new ProgressMonitor(parent,
+                    "Downloading " + targetPath.getFileName().toString(),
+                    "", 0, contentLength);
 
-            InputStream inputStream = new BufferedInputStream(
-                    new ProgressMonitorInputStream(
-                            updatePopup.getComponent(),
-                            "Reading " + targetPath.getFileName().toString(),
-                            in)
-            );
+            progressMonitor.setMillisToPopup(10); // Time to wait before popup, just an example value
 
-            Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            try (InputStream monitorInputStream = new ProgressMonitorInputStream(parent, "Downloading " + targetPath.getFileName().toString(), in)) {
+                Files.copy(monitorInputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+            }
         }
-
-
     }
+
 
     public Result downloadApp(JFrame frame, String latestFile) throws IOException {
         String url = APP_URL + LATEST_RELEASE_PATH + latestFile;
