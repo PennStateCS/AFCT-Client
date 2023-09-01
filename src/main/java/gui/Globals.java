@@ -68,7 +68,7 @@ public class Globals {
     public static ImageIcon getImageIcon(String path) {
         ImageIcon image = new ImageIcon(testingPath + path);
         if (image.getImageLoadStatus() != MediaTracker.COMPLETE) {
-            image = new ImageIcon(Objects.requireNonNull(Main.class.getResource(path)));
+            image = new ImageIcon(Objects.requireNonNull(Globals.class.getResource(path)));
         }
         return image;
     }

@@ -46,6 +46,9 @@ import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.SAXException;
 
+import static gui.Globals.errorPrint;
+import static gui.Globals.updater;
+
 /**
  * This is the class that starts JFLAP.
  * 
@@ -71,8 +74,17 @@ public class Main {
 	 *            the command line arguments, which may hold files to open
 	 */
 	public static void main(String[] args) {
+		if (args.length >= 2) {
+			if(args[0].equals("update")){
+				File oldJar = new File(args[1]);
+				File rename = new File(oldJar.getParent() + "/BACKUP-" + oldJar.getName());
+				if (!oldJar.renameTo(rename)) {
+					errorPrint("Unable to rename old application jar file.");
+				}
+			}
+		}
 
-       
+
 		// Make sure we're not some old version.
 		try {
 			String v = System.getProperty("java.specification.version");
@@ -124,11 +136,12 @@ public class Main {
 		// Prompt the user for newness.
 		NewAction.showNew();
 		if (args.length > 0) {
-			if(args[0].equals("text")){
-				
+			int start = 0;
+			if(args[0].equals("update")){
+				start = 2;
 			}
 			
-			for (int i = 0; i < args.length; i++) {
+			for (int i = start; i < args.length; i++) {
 				Codec[] codecs = (Codec[]) Universe.CODEC_REGISTRY
 				.getDecoders().toArray(new Codec[0]);
 				try {
@@ -140,6 +153,7 @@ public class Main {
 			}
 		}		
 		loadPreferences();
+		updater.updatePopup.showOnLoad();
 	}
 	
 	/**

@@ -5,6 +5,7 @@ import gui.components.SaveFileDialog;
 import gui.popups.UpdatePopup;
 
 import javax.swing.*;
+import java.awt.event.ActionEvent;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -66,11 +67,18 @@ public class Updater {
             String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
             File currentJar = null;
             try {
-                currentJar = new File(gui.Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                currentJar = new File(Updater.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                Path targetPath = (new File(currentJar.getParent() + "/" + latestFile)).toPath();
+                try (InputStream inputStream = connection.getInputStream()) {
+                    Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+                }
+
                 /* Construct command: java -jar application.jar */
                 ArrayList<String> command = new ArrayList<>();
                 command.add(javaBin);
                 command.add("-jar");
+                command.add(targetPath.toString());
+                command.add("update");
                 command.add(currentJar.getPath());
 
                 // TODO: before quitting and starting new process, PROMPT USER TO SAVE ALL ACTIVE WORK before restarting
@@ -152,5 +160,16 @@ public class Updater {
     public HttpResponse<String> getUrl(String url, String branch) {
         Map<String, String> params = Map.of("ref", branch);
         return getUrl(addUrlParams(url, params));
+    }
+
+    public static class CheckUpdateAction extends AbstractAction {
+        public CheckUpdateAction() {
+            super("Check for Updates...");
+        }
+
+        @Override
+        public void actionPerformed(ActionEvent e) {
+            updater.updatePopup.showPopup();
+        }
     }
 }

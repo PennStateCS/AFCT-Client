@@ -20,6 +20,7 @@
 
 package gui.action;
 
+import gui.Updater;
 import gui.environment.*;
 import gui.menu.MenuBarCreator;
 import gui.pumping.CFPumpingLemmaChooser;
@@ -161,6 +162,8 @@ public class NewAction extends RestrictedAction {
             menuBar.add(menu);
 			menu = new JMenu("Help");
 			MenuBarCreator.addItem(menu, new NewHelpAction());
+			//TODO
+			MenuBarCreator.addItem(menu, new Updater.CheckUpdateAction());
 			MenuBarCreator.addItem(menu, new AboutAction());
 			menuBar.add(menu);
             menu = new JMenu("Batch");
