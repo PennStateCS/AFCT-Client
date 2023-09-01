@@ -18,6 +18,7 @@ import java.net.http.HttpResponse;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
+import java.util.ArrayList;
 import java.util.Map;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
@@ -54,18 +55,31 @@ public class Updater {
         return paramUrl.toString();
     }
 
-    public Result downloadApp(JFrame frame, String latestVersion) throws IOException {
-        String url = addUrlParams(APP_URL + JAR_PATH + JAR_NAME, Map.of("ref", latestVersion));
+    public Result downloadApp(JFrame frame, String latestFile) throws IOException {
+        String url = APP_URL + LATEST_RELEASE_PATH + latestFile;
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
         connection.setRequestMethod("GET");
-        connection.setRequestProperty("Authorization", headers[3]);
-        connection.setRequestProperty("Accept", "application/vnd.github.VERSION.raw");
 
         Result result = new Result(Status.GOOD);
 
         if (connection.getResponseCode() == 200) {
-            String jarPath = Main.class.getProtectionDomain().getCodeSource().getLocation().getPath();
-            File targetFile = new SaveFileDialog(frame, new File(jarPath)).display();
+            String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
+            File currentJar = null;
+            try {
+                currentJar = new File(gui.Main.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                /* Construct command: java -jar application.jar */
+                ArrayList<String> command = new ArrayList<>();
+                command.add(javaBin);
+                command.add("-jar");
+                command.add(currentJar.getPath());
+
+                ProcessBuilder builder = new ProcessBuilder(command);
+                builder.start();
+                System.exit(0);
+            } catch (URISyntaxException ignored) { }
+
+            // If auto save and restart fails, do a manual save
+            File targetFile = new SaveFileDialog(frame, new File(latestFile)).display();
             if (targetFile != null) {
                 try (InputStream inputStream = connection.getInputStream()) {
                     Path targetPath = targetFile.toPath();

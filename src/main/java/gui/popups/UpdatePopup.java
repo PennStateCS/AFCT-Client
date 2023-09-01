@@ -32,6 +32,7 @@ public class UpdatePopup implements ExtensionPopup {
     private DateFormat dateFormat;
     private JLabel version;
     private String latestVersion;
+    private String latestFile;
     private LinkLabel releaseLink;
     private final JPanel cards;
     private static final String LOADING = "LOADING";
@@ -202,7 +203,7 @@ public class UpdatePopup implements ExtensionPopup {
 
                     while (result.status == Status.ERROR) {
                         try {
-                            result = updater.downloadApp(frame, latestVersion);
+                            result = updater.downloadApp(frame, latestFile);
                         } catch (IOException e) {
                             String message;
                             if (e instanceof NoRouteToHostException) {
@@ -296,8 +297,8 @@ public class UpdatePopup implements ExtensionPopup {
 
         // lambda to get a list of all file urls
         ArrayList<String> fileUrls = links.stream().map(x -> x.attr("href")).filter(x -> x.contains("afct-") && x.contains("-v")).sorted().collect(Collectors.toCollection(ArrayList::new));
-        String latestUrl = fileUrls.get(fileUrls.size()-1);
-        Matcher latest = extractVersionRegex.matcher(latestUrl);
+        latestFile = fileUrls.get(fileUrls.size() - 1);
+        Matcher latest = extractVersionRegex.matcher(latestFile);
         if (latest.find()) {
             latestVersion = latest.group(1);
         } else {
@@ -310,7 +311,7 @@ public class UpdatePopup implements ExtensionPopup {
         }
 
         version.setText(JUST_NAME + " " + latestVersion);
-        String url = APP_URL + LATEST_RELEASE_PATH + latestUrl;
+        String url = APP_URL + LATEST_RELEASE_PATH + latestFile;
         releaseLink.update(url, url);
 
         Matcher m;
