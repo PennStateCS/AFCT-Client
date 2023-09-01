@@ -342,6 +342,10 @@ public class UpdatePopup implements ExtensionPopup {
         return show(UpdateStatus.AVAILABLE);
     }
 
+    public Component getComponent() {
+        return frame;
+    }
+
     private UpdateStatus show(UpdateStatus updateAvailable) {
         CardLayout cl = (CardLayout)(cards.getLayout());
 

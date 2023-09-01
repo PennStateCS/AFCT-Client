@@ -6,6 +6,7 @@ import gui.popups.UpdatePopup;
 
 import javax.swing.*;
 import java.awt.event.ActionEvent;
+import java.io.BufferedInputStream;
 import java.io.File;
 import java.io.IOException;
 import java.io.InputStream;
@@ -56,6 +57,23 @@ public class Updater {
         return paramUrl.toString();
     }
 
+    private void downloadFile(HttpURLConnection connection, Path targetPath) throws IOException {
+        //TODO add a loading bar that displays download progress
+        try (InputStream in = connection.getInputStream()) {
+
+            InputStream inputStream = new BufferedInputStream(
+                    new ProgressMonitorInputStream(
+                            updatePopup.getComponent(),
+                            "Reading " + targetPath.getFileName().toString(),
+                            in)
+            );
+
+            Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        }
+
+
+    }
+
     public Result downloadApp(JFrame frame, String latestFile) throws IOException {
         String url = APP_URL + LATEST_RELEASE_PATH + latestFile;
         HttpURLConnection connection = (HttpURLConnection) new URL(url).openConnection();
@@ -65,13 +83,12 @@ public class Updater {
 
         if (connection.getResponseCode() == 200) {
             String javaBin = System.getProperty("java.home") + File.separator + "bin" + File.separator + "java";
-            File currentJar = null;
             try {
-                currentJar = new File(Updater.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+                // Can throw URISyntaxException
+                File currentJar = new File(Updater.class.getProtectionDomain().getCodeSource().getLocation().toURI());
+
                 Path targetPath = (new File(currentJar.getParent() + "/" + latestFile)).toPath();
-                try (InputStream inputStream = connection.getInputStream()) {
-                    Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                }
+                downloadFile(connection, targetPath);
 
                 /* Construct command: java -jar application.jar */
                 ArrayList<String> command = new ArrayList<>();
@@ -90,10 +107,8 @@ public class Updater {
             // If auto save and restart fails, do a manual save
             File targetFile = new SaveFileDialog(frame, new File(latestFile)).display();
             if (targetFile != null) {
-                try (InputStream inputStream = connection.getInputStream()) {
-                    Path targetPath = targetFile.toPath();
-                    Files.copy(inputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
-                }
+                Path targetPath = targetFile.toPath();
+                downloadFile(connection, targetPath);
             } else {
                 result.status = Status.WARNING;
             }
