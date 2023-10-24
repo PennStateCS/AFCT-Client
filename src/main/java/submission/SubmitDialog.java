@@ -101,14 +101,33 @@ public class SubmitDialog extends JDialog implements ActionListener {
 
         this.setMinimumSize(new Dimension(300, 0));
 
+        Preferences prefs = Preferences.userNodeForPackage(submission.SubmitDialog.class);
+
         this.serverTF.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
                 if (e.getKeyCode() == KeyEvent.VK_ENTER) {
                     fetchHomework(serverTF.getText());
+                } else {
+                    prefs.put(PREF_SERVER, serverTF.getText());
                 }
             }
         });
+
+        this.usernameTF.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                prefs.put(PREF_USERNAME, usernameTF.getText());
+            }
+        });
+
+        this.passwordTF.addKeyListener(new KeyAdapter() {
+            @Override
+            public void keyReleased(KeyEvent e) {
+                prefs.put(PREF_PASSWORD, passwordTF.getText());
+            }
+        });
+
 
         probCB.addItemListener(new ItemListener() {
             @Override
@@ -244,23 +263,22 @@ public class SubmitDialog extends JDialog implements ActionListener {
                 JOptionPane.showMessageDialog(null, "Unknown error: " + IOUtils.toString(res.getEntity().getContent()));
             }
 
-            if (res.getStatusLine().getStatusCode() != 200) {
+            /*if (res.getStatusLine().getStatusCode() != 200) {
                 this.submit.setEnabled(false);
-            }
+            }*/
 
             f.delete();
         } catch (UnsupportedEncodingException ue) {
             JOptionPane.showMessageDialog(null, "Unsupported encoding");
         } catch (IOException ie) {
             JOptionPane.showMessageDialog(null, "IO Exception");
+        } finally {
+            this.submit.setEnabled(true);
         }
     }
 
-    private void fetchHomework(String server) {
-        String url = StringUtils.stripEnd(server, "/") + "/api/homework";
-
+    private void internalFetchHomework(InputStream is) {
         try {
-            InputStream is = new URL(url).openStream();
             JSONParser parser = new JSONParser();
             String jsonText = IOUtils.toString(is);
 
@@ -298,6 +316,30 @@ public class SubmitDialog extends JDialog implements ActionListener {
             JOptionPane.showMessageDialog(null, "Malformed URL");
         } catch (IOException ie) {
             JOptionPane.showMessageDialog(null, "IO Exception");
+        }
+    }
+
+    private void fetchHomework(String server) {
+        Preferences prefs = Preferences.userNodeForPackage(submission.SubmitDialog.class);
+        String newUrl = server;
+        while (true) {
+            try {
+                // If newUrl does not begin with an http prefix
+                if (!(newUrl.startsWith("http://") || newUrl.startsWith("https://"))) {
+                    newUrl = "http://" + newUrl;
+                }
+                prefs.put(PREF_SERVER, newUrl);
+                this.serverTF.setText(newUrl);
+                String url = StringUtils.stripEnd(newUrl, "/") + "/api/homework";
+                InputStream is = new URL(url).openStream();
+                internalFetchHomework(is);
+                return;
+            } catch (IOException e) {
+                newUrl = JOptionPane.showInputDialog("Unable to connect to server!\nPlease enter a valid AFCT Server URL:", prefs.get(PREF_SERVER, ""));
+                if (newUrl == null || newUrl.isBlank()) {
+                    return;
+                }
+            }
         }
     }
 

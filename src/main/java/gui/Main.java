@@ -148,7 +148,7 @@ public class Main {
 			print(Arrays.toString(args));
 			if(args[0].equals("update")){
 				File oldJar = new File(args[1]);
-				File rename = new File(oldJar.getParent() + "/BACKUP-" + oldJar.getName());
+				File rename = new File(oldJar.getParent() + File.separator + "BACKUP-" + oldJar.getName());
 				if (!oldJar.renameTo(rename)) {
 					errorPrint("Unable to rename old application jar file.");
 				}

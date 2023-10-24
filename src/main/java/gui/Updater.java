@@ -63,16 +63,33 @@ public class Updater {
         //TODO add a loading bar that displays download progress
         Component parent = updatePopup.getComponent();
         int contentLength = connection.getContentLength();
-        try (InputStream in = connection.getInputStream()) {
-            ProgressMonitor progressMonitor = new ProgressMonitor(parent,
-                    "Downloading " + targetPath.getFileName().toString(),
-                    "", 0, contentLength);
 
-            progressMonitor.setMillisToPopup(10); // Time to wait before popup, just an example value
+        // Ensure contentLength is valid before proceeding
+        if (contentLength <= 0) {
+            throw new IOException("Invalid content length: " + contentLength);
+        }
 
-            try (InputStream monitorInputStream = new ProgressMonitorInputStream(parent, "Downloading " + targetPath.getFileName().toString(), in)) {
-                Files.copy(monitorInputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+        // Creating a ProgressMonitor for feedback
+        ProgressMonitor progressMonitor = new ProgressMonitor(parent,
+                "Downloading " + targetPath.getFileName().toString(),
+                "", 0, contentLength);
+
+        progressMonitor.setMillisToPopup(10); // Time to wait before the popup appears
+
+        // Start downloading the file
+        try (InputStream in = connection.getInputStream();
+             InputStream monitorInputStream = new ProgressMonitorInputStream(parent, "Downloading " + targetPath.getFileName().toString(), in)) {
+
+            // Copy the input stream from the connection to the target path, with progress being shown in the monitor
+            Files.copy(monitorInputStream, targetPath, StandardCopyOption.REPLACE_EXISTING);
+
+            // If canceled by the user
+            if (progressMonitor.isCanceled()) {
+                Files.deleteIfExists(targetPath); // Clean up partially downloaded file
+                throw new IOException("Download canceled by user");
             }
+        } finally {
+            progressMonitor.close();
         }
     }
 
@@ -90,7 +107,7 @@ public class Updater {
                 // Can throw URISyntaxException
                 File currentJar = new File(Updater.class.getProtectionDomain().getCodeSource().getLocation().toURI());
 
-                Path targetPath = (new File(currentJar.getParent() + "/" + latestFile)).toPath();
+                Path targetPath = (new File(currentJar.getParent() + File.separator + latestFile)).toPath();
                 downloadFile(connection, targetPath);
 
                 /* Construct command: java -jar application.jar */
