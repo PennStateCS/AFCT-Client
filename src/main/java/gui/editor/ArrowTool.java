@@ -195,6 +195,7 @@ public class ArrowTool extends Tool {
 		if (event.isPopupTrigger())
 			showPopup(event);
 
+        // State selected
 		if (lastClickedState != null) {
 			initialPointState.setLocation(lastClickedState.getPoint());
 			if(!lastClickedState.isSelected()){
@@ -271,6 +272,7 @@ public class ArrowTool extends Tool {
 				if(curState.isSelected()){
 					int x = curState.getPoint().x + p.x - initialPointClick.x;
 					int y = curState.getPoint().y + p.y - initialPointClick.y;
+                    // getAutomaton().updateStateCoordinates(curState.getPoint(), x, y); UNUSED - probably bad for performance
 					curState.getPoint().setLocation(x, y);
 					curState.setPoint(curState.getPoint());									
 				}
@@ -419,7 +421,17 @@ public class ArrowTool extends Tool {
 			}
 		}
 		Rectangle bounds = getView().getDrawer().getSelectionBounds();
-		if(count == 1 && bounds.isEmpty() && lastClickedState!=null) lastClickedState.setSelect(false);
+		if(count == 1 && bounds.isEmpty() && lastClickedState!=null) {
+            lastClickedState.setSelect(false);
+            //getAutomaton().updateStateCoordinates(initialPointState.x, initialPointState.y, lastClickedState.getPoint())
+        }
+//        else if (count > 1) {
+//            for (State curState : states) {
+//                if (curState.isSelected()) {
+//                    getAutomaton().updateStateCoordinates(curState.getPoint());
+//                }
+//            }
+//        }
 		bounds = new Rectangle(0, 0, -1, -1);
 		getView().getDrawer().setSelectionBounds(bounds);
 		lastClickedState = null;
