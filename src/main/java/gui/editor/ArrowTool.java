@@ -260,7 +260,11 @@ public class ArrowTool extends Tool {
 			if (event.isPopupTrigger())
 				return;
 			Point p = event.getPoint();
-			
+
+			//TODO - try to add object snapping so you can easily align states (and add a way to disable this in the menu or by holding a key while dragging)
+			//	store a list/set/tree? (whatever is best for unique elements, fast access, in sorted order) of x coordinates, and another for y coordinates
+			// 	probably this should actually be stored in Automaton.java, so it can be reused, and just updated whenever states are moved, added, or removed.
+
 			State[] states = getView().getDrawer().getAutomaton().getStates();
 			for(int k = 0; k < states.length; k++){
 				State curState = states[k];

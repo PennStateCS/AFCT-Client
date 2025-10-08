@@ -87,6 +87,7 @@ public class Automaton implements Serializable, Cloneable {
 		transitions = new HashSet<>();
 		finalStates = new HashSet<State>();
 		initialState = null;
+		//TODO: track state coordinates here (instead of ArrowTool.java) so they can be used for object snapping
 	}
 
 	/**

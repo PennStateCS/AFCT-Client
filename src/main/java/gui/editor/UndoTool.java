@@ -31,7 +31,11 @@ import javax.swing.KeyStroke;
 
 /**
  * First, let's make it work, then we'll make the interface so you don't have to click undo and then click randomly.
- * 
+ * TODO: make it so that the tool just works without needing to click in the canvas after selecting the tool,
+ * 	just active when tool is clicked  (and rest tool to whatever it was before.
+ *
+ * 	TODO: add using CTRL+Z to undo, and CTRL+SHIFT+Z to redo, instead of requiring the user to click the undo and redo buttons
+ * 		(but leave buttons for those who prefer to use them.
  * @author Henry Qin
  */
 
