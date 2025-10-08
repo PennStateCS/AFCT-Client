@@ -21,6 +21,7 @@
 package automata;
 
 import gui.action.OpenAction;
+import gui.editor.UniqueCoordinateHolder;
 import gui.environment.EnvironmentFrame;
 
 import java.awt.Color;
@@ -78,6 +79,10 @@ public class Automaton implements Serializable, Cloneable {
 	 */
 	private static final long serialVersionUID = 1L;
 
+    private UniqueCoordinateHolder xCoords;
+    private UniqueCoordinateHolder yCoords;
+    private HashMap<State, Point> savedStatePoints;
+
 	/**
 	 * Creates an instance of <CODE>Automaton</CODE>. The created instance
 	 * has no states and no transitions.
@@ -88,6 +93,10 @@ public class Automaton implements Serializable, Cloneable {
 		finalStates = new HashSet<State>();
 		initialState = null;
 		//TODO: track state coordinates here (instead of ArrowTool.java) so they can be used for object snapping
+        xCoords = new UniqueCoordinateHolder();
+        yCoords = new UniqueCoordinateHolder();
+
+        savedStatePoints = new HashMap<>();
 	}
 
 	/**
@@ -448,6 +457,9 @@ public class Automaton implements Serializable, Cloneable {
 		transitionFromStateMap.put(state, new LinkedList<Transition>());
 		transitionToStateMap.put(state, new LinkedList<Transition>());
 		cachedStates = null;
+        xCoords.addCoordinate(state.getPoint().x);
+        yCoords.addCoordinate(state.getPoint().y);
+
 		distributeStateEvent(new AutomataStateEvent(this, state, true, false,
 				false));
 	}
@@ -489,7 +501,35 @@ public class Automaton implements Serializable, Cloneable {
 //				}
 //			}
 //		}
+
+        xCoords.removeCoordinate(state.getPoint().x);
+        yCoords.removeCoordinate(state.getPoint().y);
 	}
+
+    public void updateStateCoordinates(Point oldPoint, Point newPoint) {
+        xCoords.updateCoordinate(oldPoint.x, newPoint.x);
+        yCoords.updateCoordinate(oldPoint.y, newPoint.y);
+    }
+
+    public void updateStateCoordinates(Point oldPoint, int newX, int newY) {
+        xCoords.updateCoordinate(oldPoint.x, newX);
+        yCoords.updateCoordinate(oldPoint.y, newY);
+    }
+
+    public void updateStateCoordinates(int oldX, int oldY, Point newPoint) {
+        xCoords.updateCoordinate(oldX, newPoint.x);
+        yCoords.updateCoordinate(oldY, newPoint.y);
+    }
+
+    public void updateStateCoordinates(State state) {
+        if (savedStatePoints.containsKey(state)) {
+            // If the state is already in the
+            Point oldPoint = savedStatePoints.get(state);
+            updateStateCoordinates(oldPoint, state.getPoint());
+        } else {
+
+        }
+    }
 
 	/**
 	 * Sets the new initial state to <CODE>initialState</CODE> and returns
@@ -542,13 +582,24 @@ public class Automaton implements Serializable, Cloneable {
 	
 	public void selectStatesWithinBounds(Rectangle bounds){
 		State[] states = getStates();
-		for(int k = 0; k < states.length; k++){
-			states[k].setSelect(false);
-			if(bounds.contains(states[k].getPoint())){	
-				states[k].setSelect(true);
-			}
+		for (int k = 0; k < states.length; k++){
+            states[k].setSelect(bounds.contains(states[k].getPoint()));
+//			states[k].setSelect(false);
+//			if(bounds.contains(states[k].getPoint())){
+//				states[k].setSelect(true);
+//			}
 		}
 	}
+
+    public void saveStatePoint(State state) {
+        savedStatePoints.put(state, new Point(state.getPoint().x, state.getPoint().y));
+        System.out.println(savedStatePoints);
+    }
+
+    public void removeSavedStatePoint(State state) {
+        savedStatePoints.remove(state);
+        System.out.println(savedStatePoints);
+    }
 	
 	public ArrayList<Note> getNotes() {
 		return myNotes;
@@ -567,6 +618,8 @@ public class Automaton implements Serializable, Cloneable {
 		}
         distributeNoteEvent(new AutomataNoteEvent(this, note, true, false));
 	}
+
+
 	/**
 	 * Adds a single final state to the set of final states. Note that the
 	 * general automaton can have an unlimited number of final states, and
