@@ -70,8 +70,11 @@ public class SubmitAction extends RestrictedAction {
 	 */
 	public void actionPerformed(ActionEvent e) {
 	    SubmitDialog d = new SubmitDialog(this.environment);
-
-	    d.setVisible(true);
+        d.setContentPane(d.getMainPanel());
+        d.pack();
+        d.setLocationRelativeTo(null);
+        d.setResizable(false);
+        d.setVisible(true);
 	}
 
 	/** The automaton. */
