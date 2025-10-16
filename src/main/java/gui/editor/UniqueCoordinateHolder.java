@@ -81,6 +81,30 @@ public class UniqueCoordinateHolder {
        return null;
     }
 
+    public Integer getClosestValue(int value) {
+        IndexPair closest = getClosestIndices(value);
+        if (closest == null) {
+            return null;
+        } else if (closest.first == closest.second) {
+            return this.coordinates.get(closest.first).value;
+        }
+        else {
+            int first = this.coordinates.get(closest.first).value;
+            int second = this.coordinates.get(closest.second).value;
+            int firstDiff = Math.abs(first - value);
+            int secondDiff = Math.abs(second - value);
+
+            if (firstDiff < secondDiff) {
+                return first;
+            } else if (firstDiff > secondDiff) {
+                return  second;
+            } else {
+                // Default to first - idk if this is the best
+                return firstDiff;
+            }
+        }
+    }
+
     public void addCoordinate(int value) {
         IndexPair closest = getClosestIndices(value);
         if (closest == null) {

@@ -267,12 +267,52 @@ public class ArrowTool extends Tool {
 			// 	probably this should actually be stored in Automaton.java, so it can be reused, and just updated whenever states are moved, added, or removed.
 
 			State[] states = getView().getDrawer().getAutomaton().getStates();
-			for(int k = 0; k < states.length; k++){
+            int count = 0;
+            int avgX = 0;
+            int avgY = 0;
+            for (State state : states) {
+                if (state.isSelected()) {
+                    count++;
+                    avgX += state.getPoint().x;
+                    avgY += state.getPoint().y;
+                }
+            }
+            avgX += p.x - initialPointClick.x;
+            avgY += p.y - initialPointClick.y;
+            if (count != 0) {
+                avgX /= count;
+                avgY /= count;
+            }
+
+            for(int k = 0; k < states.length; k++){
 				State curState = states[k];
 				if(curState.isSelected()){
 					int x = curState.getPoint().x + p.x - initialPointClick.x;
 					int y = curState.getPoint().y + p.y - initialPointClick.y;
                     // getAutomaton().updateStateCoordinates(curState.getPoint(), x, y); UNUSED - probably bad for performance
+
+                    Integer cX = getAutomaton().getClosestX(avgX);
+                    Integer cY = getAutomaton().getClosestY(avgY);
+                    int epsilon = 10;
+// TODO: need to ignore selected states when checking for coords
+                    // Snap to x-aligned states
+                    if (cY != null) {
+                        if (Math.abs(avgY - cY) <= epsilon) {
+                            System.out.printf("avgY = %d, cY = %d\n", avgY, cY);
+                            int offset = avgY - curState.getPoint().y;
+                            y = cY;// + offset;
+                        }
+                    }
+
+                    // Snap to y-aligned states
+                    if (cX != null) {
+                        if (Math.abs(avgX - cX) <= epsilon) {
+                            System.out.printf("avgX = %d, cX = %d\n", avgX, cX);
+                            int offset = avgX - curState.getPoint().x;
+                            x = cX;// + offset;
+                        }
+                    }
+
 					curState.getPoint().setLocation(x, y);
 					curState.setPoint(curState.getPoint());									
 				}

@@ -531,6 +531,24 @@ public class Automaton implements Serializable, Cloneable {
         }
     }
 
+    public void removeStateCoordinates(State state) {
+        xCoords.removeCoordinate(state.getPoint().x);
+        yCoords.removeCoordinate(state.getPoint().y);
+    }
+
+    public void addStateCoordinates(State state) {
+        xCoords.addCoordinate(state.getPoint().x);
+        yCoords.addCoordinate(state.getPoint().y);
+    }
+
+    public Integer getClosestX(int value) {
+        return xCoords.getClosestValue(value);
+    }
+
+    public Integer getClosestY(int value) {
+        return yCoords.getClosestValue(value);
+    }
+
 	/**
 	 * Sets the new initial state to <CODE>initialState</CODE> and returns
 	 * what used to be the initial state, or <CODE>null</CODE> if there was no
