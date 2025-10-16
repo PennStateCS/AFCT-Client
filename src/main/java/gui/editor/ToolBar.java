@@ -124,7 +124,7 @@ public class ToolBar extends JToolBar implements ActionListener {
         button.setSelected(false);
     }
 
-    private boolean handleUndoRedoHoldDelay(boolean isUndoing, ActionEvent e) {
+    private boolean handleUndoRedoHoldDelay(ActionEvent e) {
         // TODO: find a way to check if key is still held instead, or rate limit the action events somehow
         long currentTimeMillis = System.currentTimeMillis();
         if (currentTimeMillis - e.getWhen() > maxUndoOrRedoOffsetTimeMillis) {
@@ -135,20 +135,6 @@ public class ToolBar extends JToolBar implements ActionListener {
             lastUndoOrRedoTimeMillis = currentTimeMillis;
         }
         return result;
-
-
-//        if (isUndoing == undoing) {
-//            long currentTimeMillis = System.currentTimeMillis();
-//            boolean result = (currentTimeMillis - lastUndoOrRedoTimeMillis) > UndoRedoDelayMillis;
-//            if (result) {
-//                lastUndoOrRedoTimeMillis = currentTimeMillis;
-//            }
-//            return result;
-//        } else {
-//            lastUndoOrRedoTimeMillis = System.currentTimeMillis();
-//            undoing = isUndoing;
-//            return true;
-//        }
     }
 
 	/**
@@ -158,12 +144,12 @@ public class ToolBar extends JToolBar implements ActionListener {
 		Tool tool = (Tool) buttonsToTools.get(e.getSource());
 		if (tool != null) {
             if (tool instanceof UndoTool) {
-                if (handleUndoRedoHoldDelay(true, e)) {
+                if (handleUndoRedoHoldDelay(e)) {
                     ((AutomatonEnvironment) getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).restoreStatus();
                 }
                 handleUndoRedoButtonSelection((JToggleButton) e.getSource());
             } else if (tool instanceof RedoTool) {
-                if (handleUndoRedoHoldDelay(false, e)) {
+                if (handleUndoRedoHoldDelay(e)) {
                     ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).redo();
                 }
                 handleUndoRedoButtonSelection((JToggleButton) e.getSource());
@@ -243,6 +229,4 @@ public class ToolBar extends JToolBar implements ActionListener {
     private long UndoRedoDelayMillis = 100;
 
     private long maxUndoOrRedoOffsetTimeMillis = 300;
-
-    //private boolean undoing = false;
 }
