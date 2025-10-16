@@ -24,6 +24,8 @@ import gui.environment.AutomatonEnvironment;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 
+import java.awt.event.InputEvent;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 
 import javax.swing.Icon;
@@ -33,6 +35,7 @@ import javax.swing.KeyStroke;
  * Redo time.
  * 
  * @author Henry Qin
+ * @author Jesse Burdick-Pless
  */
 
 public class RedoTool extends Tool {
@@ -49,7 +52,7 @@ public class RedoTool extends Tool {
 	 * @return the tool tip for this tool
 	 */
 	public String getToolTip() {
-		return "Undoer - Click anywhere in the editor pane after clicking me.";
+		return "Redo (Ctrl+Shift+Z)";
 	}
 
 	/**
@@ -68,7 +71,8 @@ public class RedoTool extends Tool {
 	 * @return the key stroke to switch to this tool
 	 */
 	public KeyStroke getKey() {
-		return KeyStroke.getKeyStroke('r');
+        return KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK);
+		//return KeyStroke.getKeyStroke('r');
 	}
 
 	/**

@@ -24,7 +24,9 @@ import gui.environment.AutomatonEnvironment;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
+import java.awt.event.InputEvent;
 
 import javax.swing.Icon;
 import javax.swing.KeyStroke;
@@ -33,6 +35,7 @@ import javax.swing.KeyStroke;
  * First, let's make it work, then we'll make the interface so you don't have to click undo and then click randomly.
  * 
  * @author Henry Qin
+ * @author Jesse Burdick-Pless
  */
 
 public class UndoTool extends Tool {
@@ -49,7 +52,7 @@ public class UndoTool extends Tool {
 	 * @return the tool tip for this tool
 	 */
 	public String getToolTip() {
-		return "Undoer - Click anywhere in the editor pane after clicking me.";
+		return "Undo (Ctrl+Z)";
 	}
 
 	/**
@@ -68,7 +71,8 @@ public class UndoTool extends Tool {
 	 * @return the key stroke to switch to this tool
 	 */
 	public KeyStroke getKey() {
-		return KeyStroke.getKeyStroke('u');
+        return KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK);
+		//return KeyStroke.getKeyStroke('u');
 	}
 
 	/**

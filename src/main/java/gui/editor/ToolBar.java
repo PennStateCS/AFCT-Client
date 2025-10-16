@@ -30,6 +30,8 @@ import java.awt.Point;
 import java.awt.Toolkit;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+
+import gui.environment.AutomatonEnvironment;
 import gui.viewer.AutomatonDrawer;
 
 import java.net.URL;
@@ -39,6 +41,7 @@ import java.util.*;
  * A tool bar for editing and manipulating an automaton.
  * 
  * @author Thomas Finley
+ * @author Jesse Burdick-Pless
  */
 
 public class ToolBar extends JToolBar implements ActionListener {
@@ -114,15 +117,62 @@ public class ToolBar extends JToolBar implements ActionListener {
 		}
 	}
 
+    private void handleUndoRedoButtonSelection(JToggleButton button) {
+        if (currentButton != null) {
+            currentButton.setSelected(true);
+        }
+        button.setSelected(false);
+    }
+
+    private boolean handleUndoRedoHoldDelay(boolean isUndoing, ActionEvent e) {
+        // TODO: find a way to check if key is still held instead, or rate limit the action events somehow
+        long currentTimeMillis = System.currentTimeMillis();
+        if (currentTimeMillis - e.getWhen() > maxUndoOrRedoOffsetTimeMillis) {
+            return false;
+        }
+        boolean result = (currentTimeMillis - lastUndoOrRedoTimeMillis) > UndoRedoDelayMillis;
+        if (result) {
+            lastUndoOrRedoTimeMillis = currentTimeMillis;
+        }
+        return result;
+
+
+//        if (isUndoing == undoing) {
+//            long currentTimeMillis = System.currentTimeMillis();
+//            boolean result = (currentTimeMillis - lastUndoOrRedoTimeMillis) > UndoRedoDelayMillis;
+//            if (result) {
+//                lastUndoOrRedoTimeMillis = currentTimeMillis;
+//            }
+//            return result;
+//        } else {
+//            lastUndoOrRedoTimeMillis = System.currentTimeMillis();
+//            undoing = isUndoing;
+//            return true;
+//        }
+    }
+
 	/**
 	 * If a tool is clicked, sets the new current tool.
 	 */
 	public void actionPerformed(ActionEvent e) {
 		Tool tool = (Tool) buttonsToTools.get(e.getSource());
 		if (tool != null) {
-			adapter.setAdapter(tool);
-			currentTool = tool;
-			view.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+            if (tool instanceof UndoTool) {
+                if (handleUndoRedoHoldDelay(true, e)) {
+                    ((AutomatonEnvironment) getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).restoreStatus();
+                }
+                handleUndoRedoButtonSelection((JToggleButton) e.getSource());
+            } else if (tool instanceof RedoTool) {
+                if (handleUndoRedoHoldDelay(false, e)) {
+                    ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).redo();
+                }
+                handleUndoRedoButtonSelection((JToggleButton) e.getSource());
+            } else {
+                adapter.setAdapter(tool);
+                currentTool = tool;
+                currentButton = (JToggleButton) e.getSource();
+                view.setCursor(new Cursor(Cursor.DEFAULT_CURSOR));
+            }
 		}
 		if(tool instanceof DeleteTool){
 			   Toolkit toolkit = Toolkit.getDefaultToolkit();  
@@ -184,4 +234,15 @@ public class ToolBar extends JToolBar implements ActionListener {
 	private ToolAdapter adapter;
 
 	private Tool currentTool = null;
+
+	private JToggleButton currentButton = null;
+
+    private long lastUndoOrRedoTimeMillis = 0;
+
+    // TODO allow the user to change these timings in a GUI menu
+    private long UndoRedoDelayMillis = 100;
+
+    private long maxUndoOrRedoOffsetTimeMillis = 300;
+
+    //private boolean undoing = false;
 }
