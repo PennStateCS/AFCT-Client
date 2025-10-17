@@ -468,7 +468,7 @@ public class ArrowTool extends Tool {
 		Rectangle bounds = getView().getDrawer().getSelectionBounds();
 		if(count == 1 && bounds.isEmpty() && lastClickedState!=null) {
             lastClickedState.setSelect(false);
-            //getAutomaton().updateStateCoordinates(initialPointState.x, initialPointState.y, lastClickedState.getPoint())
+            getAutomaton().updateStateCoordinates(lastClickedState, initialPointState.x, initialPointState.y, lastClickedState.getPoint());
         }
 //        else if (count > 1) {
 //            for (State curState : states) {
@@ -477,7 +477,9 @@ public class ArrowTool extends Tool {
 //                }
 //            }
 //        }
-		bounds = new Rectangle(0, 0, -1, -1);
+        System.out.printf("xCoords = %s\n", getAutomaton().xCoords.toString());
+        System.out.printf("yCoords = %s\n\n", getAutomaton().yCoords.toString());
+        bounds = new Rectangle(0, 0, -1, -1);
 		getView().getDrawer().setSelectionBounds(bounds);
 		lastClickedState = null;
 		lastClickedTransition = null;

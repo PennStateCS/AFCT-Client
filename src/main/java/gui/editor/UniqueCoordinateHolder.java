@@ -15,12 +15,10 @@ public class UniqueCoordinateHolder {
      */
     protected class UniqueCoordinate {
         private final int value;
-        private int numStatesAtThisCoordinate;
         private HashSet<State> statesAtThisCoordinate;
 
         public UniqueCoordinate(State state, int value) {
             this.value = value;
-            this.numStatesAtThisCoordinate = 1;
             this.statesAtThisCoordinate = new HashSet<>();
             this.statesAtThisCoordinate.add(state);
         }
@@ -30,17 +28,15 @@ public class UniqueCoordinateHolder {
         }
 
         public void addState(State state) {
-            this.numStatesAtThisCoordinate += 1;
             this.statesAtThisCoordinate.add(state);
         }
 
         public void removeState(State state) {
-            this.numStatesAtThisCoordinate -= 1;
             this.statesAtThisCoordinate.remove(state);
         }
 
         public boolean hasStatesAtThisCoordinate() {
-            return numStatesAtThisCoordinate > 0;
+            return !this.statesAtThisCoordinate.isEmpty();
         }
 
         @Override
@@ -99,7 +95,7 @@ public class UniqueCoordinateHolder {
        return null;
     }
 
-    protected IndexPair getClosestIndices(State state, int value) {
+    protected IndexPair getClosestIndices(State state, int value, boolean allowEquals) {
         int start = 0;
         int end = this.coordinates.size() - 1;
 
@@ -117,15 +113,17 @@ public class UniqueCoordinateHolder {
                     return new IndexPair(start - 1, end);
                 }
             } else {
-                if (this.coordinates.get(middle).statesAtThisCoordinate.contains(state) && this.coordinates.get(middle).statesAtThisCoordinate.size() < 2) {
-                    if (middle == 0 && this.coordinates.size() == 1) {
-                        return null;
-                    } else if (middle == 0) {
-                        return new IndexPair(middle + 1, middle + 1);
-                    } else if (middle == this.coordinates.size() - 1) {
-                        return new IndexPair(middle - 1, middle - 1);
+                if (!allowEquals) {
+                    if (this.coordinates.get(middle).statesAtThisCoordinate.contains(state) && this.coordinates.get(middle).statesAtThisCoordinate.size() < 2) {
+                        if (middle == 0 && this.coordinates.size() == 1) {
+                            return null;
+                        } else if (middle == 0) {
+                            return new IndexPair(middle + 1, middle + 1);
+                        } else if (middle == this.coordinates.size() - 1) {
+                            return new IndexPair(middle - 1, middle - 1);
+                        }
+                        return new IndexPair(middle - 1, middle + 1);
                     }
-                    return new IndexPair(middle - 1, middle + 1);
                 }
                 return new IndexPair(middle, middle);
             }
@@ -135,7 +133,7 @@ public class UniqueCoordinateHolder {
     }
 
     public Integer getClosestValue(State state, int value) {
-        IndexPair closest = getClosestIndices(state, value);
+        IndexPair closest = getClosestIndices(state, value, false);
         if (closest == null) {
             return null;
         } else if (closest.first == closest.second) {
@@ -159,7 +157,7 @@ public class UniqueCoordinateHolder {
     }
 
     public void addCoordinate(State state, int value) {
-        IndexPair closest = getClosestIndices(state, value);
+        IndexPair closest = getClosestIndices(state, value, true);
         if (closest == null) {
             // The list is empty, just add the value
             this.coordinates.add(new UniqueCoordinate(state, value));
@@ -174,7 +172,7 @@ public class UniqueCoordinateHolder {
     }
 
     public void removeCoordinate(State state, int value) {
-        IndexPair closest = getClosestIndices(state, value);
+        IndexPair closest = getClosestIndices(state, value, true);
         if (closest == null) {
             // The list is empty, just return - This branch should never be reached
             return;
