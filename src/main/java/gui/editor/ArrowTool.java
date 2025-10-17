@@ -20,6 +20,7 @@
 
 package gui.editor;
 
+import automata.*;
 import gui.environment.AutomatonEnvironment;
 import gui.environment.Environment;
 import gui.environment.EnvironmentFrame;
@@ -35,6 +36,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -49,10 +51,6 @@ import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 
-import automata.Note;
-import automata.State;
-import automata.StateRenamer;
-import automata.Transition;
 import automata.graph.AutomatonGraph;
 import automata.graph.LayoutAlgorithm;
 import automata.graph.layout.GEMLayoutAlgorithm;
@@ -104,7 +102,7 @@ public class ArrowTool extends Tool {
 	 * @return the tool tip for this tool
 	 */
 	public String getToolTip() {
-		return "Attribute Editor";
+		return "Attribute Editor (Holding Alt toggles object snapping)";
 	}
 
 	/**
@@ -195,6 +193,7 @@ public class ArrowTool extends Tool {
 		if (event.isPopupTrigger())
 			showPopup(event);
 
+        // State selected
 		if (lastClickedState != null) {
 			initialPointState.setLocation(lastClickedState.getPoint());
 			if(!lastClickedState.isSelected()){
@@ -249,28 +248,98 @@ public class ArrowTool extends Tool {
 		return true;
 	}
 
+
 	/**
 	 * On a mouse drag, possibly move a state if the first press was on a state.
 	 */
 	public void mouseDragged(MouseEvent event) {
 
-
-
 		if (lastClickedState != null) {
 			if (event.isPopupTrigger())
 				return;
 			Point p = event.getPoint();
-			
+
+			//TODO - try to add object snapping so you can easily align states (and add a way to disable this in the menu or by holding a key while dragging)
+			//	store a list/set/tree? (whatever is best for unique elements, fast access, in sorted order) of x coordinates, and another for y coordinates
+			// 	probably this should actually be stored in Automaton.java, so it can be reused, and just updated whenever states are moved, added, or removed.
+
 			State[] states = getView().getDrawer().getAutomaton().getStates();
-			for(int k = 0; k < states.length; k++){
+            int count = 0;
+            int avgX = 0;
+            int avgY = 0;
+            for (State state : states) {
+                if (state.isSelected()) {
+                    count++;
+                    avgX += state.getPoint().x;
+                    avgY += state.getPoint().y;
+                }
+            }
+            if (count != 0) {
+                avgX /= count;
+                avgY /= count;
+            }
+            avgX += p.x - initialPointClick.x;
+            avgY += p.y - initialPointClick.y;
+
+            Automaton.XYPair bestXY = getAutomaton().getClosestXY(avgX, avgY);
+            Integer cX = bestXY.x;
+            Integer cY = bestXY.y;
+
+            Integer xSnapping = null;
+            Integer ySnapping = null;
+            boolean doSnapping = snapByDefault;
+            if ((event.getModifiersEx() & InputEvent.ALT_DOWN_MASK) > 0) {
+                doSnapping = !doSnapping;
+            }
+
+            if (count > 1 && !multiSnapping) {
+                doSnapping = false;
+            }
+
+            //System.out.printf("xCoords = %s\n", getAutomaton().xCoords.toString());
+            //System.out.printf("yCoords = %s\n\n", getAutomaton().yCoords.toString());
+            for(int k = 0; k < states.length; k++){
 				State curState = states[k];
 				if(curState.isSelected()){
 					int x = curState.getPoint().x + p.x - initialPointClick.x;
 					int y = curState.getPoint().y + p.y - initialPointClick.y;
+
+                    if (doSnapping) {
+                        // Snap to x-aligned states
+                        if (cY != null) {
+                            if (Math.abs(avgY - cY) + Math.abs(yOffset) <= snappingEpsilon) {
+                                //System.out.printf("avgY = %d, cY = %d\n", avgY, cY);
+                                yOffset += avgY - cY;
+                                int offset = y - avgY;
+                                y = cY;// + offset;
+                                ySnapping = cY;
+                            } else {
+                                y += yOffset;
+                                yOffset = 0;
+                            }
+                        }
+
+                        // Snap to y-aligned states
+                        if (cX != null) {
+                            if (Math.abs(avgX - cX) + Math.abs(xOffset) <= snappingEpsilon) {
+                                //System.out.printf("avgX = %d, cX = %d\n", avgX, cX);
+                                xOffset += avgX - cX;
+                                int offset = avgX - x;
+                                x = cX;// + offset;
+                                xSnapping = cX;
+                            } else {
+                                x += xOffset;
+                                xOffset = 0;
+                            }
+                        }
+                    }
+
 					curState.getPoint().setLocation(x, y);
 					curState.setPoint(curState.getPoint());									
 				}
 			}
+            getView().getDrawer().setXSnappingIndicator(xSnapping);
+            getView().getDrawer().setYSnappingIndicator(ySnapping);
 			initialPointClick = p;
 			getView().repaint();
 		} else if (lastClickedTransition != null) {
@@ -415,8 +484,13 @@ public class ArrowTool extends Tool {
 			}
 		}
 		Rectangle bounds = getView().getDrawer().getSelectionBounds();
-		if(count == 1 && bounds.isEmpty() && lastClickedState!=null) lastClickedState.setSelect(false);
-		bounds = new Rectangle(0, 0, -1, -1);
+		if(count == 1 && bounds.isEmpty() && lastClickedState!=null) {
+            lastClickedState.setSelect(false);
+        }
+
+        getView().getDrawer().setXSnappingIndicator(null);
+        getView().getDrawer().setYSnappingIndicator(null);
+        bounds = new Rectangle(0, 0, -1, -1);
 		getView().getDrawer().setSelectionBounds(bounds);
 		lastClickedState = null;
 		lastClickedTransition = null;
@@ -815,4 +889,11 @@ public class ArrowTool extends Tool {
 	private EmptyMenu emptyMenu = new EmptyMenu();
 
     private Transition selectedTransition = null;
+
+    private int xOffset = 0;
+    private int yOffset = 0;
+    // TODO: make this changeable through a GUI menu
+    private int snappingEpsilon = 10;
+    private boolean multiSnapping = false;
+    private boolean snapByDefault = true;
 }

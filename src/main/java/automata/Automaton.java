@@ -78,6 +78,8 @@ public class Automaton implements Serializable, Cloneable {
 	 */
 	private static final long serialVersionUID = 1L;
 
+    private HashMap<State, Point> savedStatePoints;
+
 	/**
 	 * Creates an instance of <CODE>Automaton</CODE>. The created instance
 	 * has no states and no transitions.
@@ -87,6 +89,8 @@ public class Automaton implements Serializable, Cloneable {
 		transitions = new HashSet<>();
 		finalStates = new HashSet<State>();
 		initialState = null;
+
+        savedStatePoints = new HashMap<>();
 	}
 
 	/**
@@ -399,7 +403,7 @@ public class Automaton implements Serializable, Cloneable {
 	/**
 	 * Moves objects from Array to List
 	 * 
-	 * @param point
+	 * @param array
 	 * @return
 	 */
 	public static List<Object> makeListFromArray(Object[] array) {
@@ -447,6 +451,7 @@ public class Automaton implements Serializable, Cloneable {
 		transitionFromStateMap.put(state, new LinkedList<Transition>());
 		transitionToStateMap.put(state, new LinkedList<Transition>());
 		cachedStates = null;
+
 		distributeStateEvent(new AutomataStateEvent(this, state, true, false,
 				false));
 	}
@@ -489,6 +494,49 @@ public class Automaton implements Serializable, Cloneable {
 //			}
 //		}
 	}
+
+
+    public static class XYPair {
+        public Integer x;
+        public Integer y;
+        public XYPair(Integer x, Integer y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        @Override
+        public String toString() {
+            return "(" + x + ", " + y + ")";
+        }
+    }
+
+    public XYPair getClosestXY(int x, int y) {
+        Integer bestX = null;
+        int minDiffX = Integer.MAX_VALUE;
+        Integer bestY = null;
+        int minDiffY = Integer.MAX_VALUE;
+
+        State[] states = getStates();
+        for (State state : states) {
+            int diffX;
+            int diffY;
+            if (!state.isSelected()) {
+                diffX = Math.abs(x - state.getPoint().x);
+                if (diffX < minDiffX) {
+                    minDiffX = diffX;
+                    bestX = state.getPoint().x;
+                }
+
+                diffY = Math.abs(y - state.getPoint().y);
+                if (diffY < minDiffY) {
+                    minDiffY = diffY;
+                    bestY = state.getPoint().y;
+                }
+            }
+        }
+
+        return new XYPair(bestX, bestY);
+    }
 
 	/**
 	 * Sets the new initial state to <CODE>initialState</CODE> and returns
@@ -541,13 +589,24 @@ public class Automaton implements Serializable, Cloneable {
 	
 	public void selectStatesWithinBounds(Rectangle bounds){
 		State[] states = getStates();
-		for(int k = 0; k < states.length; k++){
-			states[k].setSelect(false);
-			if(bounds.contains(states[k].getPoint())){	
-				states[k].setSelect(true);
-			}
+		for (int k = 0; k < states.length; k++){
+            states[k].setSelect(bounds.contains(states[k].getPoint()));
+//			states[k].setSelect(false);
+//			if(bounds.contains(states[k].getPoint())){
+//				states[k].setSelect(true);
+//			}
 		}
 	}
+
+    public void saveStatePoint(State state) {
+        savedStatePoints.put(state, new Point(state.getPoint().x, state.getPoint().y));
+        //System.out.println(savedStatePoints);
+    }
+
+    public void removeSavedStatePoint(State state) {
+        savedStatePoints.remove(state);
+        //System.out.println(savedStatePoints);
+    }
 	
 	public ArrayList<Note> getNotes() {
 		return myNotes;
@@ -566,6 +625,8 @@ public class Automaton implements Serializable, Cloneable {
 		}
         distributeNoteEvent(new AutomataNoteEvent(this, note, true, false));
 	}
+
+
 	/**
 	 * Adds a single final state to the set of final states. Note that the
 	 * general automaton can have an unlimited number of final states, and

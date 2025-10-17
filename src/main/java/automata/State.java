@@ -321,7 +321,19 @@ public class State implements Serializable {
 	private boolean selected = false;
 
 	public void setSelect(boolean select) {
+        if (selected == select) {
+            return;
+        }
 		selected = select;
+        if (select) {
+            getAutomaton().saveStatePoint(this);
+            // TODO: need to ignore selected states when checking for coords
+            //getAutomaton().removeStateCoordinates(this);
+        } else {
+            //getAutomaton().addStateCoordinates(this);
+            //getAutomaton().updateStateCoordinates(this);
+            getAutomaton().removeSavedStatePoint(this);
+        }
 	}
 	
 	public boolean isSelected(){

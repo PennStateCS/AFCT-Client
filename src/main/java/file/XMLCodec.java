@@ -118,7 +118,8 @@ public class XMLCodec extends Codec {
 			DOMPrettier.makePretty(dom);
 			Source s = new DOMSource(dom);
 			Result r = new StreamResult(file);
-			String path = "file:/" + file.getPath();
+			//String path = "file:/" + file.getPath();
+			String path = file.getPath();
 			r.setSystemId(path);
 			Transformer t = TransformerFactory.newInstance().newTransformer();
 			t.transform(s, r);
