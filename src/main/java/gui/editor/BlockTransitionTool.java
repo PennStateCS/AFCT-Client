@@ -29,6 +29,9 @@ import javax.swing.Icon;
 import javax.swing.KeyStroke;
 
 import automata.State;
+
+import static gui.editor.IconKeeper.getBlockTransitionToolIcon;
+
 /**
  * The Block Transition tool works the same way as a normal transition, except it is between
  * two blocks.
@@ -107,8 +110,7 @@ public class BlockTransitionTool extends TransitionTool {
 	 * @return the transition tool icon
 	 */
 	protected Icon getIcon() {
-        java.net.URL url = getClass().getResource("/ICON/JBP-Icons/block-transition-wip-dark.png");
-		return new javax.swing.ImageIcon(url);
+		return getBlockTransitionToolIcon(this);
 	}
 
 }

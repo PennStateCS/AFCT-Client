@@ -35,6 +35,8 @@ import javax.swing.KeyStroke;
 
 import automata.State;
 
+import static gui.editor.IconKeeper.getTransitionToolIcon;
+
 /**
  * A tool that handles the creation of transitions.
  * 
@@ -86,8 +88,7 @@ public class TransitionTool extends Tool {
 	 * @return the transition tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/JBP-Icons/transition-wip3.png");
-		return new javax.swing.ImageIcon(url);
+		return getTransitionToolIcon(this);
 	}
 
 	/**

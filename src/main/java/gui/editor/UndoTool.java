@@ -30,6 +30,8 @@ import java.awt.event.InputEvent;
 
 import javax.swing.*;
 
+import static gui.editor.IconKeeper.getUndoToolIcon;
+
 /**
  * First, let's make it work, then we'll make the interface so you don't have to click undo and then click randomly.
  * TODO: make it so that the tool just works without needing to click in the canvas after selecting the tool,
@@ -64,12 +66,7 @@ public class UndoTool extends Tool {
 	 * @return the delete tool icon
 	 */
 	protected Icon getIcon() {
-        // TODO: look into replacing all icons with SVGs so they can be scaled for diff resolutions and still look good
-		java.net.URL url = getClass().getResource("/ICON/JBP-Icons/undo-wip2.png");
-        return new ImageIcon(url);
-        //ImageIcon originalIcon = new ImageIcon(url);
-        //Image scaledImage = originalIcon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
-        //return new ImageIcon(scaledImage);
+        return getUndoToolIcon(this);
 	}
 
 	/**

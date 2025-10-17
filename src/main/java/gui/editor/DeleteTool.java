@@ -33,6 +33,8 @@ import javax.swing.KeyStroke;
 import automata.State;
 import automata.Transition;
 
+import static gui.editor.IconKeeper.getDeleteToolIcon;
+
 /**
  * A tool that handles the deletion of states and transitions.
  * 
@@ -63,8 +65,7 @@ public class DeleteTool extends Tool {
 	 * @return the delete tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/JBP-Icons/delete-wip-smallx.png");
-		return new javax.swing.ImageIcon(url);
+		return getDeleteToolIcon(this);
 	}
 
 	/**

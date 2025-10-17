@@ -111,7 +111,7 @@ public class ArrowTool extends Tool {
 	 * @return the arrow tool icon
 	 */
 	protected Icon getIcon() {
-		return getArrowToolIcon(this, false);
+		return getArrowToolIcon(this);
 	}
 
 	/**

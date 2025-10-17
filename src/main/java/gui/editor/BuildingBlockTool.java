@@ -38,6 +38,8 @@ import javax.swing.KeyStroke;
 import automata.State;
 import automata.turing.TuringMachineBuildingBlocks;
 
+import static gui.editor.IconKeeper.getBuildingBlockToolIcon;
+
 /**
  * @author Andrew
  * @author Jesse Burdick-Pless
@@ -87,8 +89,7 @@ public class BuildingBlockTool extends Tool {
 	 * @return the transition tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/blocks.gif");
-		return new javax.swing.ImageIcon(url);
+		return getBuildingBlockToolIcon(this);
 	}
 
 	/**

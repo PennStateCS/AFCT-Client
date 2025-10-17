@@ -31,6 +31,8 @@ import javax.swing.Icon;
 import javax.swing.ImageIcon;
 import javax.swing.KeyStroke;
 
+import static gui.editor.IconKeeper.getStateToolIcon;
+
 /**
  * A tool that handles the creation of states.
  * 
@@ -61,8 +63,7 @@ public class StateTool extends Tool {
 	 * @return the state tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/JBP-Icons/state-wip.png");
-		return new ImageIcon(url);
+		return getStateToolIcon(this);
 	}
 
 	/**

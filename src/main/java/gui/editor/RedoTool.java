@@ -31,6 +31,8 @@ import java.awt.event.MouseEvent;
 import javax.swing.Icon;
 import javax.swing.KeyStroke;
 
+import static gui.editor.IconKeeper.getRedoToolIcon;
+
 /**
  * Redo time.
  * 
@@ -61,8 +63,7 @@ public class RedoTool extends Tool {
 	 * @return the delete tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/JBP-Icons/redo-wip2.png");
-		return new javax.swing.ImageIcon(url);
+		return getRedoToolIcon(this);
 	}
 
 	/**
