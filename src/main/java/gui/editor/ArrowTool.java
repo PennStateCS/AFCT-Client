@@ -20,6 +20,7 @@
 
 package gui.editor;
 
+import automata.*;
 import gui.environment.AutomatonEnvironment;
 import gui.environment.Environment;
 import gui.environment.EnvironmentFrame;
@@ -49,10 +50,6 @@ import javax.swing.JPopupMenu;
 import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 
-import automata.Note;
-import automata.State;
-import automata.StateRenamer;
-import automata.Transition;
 import automata.graph.AutomatonGraph;
 import automata.graph.LayoutAlgorithm;
 import automata.graph.layout.GEMLayoutAlgorithm;
@@ -276,12 +273,16 @@ public class ArrowTool extends Tool {
                     avgY += state.getPoint().y;
                 }
             }
-            avgX += p.x - initialPointClick.x;
-            avgY += p.y - initialPointClick.y;
             if (count != 0) {
                 avgX /= count;
                 avgY /= count;
             }
+            avgX += p.x - initialPointClick.x;
+            avgY += p.y - initialPointClick.y;
+
+            Automaton.XYPair bestXY = getAutomaton().getClosestXY(avgX, avgY);
+            Integer cX = bestXY.x;
+            Integer cY = bestXY.y;
 
             Integer xSnapping = null;
             Integer ySnapping = null;
@@ -295,16 +296,14 @@ public class ArrowTool extends Tool {
 					int y = curState.getPoint().y + p.y - initialPointClick.y;
                     // getAutomaton().updateStateCoordinates(curState.getPoint(), x, y); UNUSED - probably bad for performance
 
-                    Integer cX = getAutomaton().getClosestX(curState, avgX);
-                    Integer cY = getAutomaton().getClosestY(curState, avgY);
-
                     // Snap to x-aligned states
                     if (cY != null) {
                         if (Math.abs(avgY - cY) + Math.abs(yOffset) <= snappingEpsilon) {
                             //System.out.printf("avgY = %d, cY = %d\n", avgY, cY);
                             yOffset += avgY - cY;
-                            y = cY;
-                            ySnapping = y;
+                            int offset = y - avgY;
+                            y = cY;// + offset;
+                            ySnapping = cY;
                         } else {
                             y += yOffset;
                             yOffset = 0;
@@ -316,8 +315,9 @@ public class ArrowTool extends Tool {
                         if (Math.abs(avgX - cX) + Math.abs(xOffset) <= snappingEpsilon) {
                             //System.out.printf("avgX = %d, cX = %d\n", avgX, cX);
                             xOffset += avgX - cX;
-                            x = cX;
-                            xSnapping = x;
+                            int offset = avgX - x;
+                            x = cX;// + offset;
+                            xSnapping = cX;
                         } else {
                             x += xOffset;
                             xOffset = 0;
@@ -476,19 +476,10 @@ public class ArrowTool extends Tool {
 		Rectangle bounds = getView().getDrawer().getSelectionBounds();
 		if(count == 1 && bounds.isEmpty() && lastClickedState!=null) {
             lastClickedState.setSelect(false);
-            getAutomaton().updateStateCoordinates(lastClickedState, initialPointState.x, initialPointState.y, lastClickedState.getPoint());
         }
-//        else if (count > 1) {
-//            for (State curState : states) {
-//                if (curState.isSelected()) {
-//                    getAutomaton().updateStateCoordinates(curState.getPoint());
-//                }
-//            }
-//        }
+
         getView().getDrawer().setXSnappingIndicator(null);
         getView().getDrawer().setYSnappingIndicator(null);
-        System.out.printf("xCoords = %s\n", getAutomaton().xCoords.toString());
-        System.out.printf("yCoords = %s\n\n", getAutomaton().yCoords.toString());
         bounds = new Rectangle(0, 0, -1, -1);
 		getView().getDrawer().setSelectionBounds(bounds);
 		lastClickedState = null;

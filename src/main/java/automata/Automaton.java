@@ -21,7 +21,6 @@
 package automata;
 
 import gui.action.OpenAction;
-import gui.editor.UniqueCoordinateHolder;
 import gui.environment.EnvironmentFrame;
 
 import java.awt.Color;
@@ -79,8 +78,6 @@ public class Automaton implements Serializable, Cloneable {
 	 */
 	private static final long serialVersionUID = 1L;
 
-    public UniqueCoordinateHolder xCoords;
-    public UniqueCoordinateHolder yCoords;
     private HashMap<State, Point> savedStatePoints;
 
 	/**
@@ -92,9 +89,6 @@ public class Automaton implements Serializable, Cloneable {
 		transitions = new HashSet<>();
 		finalStates = new HashSet<State>();
 		initialState = null;
-		//TODO: track state coordinates here (instead of ArrowTool.java) so they can be used for object snapping
-        xCoords = new UniqueCoordinateHolder();
-        yCoords = new UniqueCoordinateHolder();
 
         savedStatePoints = new HashMap<>();
 	}
@@ -457,7 +451,6 @@ public class Automaton implements Serializable, Cloneable {
 		transitionFromStateMap.put(state, new LinkedList<Transition>());
 		transitionToStateMap.put(state, new LinkedList<Transition>());
 		cachedStates = null;
-        this.addStateCoordinates(state);
 
 		distributeStateEvent(new AutomataStateEvent(this, state, true, false,
 				false));
@@ -500,51 +493,49 @@ public class Automaton implements Serializable, Cloneable {
 //				}
 //			}
 //		}
-
-        this.removeStateCoordinates(state);
 	}
 
-    public void updateStateCoordinates(State state, Point oldPoint, Point newPoint) {
-        xCoords.updateCoordinate(state, oldPoint.x, newPoint.x);
-        yCoords.updateCoordinate(state, oldPoint.y, newPoint.y);
-    }
 
-    public void updateStateCoordinates(State state, Point oldPoint, int newX, int newY) {
-        xCoords.updateCoordinate(state, oldPoint.x, newX);
-        yCoords.updateCoordinate(state, oldPoint.y, newY);
-    }
+    public static class XYPair {
+        public Integer x;
+        public Integer y;
+        public XYPair(Integer x, Integer y) {
+            this.x = x;
+            this.y = y;
+        }
 
-    public void updateStateCoordinates(State state, int oldX, int oldY, Point newPoint) {
-        xCoords.updateCoordinate(state, oldX, newPoint.x);
-        yCoords.updateCoordinate(state, oldY, newPoint.y);
-    }
-
-    public void updateStateCoordinates(State state) {
-        if (savedStatePoints.containsKey(state)) {
-            // If the state is already in the
-            Point oldPoint = savedStatePoints.get(state);
-            //updateStateCoordinates(state, oldPoint, state.getPoint());
-        } else {
-
+        @Override
+        public String toString() {
+            return "(" + x + ", " + y + ")";
         }
     }
 
-    public void removeStateCoordinates(State state) {
-        xCoords.removeCoordinate(state, state.getPoint().x);
-        yCoords.removeCoordinate(state, state.getPoint().y);
-    }
+    public XYPair getClosestXY(int x, int y) {
+        Integer bestX = null;
+        int minDiffX = Integer.MAX_VALUE;
+        Integer bestY = null;
+        int minDiffY = Integer.MAX_VALUE;
 
-    public void addStateCoordinates(State state) {
-        xCoords.addCoordinate(state, state.getPoint().x);
-        yCoords.addCoordinate(state, state.getPoint().y);
-    }
+        State[] states = getStates();
+        for (State state : states) {
+            int diffX;
+            int diffY;
+            if (!state.isSelected()) {
+                diffX = Math.abs(x - state.getPoint().x);
+                if (diffX < minDiffX) {
+                    minDiffX = diffX;
+                    bestX = state.getPoint().x;
+                }
 
-    public Integer getClosestX(State state, int value) {
-        return xCoords.getClosestValue(state, value);
-    }
+                diffY = Math.abs(y - state.getPoint().y);
+                if (diffY < minDiffY) {
+                    minDiffY = diffY;
+                    bestY = state.getPoint().y;
+                }
+            }
+        }
 
-    public Integer getClosestY(State state, int value) {
-        return yCoords.getClosestValue(state, value);
+        return new XYPair(bestX, bestY);
     }
 
 	/**
