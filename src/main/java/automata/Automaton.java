@@ -523,7 +523,7 @@ public class Automaton implements Serializable, Cloneable {
         if (savedStatePoints.containsKey(state)) {
             // If the state is already in the
             Point oldPoint = savedStatePoints.get(state);
-            updateStateCoordinates(state, oldPoint, state.getPoint());
+            //updateStateCoordinates(state, oldPoint, state.getPoint());
         } else {
 
         }

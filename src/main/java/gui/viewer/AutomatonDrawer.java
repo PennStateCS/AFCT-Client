@@ -145,6 +145,7 @@ public class AutomatonDrawer {
 		
 		
 		this.drawSelectionBox(g);
+		this.drawObjectSnappingIndicators(g);
 		g.dispose();
 	}
 
@@ -275,6 +276,33 @@ public class AutomatonDrawer {
 	protected void drawSelectionBox(Graphics g){
 		g.drawRect(mySelectionBounds.x, mySelectionBounds.y, mySelectionBounds.width, mySelectionBounds.height);
 	}
+
+    /**
+     * Draws object snapping indicators
+     */
+    protected void drawObjectSnappingIndicators(Graphics g){
+        Color current = g.getColor();
+        g.setColor(Color.red);
+        Rectangle rect = g.getClipBounds();
+
+        if (xSnap != null) {
+            g.drawLine(xSnap, rect.y, xSnap, rect.y + rect.height);
+        }
+        if (ySnap != null) {
+            g.drawLine(rect.x, ySnap, rect.x + rect.width, ySnap);
+        }
+        g.setColor(current);
+        //g.drawRect(mySelectionBounds.x, mySelectionBounds.y, mySelectionBounds.width, mySelectionBounds.height);
+    }
+
+    public void setYSnappingIndicator(Integer y) {
+        ySnap = y;
+    }
+
+    public void setXSnappingIndicator(Integer x) {
+        xSnap = x;
+    }
+
 
 	/**
 	 * Refreshes the <CODE>arrowToTransitionMap</CODE> structure.
@@ -586,6 +614,9 @@ public class AutomatonDrawer {
 	}
 	
 	private Rectangle mySelectionBounds = new Rectangle(0, 0, -1, -1);
+
+    private Integer xSnap = null;
+    private Integer ySnap = null;
 
 	/** The automaton we're handling. */
 	private Automaton automaton;

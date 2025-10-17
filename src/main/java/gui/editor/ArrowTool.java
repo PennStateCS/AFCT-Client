@@ -282,6 +282,10 @@ public class ArrowTool extends Tool {
                 avgX /= count;
                 avgY /= count;
             }
+
+            Integer xSnapping = null;
+            Integer ySnapping = null;
+
             //System.out.printf("xCoords = %s\n", getAutomaton().xCoords.toString());
             //System.out.printf("yCoords = %s\n\n", getAutomaton().yCoords.toString());
             for(int k = 0; k < states.length; k++){
@@ -300,6 +304,7 @@ public class ArrowTool extends Tool {
                             //System.out.printf("avgY = %d, cY = %d\n", avgY, cY);
                             yOffset += avgY - cY;
                             y = cY;
+                            ySnapping = y;
                         } else {
                             y += yOffset;
                             yOffset = 0;
@@ -312,6 +317,7 @@ public class ArrowTool extends Tool {
                             //System.out.printf("avgX = %d, cX = %d\n", avgX, cX);
                             xOffset += avgX - cX;
                             x = cX;
+                            xSnapping = x;
                         } else {
                             x += xOffset;
                             xOffset = 0;
@@ -322,6 +328,8 @@ public class ArrowTool extends Tool {
 					curState.setPoint(curState.getPoint());									
 				}
 			}
+            getView().getDrawer().setXSnappingIndicator(xSnapping);
+            getView().getDrawer().setYSnappingIndicator(ySnapping);
 			initialPointClick = p;
 			getView().repaint();
 		} else if (lastClickedTransition != null) {
@@ -477,6 +485,8 @@ public class ArrowTool extends Tool {
 //                }
 //            }
 //        }
+        getView().getDrawer().setXSnappingIndicator(null);
+        getView().getDrawer().setYSnappingIndicator(null);
         System.out.printf("xCoords = %s\n", getAutomaton().xCoords.toString());
         System.out.printf("yCoords = %s\n\n", getAutomaton().yCoords.toString());
         bounds = new Rectangle(0, 0, -1, -1);
