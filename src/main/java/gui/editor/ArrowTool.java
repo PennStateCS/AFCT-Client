@@ -56,6 +56,8 @@ import automata.turing.TMState;
 import automata.turing.TuringMachineBuildingBlocks;
 import debug.EDebug;
 
+import static gui.editor.IconKeeper.getArrowToolIcon;
+
 /**
  * The arrow tool is used mostly for editing existing objects.
  * 
@@ -109,8 +111,7 @@ public class ArrowTool extends Tool {
 	 * @return the arrow tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/arrow.gif");
-		return new javax.swing.ImageIcon(url);
+		return getArrowToolIcon(this, false);
 	}
 
 	/**
