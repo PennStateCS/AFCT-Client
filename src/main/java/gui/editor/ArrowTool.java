@@ -36,6 +36,7 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.InputEvent;
 import java.awt.event.MouseEvent;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -101,7 +102,7 @@ public class ArrowTool extends Tool {
 	 * @return the tool tip for this tool
 	 */
 	public String getToolTip() {
-		return "Attribute Editor";
+		return "Attribute Editor (Holding Alt toggles object snapping)";
 	}
 
 	/**
@@ -286,6 +287,14 @@ public class ArrowTool extends Tool {
 
             Integer xSnapping = null;
             Integer ySnapping = null;
+            boolean doSnapping = snapByDefault;
+            if ((event.getModifiersEx() & InputEvent.ALT_DOWN_MASK) > 0) {
+                doSnapping = !doSnapping;
+            }
+
+            if (count > 1 && !multiSnapping) {
+                doSnapping = false;
+            }
 
             //System.out.printf("xCoords = %s\n", getAutomaton().xCoords.toString());
             //System.out.printf("yCoords = %s\n\n", getAutomaton().yCoords.toString());
@@ -294,33 +303,34 @@ public class ArrowTool extends Tool {
 				if(curState.isSelected()){
 					int x = curState.getPoint().x + p.x - initialPointClick.x;
 					int y = curState.getPoint().y + p.y - initialPointClick.y;
-                    // getAutomaton().updateStateCoordinates(curState.getPoint(), x, y); UNUSED - probably bad for performance
 
-                    // Snap to x-aligned states
-                    if (cY != null) {
-                        if (Math.abs(avgY - cY) + Math.abs(yOffset) <= snappingEpsilon) {
-                            //System.out.printf("avgY = %d, cY = %d\n", avgY, cY);
-                            yOffset += avgY - cY;
-                            int offset = y - avgY;
-                            y = cY;// + offset;
-                            ySnapping = cY;
-                        } else {
-                            y += yOffset;
-                            yOffset = 0;
+                    if (doSnapping) {
+                        // Snap to x-aligned states
+                        if (cY != null) {
+                            if (Math.abs(avgY - cY) + Math.abs(yOffset) <= snappingEpsilon) {
+                                //System.out.printf("avgY = %d, cY = %d\n", avgY, cY);
+                                yOffset += avgY - cY;
+                                int offset = y - avgY;
+                                y = cY;// + offset;
+                                ySnapping = cY;
+                            } else {
+                                y += yOffset;
+                                yOffset = 0;
+                            }
                         }
-                    }
 
-                    // Snap to y-aligned states
-                    if (cX != null) {
-                        if (Math.abs(avgX - cX) + Math.abs(xOffset) <= snappingEpsilon) {
-                            //System.out.printf("avgX = %d, cX = %d\n", avgX, cX);
-                            xOffset += avgX - cX;
-                            int offset = avgX - x;
-                            x = cX;// + offset;
-                            xSnapping = cX;
-                        } else {
-                            x += xOffset;
-                            xOffset = 0;
+                        // Snap to y-aligned states
+                        if (cX != null) {
+                            if (Math.abs(avgX - cX) + Math.abs(xOffset) <= snappingEpsilon) {
+                                //System.out.printf("avgX = %d, cX = %d\n", avgX, cX);
+                                xOffset += avgX - cX;
+                                int offset = avgX - x;
+                                x = cX;// + offset;
+                                xSnapping = cX;
+                            } else {
+                                x += xOffset;
+                                xOffset = 0;
+                            }
                         }
                     }
 
@@ -882,5 +892,8 @@ public class ArrowTool extends Tool {
 
     private int xOffset = 0;
     private int yOffset = 0;
+    // TODO: make this changeable through a GUI menu
     private int snappingEpsilon = 10;
+    private boolean multiSnapping = false;
+    private boolean snapByDefault = true;
 }

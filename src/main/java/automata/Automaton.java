@@ -600,12 +600,12 @@ public class Automaton implements Serializable, Cloneable {
 
     public void saveStatePoint(State state) {
         savedStatePoints.put(state, new Point(state.getPoint().x, state.getPoint().y));
-        System.out.println(savedStatePoints);
+        //System.out.println(savedStatePoints);
     }
 
     public void removeSavedStatePoint(State state) {
         savedStatePoints.remove(state);
-        System.out.println(savedStatePoints);
+        //System.out.println(savedStatePoints);
     }
 	
 	public ArrayList<Note> getNotes() {
