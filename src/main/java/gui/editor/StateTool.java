@@ -61,7 +61,7 @@ public class StateTool extends Tool {
 	 * @return the state tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/state.gif");
+		java.net.URL url = getClass().getResource("/ICON/JBP-Icons/state-wip.png");
 		return new ImageIcon(url);
 	}
 

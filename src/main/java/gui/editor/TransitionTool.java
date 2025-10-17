@@ -86,7 +86,7 @@ public class TransitionTool extends Tool {
 	 * @return the transition tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/transition.gif");
+		java.net.URL url = getClass().getResource("/ICON/JBP-Icons/transition-wip3.png");
 		return new javax.swing.ImageIcon(url);
 	}
 

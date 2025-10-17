@@ -107,7 +107,7 @@ public class BlockTransitionTool extends TransitionTool {
 	 * @return the transition tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/blockTransition.gif");
+        java.net.URL url = getClass().getResource("/ICON/JBP-Icons/block-transition-wip-dark.png");
 		return new javax.swing.ImageIcon(url);
 	}
 

@@ -63,7 +63,7 @@ public class DeleteTool extends Tool {
 	 * @return the delete tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/delete.gif");
+		java.net.URL url = getClass().getResource("/ICON/JBP-Icons/delete-wip-smallx.png");
 		return new javax.swing.ImageIcon(url);
 	}
 
