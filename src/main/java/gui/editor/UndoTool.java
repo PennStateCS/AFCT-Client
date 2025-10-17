@@ -24,12 +24,12 @@ import gui.environment.AutomatonEnvironment;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.awt.event.InputEvent;
 
-import javax.swing.Icon;
-import javax.swing.KeyStroke;
+import javax.swing.*;
 
 /**
  * First, let's make it work, then we'll make the interface so you don't have to click undo and then click randomly.
@@ -65,8 +65,12 @@ public class UndoTool extends Tool {
 	 * @return the delete tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/undo2.jpg");
-		return new javax.swing.ImageIcon(url);
+        // TODO: look into replacing all icons with SVGs so they can be scaled for diff resolutions and still look good
+		java.net.URL url = getClass().getResource("/ICON/undo-wip2.png");
+        return new ImageIcon(url);
+        //ImageIcon originalIcon = new ImageIcon(url);
+        //Image scaledImage = originalIcon.getImage().getScaledInstance(16, 16, Image.SCALE_SMOOTH);
+        //return new ImageIcon(scaledImage);
 	}
 
 	/**

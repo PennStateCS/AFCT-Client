@@ -61,7 +61,7 @@ public class RedoTool extends Tool {
 	 * @return the delete tool icon
 	 */
 	protected Icon getIcon() {
-		java.net.URL url = getClass().getResource("/ICON/redo.jpg");
+		java.net.URL url = getClass().getResource("/ICON/redo-wip2.png");
 		return new javax.swing.ImageIcon(url);
 	}
 
