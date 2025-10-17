@@ -1,6 +1,9 @@
 package gui.editor;
 
+import automata.State;
+
 import java.util.ArrayList;
+import java.util.HashSet;
 
 /**
  * @author Jesse Burdick-Pless
@@ -13,27 +16,27 @@ public class UniqueCoordinateHolder {
     protected class UniqueCoordinate {
         private final int value;
         private int numStatesAtThisCoordinate;
+        private HashSet<State> statesAtThisCoordinate;
 
-        public UniqueCoordinate(int value, int numStatesAtThisCoordinate) {
-            this.value = value;
-            this.numStatesAtThisCoordinate = numStatesAtThisCoordinate;
-        }
-
-        public UniqueCoordinate(int value) {
+        public UniqueCoordinate(State state, int value) {
             this.value = value;
             this.numStatesAtThisCoordinate = 1;
+            this.statesAtThisCoordinate = new HashSet<>();
+            this.statesAtThisCoordinate.add(state);
         }
 
         public int getValue() {
             return value;
         }
 
-        public void addState() {
+        public void addState(State state) {
             this.numStatesAtThisCoordinate += 1;
+            this.statesAtThisCoordinate.add(state);
         }
 
-        public void removeState() {
+        public void removeState(State state) {
             this.numStatesAtThisCoordinate -= 1;
+            this.statesAtThisCoordinate.remove(state);
         }
 
         public boolean hasStatesAtThisCoordinate() {
@@ -56,7 +59,7 @@ public class UniqueCoordinateHolder {
         this.coordinates = new  ArrayList<>();
     }
 
-    protected IndexPair getClosestIndices(int value) {
+    protected IndexPair OLDgetClosestIndices(int value) {
        int start = 0;
        int end = this.coordinates.size() - 1;
 
@@ -81,8 +84,33 @@ public class UniqueCoordinateHolder {
        return null;
     }
 
-    public Integer getClosestValue(int value) {
-        IndexPair closest = getClosestIndices(value);
+    protected IndexPair getClosestIndices(HashSet<State> states, int value) {
+        int start = 0;
+        int end = this.coordinates.size() - 1;
+
+        while (start <= end) {
+            int middle = ((end - start) / 2) + start;
+
+            if (value < this.coordinates.get(middle).value) {
+                end = middle - 1;
+                if (start == end) {
+                    return new IndexPair(start, end + 1);
+                }
+            } else if (value > this.coordinates.get(middle).value) {
+                start = middle + 1;
+                if (start == end) {
+                    return new IndexPair(start - 1, end);
+                }
+            } else {
+                return new IndexPair(middle, middle);
+            }
+        }
+
+        return null;
+    }
+
+    public Integer getClosestValue(HashSet<State> states, int value) {
+        IndexPair closest = getClosestIndices(states, value);
         if (closest == null) {
             return null;
         } else if (closest.first == closest.second) {
@@ -105,31 +133,31 @@ public class UniqueCoordinateHolder {
         }
     }
 
-    public void addCoordinate(int value) {
+    public void addCoordinate(State state, int value) {
         IndexPair closest = getClosestIndices(value);
         if (closest == null) {
             // The list is empty, just add the value
-            this.coordinates.add(new UniqueCoordinate(value));
+            this.coordinates.add(new UniqueCoordinate(state, value));
         } else if (closest.first == closest.second) {
             // The value already exists in the list, increment the state count for that value
-            this.coordinates.get(closest.first).addState();
+            this.coordinates.get(closest.first).addState(state);
         }
         else {
             // Insert the value between closest.first and closest.second so the list stays sorted
-            this.coordinates.add(closest.second, new UniqueCoordinate(value));
+            this.coordinates.add(closest.second, new UniqueCoordinate(state, value));
         }
     }
 
-    public void removeCoordinate(int value) {
+    public void removeCoordinate(State state, int value) {
         IndexPair closest = getClosestIndices(value);
         if (closest == null) {
             // The list is empty, just return - This branch should never be reached
             return;
         } else if (closest.first == closest.second) {
             // The value already exists in the list, decrement the state count for that value
-            this.coordinates.get(closest.first).removeState();
+            this.coordinates.get(closest.first).removeState(state);
             if (!this.coordinates.get(closest.first).hasStatesAtThisCoordinate()) {
-                // If no states have this coordinate, remove the it from the list
+                // If no states have this coordinate, remove it from the list
                 this.coordinates.remove(closest.first);
             }
         }
@@ -139,12 +167,12 @@ public class UniqueCoordinateHolder {
         }
     }
 
-    public void updateCoordinate(int oldValue, int newValue) {
+    public void updateCoordinate(State state, int oldValue, int newValue) {
         if (oldValue == newValue) {
             return;
         } else {
-            this.removeCoordinate(oldValue);
-            this.addCoordinate(newValue);
+            this.removeCoordinate(state, oldValue);
+            this.addCoordinate(state, newValue);
         }
     }
 }

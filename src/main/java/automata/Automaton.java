@@ -409,7 +409,7 @@ public class Automaton implements Serializable, Cloneable {
 	/**
 	 * Moves objects from Array to List
 	 * 
-	 * @param point
+	 * @param array
 	 * @return
 	 */
 	public static List<Object> makeListFromArray(Object[] array) {
@@ -457,8 +457,8 @@ public class Automaton implements Serializable, Cloneable {
 		transitionFromStateMap.put(state, new LinkedList<Transition>());
 		transitionToStateMap.put(state, new LinkedList<Transition>());
 		cachedStates = null;
-        xCoords.addCoordinate(state.getPoint().x);
-        yCoords.addCoordinate(state.getPoint().y);
+        xCoords.addCoordinate(state, state.getPoint().x);
+        yCoords.addCoordinate(state, state.getPoint().y);
 
 		distributeStateEvent(new AutomataStateEvent(this, state, true, false,
 				false));
@@ -502,43 +502,43 @@ public class Automaton implements Serializable, Cloneable {
 //			}
 //		}
 
-        xCoords.removeCoordinate(state.getPoint().x);
-        yCoords.removeCoordinate(state.getPoint().y);
+        xCoords.removeCoordinate(state, state.getPoint().x);
+        yCoords.removeCoordinate(state, state.getPoint().y);
 	}
 
-    public void updateStateCoordinates(Point oldPoint, Point newPoint) {
-        xCoords.updateCoordinate(oldPoint.x, newPoint.x);
-        yCoords.updateCoordinate(oldPoint.y, newPoint.y);
+    public void updateStateCoordinates(State state, Point oldPoint, Point newPoint) {
+        xCoords.updateCoordinate(state, oldPoint.x, newPoint.x);
+        yCoords.updateCoordinate(state, oldPoint.y, newPoint.y);
     }
 
-    public void updateStateCoordinates(Point oldPoint, int newX, int newY) {
-        xCoords.updateCoordinate(oldPoint.x, newX);
-        yCoords.updateCoordinate(oldPoint.y, newY);
+    public void updateStateCoordinates(State state, Point oldPoint, int newX, int newY) {
+        xCoords.updateCoordinate(state, oldPoint.x, newX);
+        yCoords.updateCoordinate(state, oldPoint.y, newY);
     }
 
-    public void updateStateCoordinates(int oldX, int oldY, Point newPoint) {
-        xCoords.updateCoordinate(oldX, newPoint.x);
-        yCoords.updateCoordinate(oldY, newPoint.y);
+    public void updateStateCoordinates(State state, int oldX, int oldY, Point newPoint) {
+        xCoords.updateCoordinate(state, oldX, newPoint.x);
+        yCoords.updateCoordinate(state, oldY, newPoint.y);
     }
 
     public void updateStateCoordinates(State state) {
         if (savedStatePoints.containsKey(state)) {
             // If the state is already in the
             Point oldPoint = savedStatePoints.get(state);
-            updateStateCoordinates(oldPoint, state.getPoint());
+            updateStateCoordinates(state, oldPoint, state.getPoint());
         } else {
 
         }
     }
 
     public void removeStateCoordinates(State state) {
-        xCoords.removeCoordinate(state.getPoint().x);
-        yCoords.removeCoordinate(state.getPoint().y);
+        xCoords.removeCoordinate(state, state.getPoint().x);
+        yCoords.removeCoordinate(state, state.getPoint().y);
     }
 
     public void addStateCoordinates(State state) {
-        xCoords.addCoordinate(state.getPoint().x);
-        yCoords.addCoordinate(state.getPoint().y);
+        xCoords.addCoordinate(state, state.getPoint().x);
+        yCoords.addCoordinate(state, state.getPoint().y);
     }
 
     public Integer getClosestX(int value) {
