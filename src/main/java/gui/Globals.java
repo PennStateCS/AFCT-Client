@@ -14,6 +14,11 @@ import java.util.prefs.Preferences;
 
 import static java.lang.Math.floor;
 
+/**
+ * A class containing global values, subclasses, and static methods.
+ *
+ * @author Jesse Burdick-Pless
+ */
 public class Globals {
     public static String testingPath = "src\\main\\resources";
     public final static String currentVersion = "v" + gui.Globals.class.getPackage().getImplementationVersion();

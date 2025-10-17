@@ -2,6 +2,11 @@ package gui.editor;
 
 import javax.swing.*;
 
+/**
+ * A class for handling GUI icons.
+ *
+ * @author Jesse Burdick-Pless
+ */
 public class IconKeeper {
     public static boolean useNewIcons = true;
 
