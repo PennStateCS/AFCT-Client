@@ -250,12 +250,22 @@ public class ArrowTool extends Tool {
 		return true;
 	}
 
+
+    private int handleSnapping(int avg, int snap, int val) {
+        if (Math.abs(avg - snap) + Math.abs(xOffset) <= snappingEpsilon) {
+            xOffset += avg - snap;
+            val = snap;
+        } else {
+            val += xOffset;
+            xOffset = 0;
+        }
+        return val;
+    }
+
 	/**
 	 * On a mouse drag, possibly move a state if the first press was on a state.
 	 */
 	public void mouseDragged(MouseEvent event) {
-
-
 
 		if (lastClickedState != null) {
 			if (event.isPopupTrigger())
@@ -283,33 +293,42 @@ public class ArrowTool extends Tool {
                 avgX /= count;
                 avgY /= count;
             }
-
+            //System.out.printf("xCoords = %s\n", getAutomaton().xCoords.toString());
+            //System.out.printf("yCoords = %s\n\n", getAutomaton().yCoords.toString());
             for(int k = 0; k < states.length; k++){
 				State curState = states[k];
 				if(curState.isSelected()){
 					int x = curState.getPoint().x + p.x - initialPointClick.x;
 					int y = curState.getPoint().y + p.y - initialPointClick.y;
                     // getAutomaton().updateStateCoordinates(curState.getPoint(), x, y); UNUSED - probably bad for performance
-
-                    Integer cX = getAutomaton().getClosestX(avgX);
-                    Integer cY = getAutomaton().getClosestY(avgY);
+                    avgX = x;
+                    avgY = y;
+                    Integer cX = getAutomaton().getClosestX(curState, avgX);
+                    Integer cY = getAutomaton().getClosestY(curState, avgY);
                     int epsilon = 10;
 // TODO: need to ignore selected states when checking for coords
                     // Snap to x-aligned states
                     if (cY != null) {
-                        if (Math.abs(avgY - cY) <= epsilon) {
-                            System.out.printf("avgY = %d, cY = %d\n", avgY, cY);
-                            int offset = avgY - curState.getPoint().y;
-                            y = cY;// + offset;
+                        if (Math.abs(avgY - cY) + Math.abs(yOffset) <= epsilon) {
+                            //System.out.printf("avgY = %d, cY = %d\n", avgY, cY);
+                            yOffset += avgY - cY;
+                            y = cY;
+                        } else {
+                            y += yOffset;
+                            yOffset = 0;
                         }
                     }
+                    System.out.printf("avgX = %d, p.x - initialPointClick.x = %d\n", avgX, p.x - initialPointClick.x);
 
                     // Snap to y-aligned states
                     if (cX != null) {
-                        if (Math.abs(avgX - cX) <= epsilon) {
-                            System.out.printf("avgX = %d, cX = %d\n", avgX, cX);
-                            int offset = avgX - curState.getPoint().x;
-                            x = cX;// + offset;
+                        if (Math.abs(avgX - cX) + Math.abs(xOffset) <= epsilon) {
+                            //System.out.printf("avgX = %d, cX = %d\n", avgX, cX);
+                            xOffset += avgX - cX;
+                            x = cX;
+                        } else {
+                            x += xOffset;
+                            xOffset = 0;
                         }
                     }
 
@@ -871,4 +890,8 @@ public class ArrowTool extends Tool {
 	private EmptyMenu emptyMenu = new EmptyMenu();
 
     private Transition selectedTransition = null;
+
+    private int xOffset = 0;
+    private int yOffset = 0;
+    private int snappingEpsilon = 10;
 }

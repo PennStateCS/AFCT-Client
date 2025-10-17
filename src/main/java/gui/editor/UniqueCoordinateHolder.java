@@ -42,6 +42,21 @@ public class UniqueCoordinateHolder {
         public boolean hasStatesAtThisCoordinate() {
             return numStatesAtThisCoordinate > 0;
         }
+
+        @Override
+        public String toString() {
+            StringBuilder sb = new StringBuilder();
+            sb.append("[");
+            sb.append(value);
+            sb.append(":{");
+            for (State state : this.statesAtThisCoordinate) {
+                sb.append(state.toString());
+                sb.append(",");
+            }
+            sb.append("}]");
+
+            return sb.toString();
+        }
     }
 
     protected class IndexPair {
@@ -84,7 +99,7 @@ public class UniqueCoordinateHolder {
        return null;
     }
 
-    protected IndexPair getClosestIndices(HashSet<State> states, int value) {
+    protected IndexPair getClosestIndices(State state, int value) {
         int start = 0;
         int end = this.coordinates.size() - 1;
 
@@ -102,6 +117,16 @@ public class UniqueCoordinateHolder {
                     return new IndexPair(start - 1, end);
                 }
             } else {
+                if (this.coordinates.get(middle).statesAtThisCoordinate.contains(state) && this.coordinates.get(middle).statesAtThisCoordinate.size() < 2) {
+                    if (middle == 0 && this.coordinates.size() == 1) {
+                        return null;
+                    } else if (middle == 0) {
+                        return new IndexPair(middle + 1, middle + 1);
+                    } else if (middle == this.coordinates.size() - 1) {
+                        return new IndexPair(middle - 1, middle - 1);
+                    }
+                    return new IndexPair(middle - 1, middle + 1);
+                }
                 return new IndexPair(middle, middle);
             }
         }
@@ -109,8 +134,8 @@ public class UniqueCoordinateHolder {
         return null;
     }
 
-    public Integer getClosestValue(HashSet<State> states, int value) {
-        IndexPair closest = getClosestIndices(states, value);
+    public Integer getClosestValue(State state, int value) {
+        IndexPair closest = getClosestIndices(state, value);
         if (closest == null) {
             return null;
         } else if (closest.first == closest.second) {
@@ -125,7 +150,7 @@ public class UniqueCoordinateHolder {
             if (firstDiff < secondDiff) {
                 return first;
             } else if (firstDiff > secondDiff) {
-                return  second;
+                return second;
             } else {
                 // Default to first - idk if this is the best
                 return firstDiff;
@@ -134,7 +159,7 @@ public class UniqueCoordinateHolder {
     }
 
     public void addCoordinate(State state, int value) {
-        IndexPair closest = getClosestIndices(value);
+        IndexPair closest = getClosestIndices(state, value);
         if (closest == null) {
             // The list is empty, just add the value
             this.coordinates.add(new UniqueCoordinate(state, value));
@@ -149,7 +174,7 @@ public class UniqueCoordinateHolder {
     }
 
     public void removeCoordinate(State state, int value) {
-        IndexPair closest = getClosestIndices(value);
+        IndexPair closest = getClosestIndices(state, value);
         if (closest == null) {
             // The list is empty, just return - This branch should never be reached
             return;
@@ -174,5 +199,17 @@ public class UniqueCoordinateHolder {
             this.removeCoordinate(state, oldValue);
             this.addCoordinate(state, newValue);
         }
+    }
+
+    @Override
+    public String toString() {
+        StringBuilder sb = new StringBuilder();
+        sb.append("UniqueCoordinateHolder(");
+        for (UniqueCoordinate coordinate : this.coordinates) {
+            sb.append(coordinate.toString());
+            sb.append(", ");
+        }
+        sb.append(")");
+        return sb.toString();
     }
 }

@@ -328,9 +328,9 @@ public class State implements Serializable {
         if (select) {
             getAutomaton().saveStatePoint(this);
             // TODO: need to ignore selected states when checking for coords
-            getAutomaton().removeStateCoordinates(this);
+            //getAutomaton().removeStateCoordinates(this);
         } else {
-            getAutomaton().addStateCoordinates(this);
+            //getAutomaton().addStateCoordinates(this);
             //getAutomaton().updateStateCoordinates(this);
             getAutomaton().removeSavedStatePoint(this);
         }

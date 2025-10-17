@@ -79,8 +79,8 @@ public class Automaton implements Serializable, Cloneable {
 	 */
 	private static final long serialVersionUID = 1L;
 
-    private UniqueCoordinateHolder xCoords;
-    private UniqueCoordinateHolder yCoords;
+    public UniqueCoordinateHolder xCoords;
+    public UniqueCoordinateHolder yCoords;
     private HashMap<State, Point> savedStatePoints;
 
 	/**
@@ -457,8 +457,7 @@ public class Automaton implements Serializable, Cloneable {
 		transitionFromStateMap.put(state, new LinkedList<Transition>());
 		transitionToStateMap.put(state, new LinkedList<Transition>());
 		cachedStates = null;
-        xCoords.addCoordinate(state, state.getPoint().x);
-        yCoords.addCoordinate(state, state.getPoint().y);
+        this.addStateCoordinates(state);
 
 		distributeStateEvent(new AutomataStateEvent(this, state, true, false,
 				false));
@@ -502,8 +501,7 @@ public class Automaton implements Serializable, Cloneable {
 //			}
 //		}
 
-        xCoords.removeCoordinate(state, state.getPoint().x);
-        yCoords.removeCoordinate(state, state.getPoint().y);
+        this.removeStateCoordinates(state);
 	}
 
     public void updateStateCoordinates(State state, Point oldPoint, Point newPoint) {
@@ -541,12 +539,12 @@ public class Automaton implements Serializable, Cloneable {
         yCoords.addCoordinate(state, state.getPoint().y);
     }
 
-    public Integer getClosestX(int value) {
-        return xCoords.getClosestValue(value);
+    public Integer getClosestX(State state, int value) {
+        return xCoords.getClosestValue(state, value);
     }
 
-    public Integer getClosestY(int value) {
-        return yCoords.getClosestValue(value);
+    public Integer getClosestY(State state, int value) {
+        return yCoords.getClosestValue(state, value);
     }
 
 	/**
