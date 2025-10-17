@@ -27,6 +27,7 @@ import gui.viewer.AutomatonPane;
 import java.awt.Graphics;
 import java.awt.Point;
 import java.awt.Stroke;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 
 import javax.swing.Icon;
@@ -38,6 +39,7 @@ import automata.State;
  * A tool that handles the creation of transitions.
  * 
  * @author Thomas Finley
+ * @author Jesse Burdick-Pless
  */
 
 public class TransitionTool extends Tool {
@@ -161,7 +163,7 @@ public class TransitionTool extends Tool {
 	 * @return the keystroke to switch to this tool
 	 */
 	public KeyStroke getKey() {
-		return KeyStroke.getKeyStroke('t');
+		return KeyStroke.getKeyStroke(KeyEvent.VK_T, 0);
 	}
 
 	/** The first clicked state. */

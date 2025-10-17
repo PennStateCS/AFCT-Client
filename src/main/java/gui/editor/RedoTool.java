@@ -52,7 +52,7 @@ public class RedoTool extends Tool {
 	 * @return the tool tip for this tool
 	 */
 	public String getToolTip() {
-		return "Redo (Ctrl+Shift+Z)";
+		return "Redo";
 	}
 
 	/**

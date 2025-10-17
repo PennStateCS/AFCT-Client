@@ -32,6 +32,8 @@ import javax.swing.KeyStroke;
  * The <CODE>Tool</CODE> abstract class is a type of input adapter for the
  * pane used to edit the view, and the automaton. The tool also has the ability
  * to draw on the view.
+ *
+ * @author Unknown, Jesse Burdick-Pless
  */
 
 public abstract class Tool extends SuperMouseAdapter {
@@ -60,11 +62,15 @@ public abstract class Tool extends SuperMouseAdapter {
 		KeyStroke stroke = getKey();
 		if (stroke == null)
 			return tip;
-		int index = findDominant(tip, stroke.getKeyChar());
-		if (index == -1)
-			return tip + "(" + Character.toUpperCase(stroke.getKeyChar()) + ")";
-		return tip.substring(0, index) + "(" + tip.substring(index, index + 1)
-				+ ")" + tip.substring(index + 1, tip.length());
+		int index = findDominant(tip, (char) stroke.getKeyCode());
+		if (index == -1) {
+            if (stroke.getModifiers() == 0) {
+                return tip + "(" + Character.toUpperCase(stroke.getKeyChar()) + ")";
+            } else {
+                return tip;
+            }
+        }
+		return tip.substring(0, index) + "(" + tip.charAt(index) + ")" + tip.substring(index + 1);
 	}
 
 	/**

@@ -56,7 +56,7 @@ public class UndoTool extends Tool {
 	 * @return the tool tip for this tool
 	 */
 	public String getToolTip() {
-		return "Undo (Ctrl+Z)";
+		return "Undo";
 	}
 
 	/**

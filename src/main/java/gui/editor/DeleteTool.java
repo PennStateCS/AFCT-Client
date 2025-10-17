@@ -24,6 +24,7 @@ import gui.environment.AutomatonEnvironment;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 
 import javax.swing.Icon;
@@ -36,6 +37,7 @@ import automata.Transition;
  * A tool that handles the deletion of states and transitions.
  * 
  * @author Thomas Finley
+ * @author Jesse Burdick-Pless
  */
 
 public class DeleteTool extends Tool {
@@ -71,7 +73,7 @@ public class DeleteTool extends Tool {
 	 * @return the key stroke to switch to this tool
 	 */
 	public KeyStroke getKey() {
-		return KeyStroke.getKeyStroke('d');
+		return KeyStroke.getKeyStroke(KeyEvent.VK_D, 0);
 	}
 
 	/**

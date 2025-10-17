@@ -34,10 +34,7 @@ import java.awt.Component;
 import java.awt.GridLayout;
 import java.awt.Point;
 import java.awt.Rectangle;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.InputEvent;
-import java.awt.event.MouseEvent;
+import java.awt.event.*;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
@@ -63,6 +60,7 @@ import debug.EDebug;
  * The arrow tool is used mostly for editing existing objects.
  * 
  * @author Thomas Finley, Henry Qin
+ * @author Jesse Burdick-Pless
  */
 
 public class ArrowTool extends Tool {
@@ -503,7 +501,7 @@ public class ArrowTool extends Tool {
 	 * @return the key stroke that will activate this tool
 	 */
 	public KeyStroke getKey() {
-		return KeyStroke.getKeyStroke('a');
+		return KeyStroke.getKeyStroke(KeyEvent.VK_A, 0);
 	}
 
 	/**

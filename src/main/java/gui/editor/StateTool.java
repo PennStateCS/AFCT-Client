@@ -24,6 +24,7 @@ import gui.environment.AutomatonEnvironment;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 
 import javax.swing.Icon;
@@ -34,6 +35,7 @@ import javax.swing.KeyStroke;
  * A tool that handles the creation of states.
  * 
  * @author Thomas Finley
+ * @author Jesse Burdick-Pless
  */
 
 public class StateTool extends Tool {
@@ -93,7 +95,7 @@ public class StateTool extends Tool {
 	 * @return the keystroke for this tool
 	 */
 	public KeyStroke getKey() {
-		return KeyStroke.getKeyStroke('s');
+		return KeyStroke.getKeyStroke(KeyEvent.VK_S, 0);
 	}
 
 	/** The state that was created. */

@@ -29,6 +29,7 @@ import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 
 import java.awt.Point;
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 
 import javax.swing.Icon;
@@ -39,7 +40,8 @@ import automata.turing.TuringMachineBuildingBlocks;
 
 /**
  * @author Andrew
- * 
+ * @author Jesse Burdick-Pless
+ *
  * TODO To change the template for this generated type comment go to Window -
  * Preferences - Java - Code Style - Code Templates
  */
@@ -141,7 +143,7 @@ public class BuildingBlockTool extends Tool {
 	 * @return the keystroke to switch to this tool
 	 */
 	public KeyStroke getKey() {
-		return KeyStroke.getKeyStroke('b');
+		return KeyStroke.getKeyStroke(KeyEvent.VK_B, 0);
 	}
 
 	/** The first clicked state. */

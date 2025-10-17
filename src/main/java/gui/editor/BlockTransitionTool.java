@@ -22,6 +22,7 @@ package gui.editor;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 
+import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 
 import javax.swing.Icon;
@@ -32,6 +33,7 @@ import automata.State;
  * The Block Transition tool works the same way as a normal transition, except it is between
  * two blocks.
  * @author Bart Bressler and Stephen Reading
+ * @author Jesse Burdick-Pless
  *
  */
 public class BlockTransitionTool extends TransitionTool {
@@ -54,7 +56,7 @@ public class BlockTransitionTool extends TransitionTool {
 	 * @return the keystroke to switch to this tool
 	 */
 	public KeyStroke getKey() {
-		return KeyStroke.getKeyStroke('T');
+		return KeyStroke.getKeyStroke(KeyEvent.VK_T, 0);
 	}
 	
 	/**
@@ -96,7 +98,7 @@ public class BlockTransitionTool extends TransitionTool {
 	 * @return the tool tip for this tool
 	 */
 	public String getToolTip() {
-		return "BlockTransition Creator";
+		return "Block Transition Creator";
 	}
 
 	/**
