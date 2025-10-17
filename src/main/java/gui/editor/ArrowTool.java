@@ -251,17 +251,6 @@ public class ArrowTool extends Tool {
 	}
 
 
-    private int handleSnapping(int avg, int snap, int val) {
-        if (Math.abs(avg - snap) + Math.abs(xOffset) <= snappingEpsilon) {
-            xOffset += avg - snap;
-            val = snap;
-        } else {
-            val += xOffset;
-            xOffset = 0;
-        }
-        return val;
-    }
-
 	/**
 	 * On a mouse drag, possibly move a state if the first press was on a state.
 	 */
@@ -301,15 +290,13 @@ public class ArrowTool extends Tool {
 					int x = curState.getPoint().x + p.x - initialPointClick.x;
 					int y = curState.getPoint().y + p.y - initialPointClick.y;
                     // getAutomaton().updateStateCoordinates(curState.getPoint(), x, y); UNUSED - probably bad for performance
-                    avgX = x;
-                    avgY = y;
+
                     Integer cX = getAutomaton().getClosestX(curState, avgX);
                     Integer cY = getAutomaton().getClosestY(curState, avgY);
-                    int epsilon = 10;
-// TODO: need to ignore selected states when checking for coords
+
                     // Snap to x-aligned states
                     if (cY != null) {
-                        if (Math.abs(avgY - cY) + Math.abs(yOffset) <= epsilon) {
+                        if (Math.abs(avgY - cY) + Math.abs(yOffset) <= snappingEpsilon) {
                             //System.out.printf("avgY = %d, cY = %d\n", avgY, cY);
                             yOffset += avgY - cY;
                             y = cY;
@@ -318,11 +305,10 @@ public class ArrowTool extends Tool {
                             yOffset = 0;
                         }
                     }
-                    System.out.printf("avgX = %d, p.x - initialPointClick.x = %d\n", avgX, p.x - initialPointClick.x);
 
                     // Snap to y-aligned states
                     if (cX != null) {
-                        if (Math.abs(avgX - cX) + Math.abs(xOffset) <= epsilon) {
+                        if (Math.abs(avgX - cX) + Math.abs(xOffset) <= snappingEpsilon) {
                             //System.out.printf("avgX = %d, cX = %d\n", avgX, cX);
                             xOffset += avgX - cX;
                             x = cX;
