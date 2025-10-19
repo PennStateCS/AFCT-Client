@@ -63,15 +63,15 @@ public class AFCTClient
     // Courses
     // ================================================================
     @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> getCourses() throws IOException {
+    public List<Map<String, Object>> getCourses(String userEmail) throws IOException {
         ensureAuth();
-        URL url = new URL(baseUrl + "/api/courses");
+        URL url = new URL(baseUrl + "/api/courses/userCourses/" + userEmail);
         HttpURLConnection conn = openGet(url);
         int status = conn.getResponseCode();
         String body = readBody(conn);
 
         if (status != 200) {
-            throw httpError("GET /api/courses", status, body);
+            throw httpError("GET /api/courses/userCourses/" + userEmail, status, body);
         }
         return parseJson(body, List.class);
     }
