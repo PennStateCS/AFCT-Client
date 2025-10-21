@@ -112,7 +112,7 @@ public class Profile {
     }
 	
 	public Profile(){
-		emptyString = lambda;
+		emptyString = epsilon;
 		transTuringFinal = false;
 		transTuringFinalCheckBox = new JCheckBoxMenuItem("Enable Transitions From Turing Machine Final States");
         transTuringFinalCheckBox.setSelected(transTuringFinal);
@@ -181,7 +181,7 @@ public class Profile {
 	/**
 	 * Sets the color.
 	 * 
-	 * @param new color
+	 * @param color the new color
 	 */
 	public void setColor(String color) {
 		Color = color;
