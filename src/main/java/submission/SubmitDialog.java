@@ -7,6 +7,7 @@ import java.awt.event.ActionListener;
 import gui.environment.Environment;
 import java.io.File;
 import java.io.IOException;
+import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
@@ -17,6 +18,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
     private JTextField email;
     private JPasswordField password;
     private JButton signInButton;
+    private JButton workingButton;
     private JButton submitButton;
     private JTextArea result;
     private JComboBox<String> courseBox;
@@ -56,7 +58,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
         port.setText("3000");
         email.setText("student@example.com");
         password.setText("password123");
-        path.setText("No file selected");
+        path.setText("JFLAP File");
         resultText = "";
 
         // Visuals for combo boxes
@@ -80,6 +82,37 @@ public class SubmitDialog extends JDialog implements ActionListener {
         assignmentBox.setEnabled(false);
         problemBox.setEnabled(false);
         submitButton.setEnabled(false);
+        workingButton.setEnabled(false);
+    }
+
+    /*
+    * Sets the selected file to the JFLAP file that the user was working on
+    * formatted as: [email]_[assignment].jff
+    * @param email (String): the users email used for the file name
+    * @param assignment (String): the assignment name used for the file name
+     */
+    private void setCurrJFLAP(String email, String assignment)
+    {
+        assignment = assignment.replaceAll("[\\s+/:*?\"<>|]", ""); // Remove illegal filename characters (and whitespace)
+        String fileName = email.split("@")[0] + "_" + assignment; // [email]_[assignment] (no whitespace in assignment)
+
+        // Try to create a temp file for the file that the user was working with
+        try{
+            File f = File.createTempFile(fileName, ".jff");
+            JFileChooser fileChooser = new JFileChooser();
+            fileChooser.setSelectedFile(f);
+            selectedFile = f;
+
+            path.setText(fileName + ".jff");
+            f.delete();
+
+            appendResult("Selected file: " + fileName);
+
+        } catch (UnsupportedEncodingException ue) {
+            JOptionPane.showMessageDialog(null, "Unsupported encoding");
+        } catch (IOException ie) {
+            JOptionPane.showMessageDialog(null, "IO Exception");
+        }
     }
 
     private void setupEventHandlers() {
@@ -136,6 +169,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     @Override
                     protected void done() {
                         signInButton.setEnabled(true);
+                        updateWorkingEnabled();
                         updateSubmitEnabled();
                     }
                 }.execute();
@@ -150,6 +184,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     // Reset dependents
                     setModel(assignmentBox, List.of(PLACEHOLDER), false);
                     setModel(problemBox, List.of(PLACEHOLDER), false);
+                    updateWorkingEnabled();
                     updateSubmitEnabled();
                     return;
                 }
@@ -165,12 +200,28 @@ public class SubmitDialog extends JDialog implements ActionListener {
                 if (isPopulating) return;
                 if (assignmentBox.getSelectedIndex() <= 0) {
                     setModel(problemBox, List.of(PLACEHOLDER), false);
+                    updateWorkingEnabled();
                     updateSubmitEnabled();
                     return;
                 }
                 appendResult("Selected assignment: " + assignmentBox.getSelectedItem());
                 appendResult("Loading problems for selected assignment…");
                 loadProblemsAsync();
+            }
+        });
+
+        problemBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (isPopulating) return;
+                if (problemBox.getSelectedIndex() <= 0) {
+                    updateWorkingEnabled();
+                    updateSubmitEnabled();
+                    return;
+                }
+                appendResult("Selected problem: " + problemBox.getSelectedItem());
+                updateWorkingEnabled(); // Not needed for other boxes because this one cannot be filled without the others
+                updateSubmitEnabled(); // Not needed for other boxes because this one cannot be filled without the others
             }
         });
 
@@ -185,6 +236,28 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     appendResult("Selected file: " + selectedFile.getAbsolutePath());
                     updateSubmitEnabled();
                 }
+            }
+        });
+
+        workingButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (client == null || !client.isAuthenticated()) {
+                    JOptionPane.showMessageDialog(mainForm, "You must be authenticated to add file.", "Authentication Required", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (assignmentBox.getSelectedIndex() <= 0) {
+                    JOptionPane.showMessageDialog(mainForm, "No assignment selected", "Please select an assignment to add file.", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (problemBox.getSelectedIndex() <= 0) {
+                    JOptionPane.showMessageDialog(mainForm, "No problem selected", "Please select a problem to add file.", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
+                appendResult("Setting file to the working file…");
+
+                setCurrJFLAP(email.getText(), String.valueOf(problemBox.getSelectedItem()));
             }
         });
 
@@ -292,6 +365,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
             @Override
             protected void done() {
                 setModel(assignmentBox, titles, true);
+                updateWorkingEnabled();
                 updateSubmitEnabled();
             }
         }.execute();
@@ -330,6 +404,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
             @Override
             protected void done() {
                 setModel(problemBox, titles, true);
+                updateWorkingEnabled();
                 updateSubmitEnabled();
             }
         }.execute();
@@ -357,12 +432,26 @@ public class SubmitDialog extends JDialog implements ActionListener {
         result.setCaretPosition(result.getDocument().getLength());
     }
 
+    private void updateWorkingEnabled() {
+        boolean ready =
+                client != null && client.isAuthenticated() &&
+                        assignmentBox.isEnabled() && assignmentBox.getSelectedIndex() > 0 &&
+                        problemBox.isEnabled() && problemBox.getSelectedIndex() > 0;
+
+        // Enable working button (if ready)
+        workingButton.setEnabled(ready);
+    }
+
     private void updateSubmitEnabled() {
         boolean ready =
                 client != null && client.isAuthenticated() &&
                         assignmentBox.isEnabled() && assignmentBox.getSelectedIndex() > 0 &&
-                        problemBox.isEnabled() && problemBox.getSelectedIndex() > 0 &&
-                        selectedFile != null;
+                        problemBox.isEnabled() && problemBox.getSelectedIndex() > 0;
+
+        // Set current submit file to JFLAP file, when file is null
+        if (selectedFile == null && ready) { setCurrJFLAP(email.getText(), String.valueOf(problemBox.getSelectedItem())); }
+
+        // Enable submit button (if ready)
         submitButton.setEnabled(ready);
     }
 
