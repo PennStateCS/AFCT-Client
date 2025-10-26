@@ -4,10 +4,11 @@ import javax.swing.*;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+
+import file.XMLCodec;
 import gui.environment.Environment;
 import java.io.File;
 import java.io.IOException;
-import java.io.UnsupportedEncodingException;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
@@ -93,25 +94,23 @@ public class SubmitDialog extends JDialog implements ActionListener {
      */
     private void setCurrJFLAP(String email, String assignment)
     {
-        assignment = assignment.replaceAll("[\\s+/:*?\"<>|]", ""); // Remove illegal filename characters (and whitespace)
+        assignment = assignment.replaceAll("[\\s\\\\/:*?\"<>|]", ""); // Remove illegal filename characters (and whitespace)
         String fileName = email.split("@")[0] + "_" + assignment; // [email]_[assignment] (no whitespace in assignment)
 
         // Try to create a temp file for the file that the user was working with
         try{
-            File f = File.createTempFile(fileName, ".jff");
-            JFileChooser fileChooser = new JFileChooser();
-            fileChooser.setSelectedFile(f);
+            // Create a temp file and encode the user's JFLAP program as the file
+            String tmpDir = System.getProperty("java.io.tmpdir");
+            File f = new File(tmpDir, fileName + ".jff");
+            XMLCodec x = new XMLCodec();
+            x.encode(this.env.getObject(), f, null);
+
+            // Set the selected file and notify user
             selectedFile = f;
-
-            path.setText(fileName + ".jff");
-            f.delete();
-
-            appendResult("Selected file: " + fileName);
-
-        } catch (UnsupportedEncodingException ue) {
-            JOptionPane.showMessageDialog(null, "Unsupported encoding");
-        } catch (IOException ie) {
-            JOptionPane.showMessageDialog(null, "IO Exception");
+            path.setText(selectedFile.getName());
+            appendResult("Selected file: " + selectedFile.getAbsolutePath());
+        } catch (Exception e) {
+            JOptionPane.showMessageDialog(null, "Error saving temp file: " + e.getMessage());
         }
     }
 
@@ -139,14 +138,16 @@ public class SubmitDialog extends JDialog implements ActionListener {
                             if (token != null && !token.isBlank()) {
                                 publish("Authentication Success.");
                                 publish("Loading courses…");
+
                                 // Load courses on worker thread
                                 List<Map<String, Object>> fetched = client.getCourses(userEmail);
                                 courses = fetched;
-                                List<String> names = new ArrayList<>();
+                                List<String> names = new ArrayList<>(fetched.size() + 1);
                                 names.add(PLACEHOLDER);
                                 for (Map<String, Object> course : fetched) {
                                     names.add((String) course.get("name"));
                                 }
+
                                 SwingUtilities.invokeLater(() -> {
                                     setModel(courseBox, names, true);
                                     setModel(assignmentBox, List.of(PLACEHOLDER), false);
