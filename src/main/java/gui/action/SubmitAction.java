@@ -24,12 +24,14 @@ import java.io.Serializable;
 
 import gui.deterministic.ConversionPane;
 import gui.environment.Environment;
+import gui.environment.Universe;
 import gui.environment.tag.CriticalTag;
 
 import java.awt.event.ActionEvent;
 
 import javax.swing.JOptionPane;
 
+import submission.LegacySubmitDialog;
 import submission.SubmitDialog;
 
 /**
@@ -69,12 +71,17 @@ public class SubmitAction extends RestrictedAction {
 	 *            the action event
 	 */
 	public void actionPerformed(ActionEvent e) {
-	    SubmitDialog d = new SubmitDialog(this.environment);
-        d.setContentPane(d.getMainPanel());
-        d.pack();
-        d.setLocationRelativeTo(null);
-        d.setResizable(false);
-        d.setVisible(true);
+        if (Universe.curProfile.getUseLegacySubmissionGui()) {
+            LegacySubmitDialog d = new LegacySubmitDialog(this.environment);
+            d.setVisible(true);
+        } else {
+            SubmitDialog d = new SubmitDialog(this.environment);
+            d.setContentPane(d.getMainPanel());
+            d.pack();
+            d.setLocationRelativeTo(null);
+            d.setResizable(false);
+            d.setVisible(true);
+        }
 	}
 
 	/** The automaton. */

@@ -194,7 +194,7 @@ public class Profile {
         legacyUseLegacySubmissionGuiCheckBox.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e)
             {
-                setUseLegacyIcons(legacyUseLegacySubmissionGuiCheckBox.isSelected());
+                setUseLegacySubmissionGui(legacyUseLegacySubmissionGuiCheckBox.isSelected());
                 savePreferences();
             }
         });
@@ -283,6 +283,10 @@ public class Profile {
     public void setUseLegacySubmissionGui(boolean t) {
         legacyUseLegacySubmissionGui = t;
         legacyUseLegacySubmissionGuiCheckBox.setSelected(t);
+    }
+
+    public boolean getUseLegacySubmissionGui() {
+        return legacyUseLegacySubmissionGui;
     }
 
 	/**
