@@ -24,6 +24,7 @@ import gui.environment.AutomatonEnvironment;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 
+import java.awt.*;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 
@@ -76,6 +77,10 @@ public class StateTool extends Tool {
 		if (getDrawer().getAutomaton().getEnvironmentFrame() !=null)
     		((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
 		state = getAutomaton().createState(event.getPoint());
+        state.setSelect(true);
+
+        initialPointClick.setLocation(event.getPoint());
+
 		getView().repaint();
 	}
 
@@ -86,9 +91,31 @@ public class StateTool extends Tool {
 	 *            the mouse event
 	 */
 	public void mouseDragged(MouseEvent event) {
-		state.setPoint(event.getPoint());
+        ObjectSnappingHandler objectSnappingHandler = ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
+        boolean doSnapping = objectSnappingHandler.whenMouseDragged(event, null, initialPointClick, getAutomaton(), state);
+        Point p = event.getPoint();
+        int x = state.getPoint().x + p.x - initialPointClick.x;
+        int y = state.getPoint().y + p.y - initialPointClick.y;
+        if (doSnapping) {
+            Point temp = objectSnappingHandler.snapState(x, y);
+            x = temp.x;
+            y = temp.y;
+        }
+        state.getPoint().setLocation(x, y);
+        state.setPoint(state.getPoint());
+        objectSnappingHandler.showSnappingIndicators(getView());
+        initialPointClick = p;
+
+        //state.setPoint(event.getPoint());
 		getView().repaint();
 	}
+
+    public void mouseReleased(MouseEvent event) {
+        ObjectSnappingHandler objectSnappingHandler = ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
+        objectSnappingHandler.clearSnappingIndicators(getView());
+        state.setSelect(false);
+        getView().repaint();
+    }
 
 	/**
 	 * Returns the keystroke to switch to this tool, S.
@@ -101,4 +128,7 @@ public class StateTool extends Tool {
 
 	/** The state that was created. */
 	automata.State state = null;
+
+    /** The initial point of the click. */
+    private Point initialPointClick = new Point();
 }

@@ -263,6 +263,10 @@ public class ArrowTool extends Tool {
 			// 	probably this should actually be stored in Automaton.java, so it can be reused, and just updated whenever states are moved, added, or removed.
 
 			State[] states = getView().getDrawer().getAutomaton().getStates();
+
+            ObjectSnappingHandler objectSnappingHandler = ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
+            boolean doSnapping = objectSnappingHandler.whenMouseDragged(event, states, initialPointClick, getAutomaton());
+            /*
             int count = 0;
             int avgX = 0;
             int avgY = 0;
@@ -294,6 +298,7 @@ public class ArrowTool extends Tool {
             if (count > 1 && !multiSnapping) {
                 doSnapping = false;
             }
+            */
 
             //System.out.printf("xCoords = %s\n", getAutomaton().xCoords.toString());
             //System.out.printf("yCoords = %s\n\n", getAutomaton().yCoords.toString());
@@ -304,6 +309,10 @@ public class ArrowTool extends Tool {
 					int y = curState.getPoint().y + p.y - initialPointClick.y;
 
                     if (doSnapping) {
+                        Point temp = objectSnappingHandler.snapState(x, y);
+                        x = temp.x;
+                        y = temp.y;
+                        /*
                         // Snap to x-aligned states
                         if (cY != null) {
                             if (Math.abs(avgY - cY) + Math.abs(yOffset) <= snappingEpsilon) {
@@ -331,14 +340,14 @@ public class ArrowTool extends Tool {
                                 xOffset = 0;
                             }
                         }
+                        */
                     }
 
 					curState.getPoint().setLocation(x, y);
 					curState.setPoint(curState.getPoint());									
 				}
 			}
-            getView().getDrawer().setXSnappingIndicator(xSnapping);
-            getView().getDrawer().setYSnappingIndicator(ySnapping);
+            objectSnappingHandler.showSnappingIndicators(getView());
 			initialPointClick = p;
 			getView().repaint();
 		} else if (lastClickedTransition != null) {
@@ -487,8 +496,13 @@ public class ArrowTool extends Tool {
             lastClickedState.setSelect(false);
         }
 
+        ObjectSnappingHandler objectSnappingHandler = ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
+        objectSnappingHandler.clearSnappingIndicators(getView());
+        /*
         getView().getDrawer().setXSnappingIndicator(null);
         getView().getDrawer().setYSnappingIndicator(null);
+        */
+
         bounds = new Rectangle(0, 0, -1, -1);
 		getView().getDrawer().setSelectionBounds(bounds);
 		lastClickedState = null;
@@ -888,11 +902,4 @@ public class ArrowTool extends Tool {
 	private EmptyMenu emptyMenu = new EmptyMenu();
 
     private Transition selectedTransition = null;
-
-    private int xOffset = 0;
-    private int yOffset = 0;
-    // TODO: make this changeable through a GUI menu
-    private int snappingEpsilon = 10;
-    private boolean multiSnapping = false;
-    private boolean snapByDefault = true;
 }

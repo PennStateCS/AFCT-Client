@@ -20,6 +20,7 @@
 
 package gui.environment;
 
+import gui.editor.ObjectSnappingHandler;
 import gui.editor.UndoKeeper;
 import automata.Automaton;
 import automata.event.AutomataStateEvent;
@@ -51,6 +52,7 @@ public class AutomatonEnvironment extends Environment {
 		automaton.addTransitionListener(listener);
 		automaton.addNoteListener(listener);
 		initUndoKeeper();
+        objectSnappingHandler = new ObjectSnappingHandler();
 	}
 
 	/**
@@ -90,6 +92,12 @@ public class AutomatonEnvironment extends Environment {
 	
 	private UndoKeeper myKeeper;
     /*End undo methods*/
+
+    private ObjectSnappingHandler objectSnappingHandler;
+
+    public ObjectSnappingHandler getObjectSnappingHandler() {
+        return objectSnappingHandler;
+    }
 
 	/**
 	 * The transition and state listener for an automaton detects if there are
