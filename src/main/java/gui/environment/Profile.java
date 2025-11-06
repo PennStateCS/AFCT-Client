@@ -188,13 +188,13 @@ public class Profile {
             }
         });
 
-        legacyUseLegacySubmissionGui = false; //defaults to false
+        legacyUseLegacySubmissionGui = true; //TODO: should defaults to false
         legacyUseLegacySubmissionGuiCheckBox = new JCheckBoxMenuItem("Use legacy submission interface");
         legacyUseLegacySubmissionGuiCheckBox.setSelected(legacyUseLegacySubmissionGui);
         legacyUseLegacySubmissionGuiCheckBox.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e)
             {
-                setUseLegacyIcons(legacyUseLegacySubmissionGuiCheckBox.isSelected());
+                setUseLegacySubmissionGui(legacyUseLegacySubmissionGuiCheckBox.isSelected());
                 savePreferences();
             }
         });
@@ -283,6 +283,10 @@ public class Profile {
     public void setUseLegacySubmissionGui(boolean t) {
         legacyUseLegacySubmissionGui = t;
         legacyUseLegacySubmissionGuiCheckBox.setSelected(t);
+    }
+
+    public boolean getUseLegacySubmissionGui() {
+        return legacyUseLegacySubmissionGui;
     }
 
 	/**
