@@ -76,6 +76,8 @@ public class StateTool extends Tool {
 	public void mousePressed(MouseEvent event) {
 		if (getDrawer().getAutomaton().getEnvironmentFrame() !=null)
     		((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
+        getAutomaton().deselectAllStates();
+        getView().didBoundsSelection = false;
 		state = getAutomaton().createState(event.getPoint());
         state.setSelect(true);
 
@@ -113,7 +115,7 @@ public class StateTool extends Tool {
     public void mouseReleased(MouseEvent event) {
         ObjectSnappingHandler objectSnappingHandler = ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
         objectSnappingHandler.clearSnappingIndicators(getView());
-        state.setSelect(false);
+        //state.setSelect(false);
         getView().repaint();
     }
 

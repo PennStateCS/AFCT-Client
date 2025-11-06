@@ -140,12 +140,22 @@ public class ArrowTool extends Tool {
         }
 		Transition trans = getDrawer().transitionAtPoint(event.getPoint());
 		if (trans == null){
-			Rectangle bounds;
-			bounds = new Rectangle(0, 0, -1, -1);
+			Rectangle bounds = new Rectangle(0, 0, -1, -1);
 			getView().getDrawer().getAutomaton().selectStatesWithinBounds(bounds);
+
+            lastClickedState = getDrawer().stateAtPoint(event.getPoint());
+            if (lastClickedState != null) {
+                lastClickedState.setSelect(true);
+            }
+
 			getView().repaint();
 			return;
 		}
+
+        if (lastClickedState == null){
+            getView().didBoundsSelection = false;
+        }
+
         EDebug.print("Beginning to Edit with creator "+ creator.getClass());
 		creator.editTransition(trans, event.getPoint());
 
@@ -181,12 +191,26 @@ public class ArrowTool extends Tool {
 		} else {
             EDebug.print("I cannot preserve what you ask");
 		}
+
+        State newLastClickedState = getDrawer().stateAtPoint(event.getPoint());
+        if (newLastClickedState != null) {
+            if (!newLastClickedState.isSelected()) {
+                getView().didBoundsSelection = false;
+            }
+        }
+
+        if (!getView().didBoundsSelection) {
+            getAutomaton().deselectAllStates();
+        }
+
 		initialPointClick.setLocation(event.getPoint());
 		lastClickedState = getDrawer().stateAtPoint(event.getPoint());
-		if (lastClickedState == null)
-			lastClickedTransition = getDrawer().transitionAtPoint(
-					event.getPoint());
-
+		if (lastClickedState == null) {
+            lastClickedTransition = getDrawer().transitionAtPoint(
+                    event.getPoint());
+        } else {
+            lastClickedState.setSelect(true);
+        }
 
 		// Should we show a popup menu?
 		if (event.isPopupTrigger())
@@ -435,8 +459,8 @@ public class ArrowTool extends Tool {
 			initialPointClick.setLocation(p);
 			getView().repaint();
 			//EDebug.print(getView().getDrawer().selfTransitionMap);
-		}
-		else{
+		} else {
+            getView().didBoundsSelection = true;
 			Rectangle bounds;
 			int nowX = event.getPoint().x;
 			int nowY = event.getPoint().y;
@@ -492,9 +516,7 @@ public class ArrowTool extends Tool {
 			}
 		}
 		Rectangle bounds = getView().getDrawer().getSelectionBounds();
-		if(count == 1 && bounds.isEmpty() && lastClickedState!=null) {
-            lastClickedState.setSelect(false);
-        }
+//		if(count == 1 && bounds.isEmpty() && lastClickedState!=null) {lastClickedState.setSelect(false);}
 
         ObjectSnappingHandler objectSnappingHandler = ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
         objectSnappingHandler.clearSnappingIndicators(getView());
@@ -570,6 +592,9 @@ public class ArrowTool extends Tool {
 		}
 
 		public void show(State state, Component comp, Point at) {
+            getAutomaton().deselectAllStates();
+            state.setSelect(true);
+
 			this.remove(editBlock);
 			this.state = state;
 			//System.out.println(getDrawer().getAutomaton().getEnvironmentFrame());

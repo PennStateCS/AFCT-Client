@@ -177,7 +177,7 @@ public class Profile {
 
 
         legacyUseLegacyIcons = false; //defaults to false
-        legacyUseLegacyIconsCheckBox = new JCheckBoxMenuItem("Use legacy icons");
+        legacyUseLegacyIconsCheckBox = new JCheckBoxMenuItem("Use legacy toolbar icons");
         legacyUseLegacyIconsCheckBox.setSelected(legacyUseLegacyIcons);
         legacyUseLegacyIconsCheckBox.addActionListener(new ActionListener() {
             public void actionPerformed(ActionEvent e)

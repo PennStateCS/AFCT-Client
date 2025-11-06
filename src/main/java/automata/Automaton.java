@@ -588,6 +588,9 @@ public class Automaton implements Serializable, Cloneable {
 	}
 	
 	public void selectStatesWithinBounds(Rectangle bounds){
+//        if (bounds.width == -1 && bounds.height == -1) {
+//            return;
+//        }
 		State[] states = getStates();
 		for (int k = 0; k < states.length; k++){
             states[k].setSelect(bounds.contains(states[k].getPoint()));
@@ -597,6 +600,13 @@ public class Automaton implements Serializable, Cloneable {
 //			}
 		}
 	}
+
+    public void deselectAllStates(){
+        State[] states = getStates();
+        for (State state : states) {
+            state.setSelect(false);
+        }
+    }
 
     public void saveStatePoint(State state) {
         savedStatePoints.put(state, new Point(state.getPoint().x, state.getPoint().y));

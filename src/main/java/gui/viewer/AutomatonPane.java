@@ -50,6 +50,7 @@ public class AutomatonPane extends JPanel implements Scrollable {
 	 */
 	private static final long serialVersionUID = 1L;
 
+    public boolean didBoundsSelection = false;
 
 	/**
 	 * Instantiates an AutomatonPane.
