@@ -39,6 +39,7 @@ import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import gui.editor.IconKeeper;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -80,6 +81,12 @@ public class Profile {
     /**The tag name for allow-stay preference.*/
     public static final String ALLOW_STAY = "turing_allow_stay_on_transition";
 
+    /**The tag name for legacy icons preference.*/
+    public static final String LEGACY_ICONS = "legacy_use_legacy_icons";
+
+    /**The tag name for legacy icons preference.*/
+    public static final String LEGACY_SUBMISSION_GUI = "legacy_use_legacy_submission_gui";
+
 
 	/**
 	 * Determines whether transitions can be issued from the final
@@ -102,17 +109,28 @@ public class Profile {
 
 	private JCheckBoxMenuItem turingAcceptByFinalStateCheckBox; 
 	private JCheckBoxMenuItem turingAcceptByHaltingCheckBox; 
-	private JCheckBoxMenuItem turingAllowStayCheckBox; 
+	private JCheckBoxMenuItem turingAllowStayCheckBox;
 
-	
-	public String pathToFile = "";		
+
+    /**
+     * Legacy options
+     */
+    private boolean legacyUseLegacyIcons;
+    private boolean legacyUseLegacySubmissionGui;
+    private JCheckBoxMenuItem legacyUseLegacyIconsCheckBox;
+    private JCheckBoxMenuItem legacyUseLegacySubmissionGuiCheckBox;
+
+
+    public String pathToFile = "";
 	
     public void setNumUndo(int nn){
     	undo_num = nn;
     }
 	
 	public Profile(){
+        // Set default emptyString character to epsilon
 		emptyString = epsilon;
+
 		transTuringFinal = false;
 		transTuringFinalCheckBox = new JCheckBoxMenuItem("Enable Transitions From Turing Machine Final States");
         transTuringFinalCheckBox.setSelected(transTuringFinal);
@@ -158,6 +176,28 @@ public class Profile {
         });
 
 
+        legacyUseLegacyIcons = false; //defaults to false
+        legacyUseLegacyIconsCheckBox = new JCheckBoxMenuItem("Use legacy icons");
+        legacyUseLegacyIconsCheckBox.setSelected(legacyUseLegacyIcons);
+        legacyUseLegacyIconsCheckBox.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e)
+            {
+                IconKeeper.useNewIcons = !legacyUseLegacyIconsCheckBox.isSelected();
+                setUseLegacyIcons(legacyUseLegacyIconsCheckBox.isSelected());
+                savePreferences();
+            }
+        });
+
+        legacyUseLegacySubmissionGui = false; //defaults to false
+        legacyUseLegacySubmissionGuiCheckBox = new JCheckBoxMenuItem("Use legacy submission interface");
+        legacyUseLegacySubmissionGuiCheckBox.setSelected(legacyUseLegacySubmissionGui);
+        legacyUseLegacySubmissionGuiCheckBox.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e)
+            {
+                setUseLegacyIcons(legacyUseLegacySubmissionGuiCheckBox.isSelected());
+                savePreferences();
+            }
+        });
 	}
 	
 	/**
@@ -235,6 +275,16 @@ public class Profile {
         TMTransitionCreator.setDirs(t);
 	}
 
+    public void setUseLegacyIcons(boolean t) {
+        legacyUseLegacyIcons = t;
+        legacyUseLegacyIconsCheckBox.setSelected(t);
+    }
+
+    public void setUseLegacySubmissionGui(boolean t) {
+        legacyUseLegacySubmissionGui = t;
+        legacyUseLegacySubmissionGuiCheckBox.setSelected(t);
+    }
+
 	/**
 	 * Returns whether transitions from Turing machine final states are allowed.
 	 * 
@@ -270,6 +320,15 @@ public class Profile {
 	public JCheckBoxMenuItem getAllowStayCheckBox() {
 		return turingAllowStayCheckBox;
 	}
+
+    public JCheckBoxMenuItem getUseLegacyIconsCheckBox() {
+        return legacyUseLegacyIconsCheckBox;
+    }
+
+    public JCheckBoxMenuItem getUseLegacySubmissionGuiCheckBox() {
+        return legacyUseLegacySubmissionGuiCheckBox;
+    }
+
 	/**
 	 * Saves the preferences stored in this profile in jflapPreferences.xml.
 	 */
@@ -305,6 +364,11 @@ public class Profile {
 			se.appendChild(element);
 			element = createElement(doc, ALLOW_STAY, null, "" + turingAllowStay);
 			se.appendChild(element);
+
+            element = createElement(doc, LEGACY_ICONS, null, "" + legacyUseLegacyIcons);
+            se.appendChild(element);
+            element = createElement(doc, LEGACY_SUBMISSION_GUI, null, "" + legacyUseLegacySubmissionGui);
+            se.appendChild(element);
 			
 			DOMPrettier.makePretty(doc);
 			Source s = new DOMSource(doc);

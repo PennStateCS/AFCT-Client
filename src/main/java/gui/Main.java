@@ -25,6 +25,7 @@ import file.xml.Transducer;
 import file.xml.TransducerFactory;
 import gui.action.NewAction;
 import gui.action.OpenAction;
+import gui.editor.IconKeeper;
 import gui.environment.Profile;
 import gui.environment.Universe;
 
@@ -197,10 +198,7 @@ public class Main {
 					   .getElementsByTagName(Profile.TURING_FINAL_NAME).item(0);
 					if (parent!=null) {
 						String turingFinal = parent.getTextContent();
-						if (turingFinal.equals("true"))
-							current.setTransitionsFromTuringFinalStateAllowed(true);
-                        else
-							current.setTransitionsFromTuringFinalStateAllowed(false);
+                        current.setTransitionsFromTuringFinalStateAllowed(turingFinal.equals("true"));
 					}
 
                     //set the Turing Acceptance ways.
@@ -208,20 +206,14 @@ public class Main {
 					   .getElementsByTagName(Profile.ACCEPT_FINAL_STATE).item(0);
 					if (parent!=null) {
 						String acceptFinal = parent.getTextContent();
-						if (acceptFinal.equals("true"))
-							current.setAcceptByFinalState(true);
-                        else
-							current.setAcceptByFinalState(false);
+                        current.setAcceptByFinalState(acceptFinal.equals("true"));
 					}
 
 					parent = doc.getDocumentElement()
 					   .getElementsByTagName(Profile.ACCEPT_HALT).item(0);
 					if (parent!=null) {
 						String acceptHalt = parent.getTextContent();
-						if (acceptHalt.equals("true"))
-							current.setAcceptByHalting(true);
-                        else
-							current.setAcceptByHalting(false);
+                        current.setAcceptByHalting(acceptHalt.equals("true"));
 
 					}
 
@@ -230,11 +222,22 @@ public class Main {
 					   .getElementsByTagName(Profile.ALLOW_STAY).item(0);
 					if (parent!=null) {
 						String allowStay = parent.getTextContent();
-						if (allowStay.equals("true"))
-							current.setAllowStay(true);
-                        else
-							current.setAllowStay(false);
+                        current.setAllowStay(allowStay.equals("true"));
 					}
+
+                    //set the UseLegacyIcons option
+                    parent = doc.getDocumentElement().getElementsByTagName(Profile.LEGACY_ICONS).item(0);
+                    if (parent!=null) {
+                        boolean UseLegacyIcons = parent.getTextContent().equals("true");
+                        current.setUseLegacyIcons(UseLegacyIcons);
+                        IconKeeper.useNewIcons = !UseLegacyIcons;
+                    }
+
+                    //set the UseLegacySubmissionGui option
+                    parent = doc.getDocumentElement().getElementsByTagName(Profile.LEGACY_SUBMISSION_GUI).item(0);
+                    if (parent!=null) {
+                        current.setUseLegacySubmissionGui(parent.getTextContent().equals("true"));
+                    }
                     
                     //Now set the Undo amount
 					parent = doc.getDocumentElement()

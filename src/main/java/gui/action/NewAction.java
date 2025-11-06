@@ -177,6 +177,11 @@ public class NewAction extends RestrictedAction {
             tmPrefMenu.add(Universe.curProfile.getAcceptByHaltingCheckBox());
             tmPrefMenu.add(Universe.curProfile.getAllowStayCheckBox());
 
+            JMenu legacyPrefMenu = new JMenu("Legacy Options");
+            legacyPrefMenu.add(Universe.curProfile.getUseLegacyIconsCheckBox());
+            legacyPrefMenu.add(Universe.curProfile.getUseLegacySubmissionGuiCheckBox());
+
+
             //MenuBarCreator.addItem(menu, new ColorChooserAction());
             MenuBarCreator.addItem(menu, new EmptyStringCharacterAction());
 //            menu.add(Universe.curProfile.getTuringFinalCheckBox());
@@ -184,7 +189,8 @@ public class NewAction extends RestrictedAction {
             menu.add(new ColorChooserAction());
 
             menu.add(tmPrefMenu);
-            
+            menu.add(legacyPrefMenu);
+
             
 
             menuBar.add(menu);
