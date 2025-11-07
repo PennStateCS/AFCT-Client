@@ -35,6 +35,7 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.nio.file.FileSystems;
 import java.util.Arrays;
 
 import javax.xml.parsers.DocumentBuilder;
@@ -162,7 +163,8 @@ public class Main {
 	 */
 	private static void loadPreferences() {
 		Profile current = Universe.curProfile;
-		String path = "";
+		/*
+        String path = "";
 		try {
 			path = new File(".").getCanonicalPath();
 		} catch (IOException e) {
@@ -170,12 +172,13 @@ public class Main {
 			e.printStackTrace();
 		}
 		path = path + "/jflapPreferences.xml";
+		 */
+        String path = getPreferencesFilePath();
 		current.pathToFile = path;
 
 		if(new File(path).exists()){
 			File file = new File(path);
-			DocumentBuilderFactory factory = DocumentBuilderFactory
-			.newInstance();
+			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 			DocumentBuilder builder;
 			try {
 				builder = factory.newDocumentBuilder(); Document doc;

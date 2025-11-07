@@ -341,8 +341,7 @@ public class Profile {
 		if(emptyString.equals(lambda)) empty = lambdaText;
 	    else if(emptyString.equals(epsilon)) empty = epsilonText;
 		
-		DocumentBuilderFactory factory = DocumentBuilderFactory
-		.newInstance();
+		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder;
 		try {
 			File file = new File(pathToFile);
