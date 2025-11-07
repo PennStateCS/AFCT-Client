@@ -606,6 +606,7 @@ public class Automaton implements Serializable, Cloneable {
         for (State state : states) {
             state.setSelect(false);
         }
+        // TODO: make this also deselect all transitions too?
     }
 
     public void saveStatePoint(State state) {

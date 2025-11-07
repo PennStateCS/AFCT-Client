@@ -23,6 +23,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.List;
 import java.util.Map;
 
 import javax.swing.JCheckBoxMenuItem;
@@ -63,7 +64,7 @@ public class Profile {
 	public int undo_num = 50;
 	
 	/** The tag name for the empty string preference. */
-	public String EMPTY_STRING_NAME = "empty_string";
+	public static final String EMPTY_STRING_NAME = "empty_string";
 
 	/** The tag name for the root of a structure. */
 	public static final String STRUCTURE_NAME = "structure";
@@ -338,8 +339,7 @@ public class Profile {
         return legacyUseLegacySubmissionGuiCheckBox;
     }
 
-    protected static Element createElement(Document document, String tagname,
-                                           Map<?, ?> attributes, String text) {
+    protected static Element createElement(Document document, String tagname, Map<?, ?> attributes, String text) {
         // Create the new element.
         Element element = document.createElement(tagname);
 
@@ -349,13 +349,17 @@ public class Profile {
         return element;
     }
 
+    private static void savePreferencesHelper(String tagname, Object text, Document doc) {
+        String strText = String.valueOf(text);
+        Element element = createElement(doc, tagname, null, strText);
+        doc.getDocumentElement().appendChild(element);
+    }
+
 	/**
 	 * Saves the preferences stored in this profile in jflapPreferences.xml.
 	 */
 	public void savePreferences() {
-		String empty = "";
-		if(emptyString.equals(lambda)) empty = lambdaText;
-	    else if(emptyString.equals(epsilon)) empty = epsilonText;
+
 		
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder;
@@ -370,25 +374,24 @@ public class Profile {
 			Element structureElement = createElement(doc, STRUCTURE_NAME, null,
 					null);
 			doc.appendChild(structureElement);
-			Element se = doc.getDocumentElement();		
-			Element element = createElement(doc, EMPTY_STRING_NAME, null, ""+empty);
-			se.appendChild(element);
-			element = createElement(doc, TURING_FINAL_NAME, null, ""+transTuringFinal);
-			se.appendChild(element);
-			element = createElement(doc, UNDO_AMOUNT_NAME, null, ""+undo_num);
-			se.appendChild(element);
-			element = createElement(doc, ACCEPT_FINAL_STATE, null, ""+turingAcceptByFinalState);
-			se.appendChild(element);
-			element = createElement(doc, ACCEPT_HALT, null, ""+turingAcceptByHalting);
-			se.appendChild(element);
-			element = createElement(doc, ALLOW_STAY, null, "" + turingAllowStay);
-			se.appendChild(element);
 
-            element = createElement(doc, LEGACY_ICONS, null, "" + legacyUseLegacyIcons);
-            se.appendChild(element);
-            element = createElement(doc, LEGACY_SUBMISSION_GUI, null, "" + legacyUseLegacySubmissionGui);
-            se.appendChild(element);
-			
+            String empty = "";
+            if(emptyString.equals(lambda)) {
+                empty = lambdaText;
+            }
+            else if(emptyString.equals(epsilon)) {
+                empty = epsilonText;
+            }
+
+            savePreferencesHelper(EMPTY_STRING_NAME, empty, doc);
+            savePreferencesHelper(TURING_FINAL_NAME, transTuringFinal, doc);
+            savePreferencesHelper(UNDO_AMOUNT_NAME, undo_num, doc);
+            savePreferencesHelper(ACCEPT_FINAL_STATE, turingAcceptByFinalState, doc);
+            savePreferencesHelper(ACCEPT_HALT, turingAcceptByHalting, doc);
+            savePreferencesHelper(ALLOW_STAY, turingAllowStay, doc);
+            savePreferencesHelper(LEGACY_ICONS, legacyUseLegacyIcons, doc);
+            savePreferencesHelper(LEGACY_SUBMISSION_GUI, legacyUseLegacySubmissionGui, doc);
+
 			DOMPrettier.makePretty(doc);
 			Source s = new DOMSource(doc);
 			Result r = new StreamResult(file);
@@ -418,6 +421,16 @@ public class Profile {
 
     private static Node preferencesElementLoaderHelper(String elementTag, Document doc) {
         return doc.getDocumentElement().getElementsByTagName(elementTag).item(0);
+    }
+
+    private void loadPreferenceElement(String elementTag, Document doc) {
+        Node parent = preferencesElementLoaderHelper(elementTag, doc);
+        if (parent!=null) {
+            switch (elementTag) {
+                case EMPTY_STRING_NAME:
+
+            }
+        }
     }
 
     /**

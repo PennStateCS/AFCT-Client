@@ -229,6 +229,22 @@ public class MenuBarCreator {
 		return menu;
 	}
 
+    /**
+     * Instantiates the context-aware edit menu.
+     *
+     * @param frame the environment frame
+     * @return the context-aware edit menu
+     */
+    private static JMenu getEditMenu(EnvironmentFrame frame) {
+        Environment environment = frame.getEnvironment();
+        JMenu menu = new JMenu("Edit");
+        Serializable object = environment.getObject();
+
+        addItem(menu, new AboutAction());
+
+        return menu;
+    }
+
 	/**
 	 * Instantiates the menu that holds input related menu events.
 	 * 
