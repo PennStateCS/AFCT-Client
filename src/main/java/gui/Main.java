@@ -142,8 +142,8 @@ public class Main {
 							+ e.getMessage());
 				}
 			}
-		}		
-		loadPreferences();
+		}
+        Universe.curProfile.loadPreferences();
 		updater.updatePopup.showOnLoad();
 
 		if (args.length >= 2) {
@@ -156,112 +156,5 @@ public class Main {
 				}
 			}
 		}
-	}
-	
-	/**
-	 * This method loads from the preferences file, if one exists.
-	 */
-	private static void loadPreferences() {
-		Profile current = Universe.curProfile;
-		/*
-        String path = "";
-		try {
-			path = new File(".").getCanonicalPath();
-		} catch (IOException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		path = path + "/jflapPreferences.xml";
-		 */
-        String path = getPreferencesFilePath();
-		current.pathToFile = path;
-
-		if(new File(path).exists()){
-			File file = new File(path);
-			DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
-			DocumentBuilder builder;
-			try {
-				builder = factory.newDocumentBuilder(); Document doc;
-				try {
-					doc = builder.parse(file);
-					
-					//Set the empty string constant
-					Node parent = doc.getDocumentElement()
-					   .getElementsByTagName(current.EMPTY_STRING_NAME).item(0);
-					if (parent!=null) {
-						String empty = parent.getTextContent();
-						if(empty.equals(current.lambdaText)) 
-							current.setEmptyString(current.lambda);
-						else if(empty.equals(current.epsilonText)) 
-							current.setEmptyString(current.epsilon);
-					}
-					
-					//Then set the Turing final state constant
-					parent = doc.getDocumentElement()
-					   .getElementsByTagName(Profile.TURING_FINAL_NAME).item(0);
-					if (parent!=null) {
-						String turingFinal = parent.getTextContent();
-                        current.setTransitionsFromTuringFinalStateAllowed(turingFinal.equals("true"));
-					}
-
-                    //set the Turing Acceptance ways.
-					parent = doc.getDocumentElement()
-					   .getElementsByTagName(Profile.ACCEPT_FINAL_STATE).item(0);
-					if (parent!=null) {
-						String acceptFinal = parent.getTextContent();
-                        current.setAcceptByFinalState(acceptFinal.equals("true"));
-					}
-
-					parent = doc.getDocumentElement()
-					   .getElementsByTagName(Profile.ACCEPT_HALT).item(0);
-					if (parent!=null) {
-						String acceptHalt = parent.getTextContent();
-                        current.setAcceptByHalting(acceptHalt.equals("true"));
-
-					}
-
-                    //set the AllowStay option
-					parent = doc.getDocumentElement()
-					   .getElementsByTagName(Profile.ALLOW_STAY).item(0);
-					if (parent!=null) {
-						String allowStay = parent.getTextContent();
-                        current.setAllowStay(allowStay.equals("true"));
-					}
-
-                    //set the UseLegacyIcons option
-                    parent = doc.getDocumentElement().getElementsByTagName(Profile.LEGACY_ICONS).item(0);
-                    if (parent!=null) {
-                        boolean UseLegacyIcons = parent.getTextContent().equals("true");
-                        current.setUseLegacyIcons(UseLegacyIcons);
-                        IconKeeper.useNewIcons = !UseLegacyIcons;
-                    }
-
-                    //set the UseLegacySubmissionGui option
-                    parent = doc.getDocumentElement().getElementsByTagName(Profile.LEGACY_SUBMISSION_GUI).item(0);
-                    if (parent!=null) {
-                        current.setUseLegacySubmissionGui(parent.getTextContent().equals("true"));
-                    }
-                    
-                    //Now set the Undo amount
-					parent = doc.getDocumentElement()
-					   .getElementsByTagName(Profile.UNDO_AMOUNT_NAME).item(0);
-					if (parent!=null) {
-                        String number = parent.getTextContent();
-                        current.setNumUndo(Integer.parseInt(number));
-					}
-
-				} catch (SAXException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				} catch (IOException e) {
-					// TODO Auto-generated catch block
-					e.printStackTrace();
-				}				
-			} catch (ParserConfigurationException e) {
-				// TODO Auto-generated catch block
-				e.printStackTrace();
-			}
-			
-		}		
 	}
 }

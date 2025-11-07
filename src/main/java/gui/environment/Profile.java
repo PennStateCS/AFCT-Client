@@ -22,6 +22,7 @@ package gui.environment;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
+import java.io.IOException;
 import java.util.Map;
 
 import javax.swing.JCheckBoxMenuItem;
@@ -45,6 +46,10 @@ import org.w3c.dom.Element;
 
 import file.xml.DOMPrettier;
 import gui.editor.TMTransitionCreator;
+import org.w3c.dom.Node;
+import org.xml.sax.SAXException;
+
+import static gui.Globals.getPreferencesFilePath;
 
 public class Profile {
     public static String LAMBDA = "\u03BB";     // Jinghui Lim added stuff
@@ -57,7 +62,7 @@ public class Profile {
 	public String Color = "Original";
 	public int undo_num = 50;
 	
-	/** The tag bane for the empty string preference. */
+	/** The tag name for the empty string preference. */
 	public String EMPTY_STRING_NAME = "empty_string";
 
 	/** The tag name for the root of a structure. */
@@ -333,6 +338,17 @@ public class Profile {
         return legacyUseLegacySubmissionGuiCheckBox;
     }
 
+    protected static Element createElement(Document document, String tagname,
+                                           Map<?, ?> attributes, String text) {
+        // Create the new element.
+        Element element = document.createElement(tagname);
+
+        // Add the text element.
+        if (text != null)
+            element.appendChild(document.createTextNode(text));
+        return element;
+    }
+
 	/**
 	 * Saves the preferences stored in this profile in jflapPreferences.xml.
 	 */
@@ -399,15 +415,99 @@ public class Profile {
 			e.printStackTrace();
 		}
 	}
-	
-	protected static Element createElement(Document document, String tagname,
-			Map<?, ?> attributes, String text) {
-		// Create the new element.
-		Element element = document.createElement(tagname);
-		
-		// Add the text element.
-		if (text != null)
-			element.appendChild(document.createTextNode(text));
-		return element;
-	}
+
+    private static Node preferencesElementLoaderHelper(String elementTag, Document doc) {
+        return doc.getDocumentElement().getElementsByTagName(elementTag).item(0);
+    }
+
+    /**
+     * This method loads from the preferences file, if one exists.
+     */
+    public void loadPreferences() {
+        String path = getPreferencesFilePath();
+        pathToFile = path;
+
+        if(new File(path).exists()){
+            File file = new File(path);
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            DocumentBuilder builder;
+            try {
+                builder = factory.newDocumentBuilder(); Document doc;
+                try {
+                    doc = builder.parse(file);
+                    Node parent;
+
+                    //Set the empty string constant
+                    parent = preferencesElementLoaderHelper(EMPTY_STRING_NAME, doc);
+                    if (parent!=null) {
+                        String empty = parent.getTextContent();
+                        if(empty.equals(lambdaText))
+                            setEmptyString(lambda);
+                        else if(empty.equals(epsilonText))
+                            setEmptyString(epsilon);
+                    }
+
+                    //Then set the Turing final state constant
+                    parent = preferencesElementLoaderHelper(TURING_FINAL_NAME, doc);
+                    if (parent!=null) {
+                        String turingFinal = parent.getTextContent();
+                        setTransitionsFromTuringFinalStateAllowed(turingFinal.equals("true"));
+                    }
+
+                    //set the Turing Acceptance ways.
+                    parent = preferencesElementLoaderHelper(ACCEPT_FINAL_STATE, doc);
+                    if (parent!=null) {
+                        String acceptFinal = parent.getTextContent();
+                        setAcceptByFinalState(acceptFinal.equals("true"));
+                    }
+
+                    parent = preferencesElementLoaderHelper(ACCEPT_HALT, doc);
+                    if (parent!=null) {
+                        String acceptHalt = parent.getTextContent();
+                        setAcceptByHalting(acceptHalt.equals("true"));
+
+                    }
+
+                    //set the AllowStay option
+                    parent = preferencesElementLoaderHelper(ALLOW_STAY, doc);
+                    if (parent!=null) {
+                        String allowStay = parent.getTextContent();
+                        setAllowStay(allowStay.equals("true"));
+                    }
+
+                    //set the UseLegacyIcons option
+                    parent = preferencesElementLoaderHelper(LEGACY_ICONS, doc);
+                    if (parent!=null) {
+                        boolean UseLegacyIcons = parent.getTextContent().equals("true");
+                        setUseLegacyIcons(UseLegacyIcons);
+                        IconKeeper.useNewIcons = !UseLegacyIcons;
+                    }
+
+                    //set the UseLegacySubmissionGui option
+                    parent = preferencesElementLoaderHelper(LEGACY_SUBMISSION_GUI, doc);
+                    if (parent!=null) {
+                        setUseLegacySubmissionGui(parent.getTextContent().equals("true"));
+                    }
+
+                    //Now set the Undo amount
+                    parent = preferencesElementLoaderHelper(UNDO_AMOUNT_NAME, doc);
+                    if (parent!=null) {
+                        String number = parent.getTextContent();
+                        setNumUndo(Integer.parseInt(number));
+                    }
+
+                } catch (SAXException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                } catch (IOException e) {
+                    // TODO Auto-generated catch block
+                    e.printStackTrace();
+                }
+            } catch (ParserConfigurationException e) {
+                // TODO Auto-generated catch block
+                e.printStackTrace();
+            }
+
+        }
+    }
 }
