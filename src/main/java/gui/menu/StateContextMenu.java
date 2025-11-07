@@ -83,6 +83,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
         this.states = states;
         int numSelectedStates = 0;
         int numSelectedFinalStates = 0;
+        int numSelectedLabeledStates = 0;
         Set<State> finalStates = drawer.getAutomaton().finalStates;
         for (State state : states) {
             if (state.isSelected()) {
@@ -90,6 +91,9 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
                 numSelectedStates += 1;
                 if (finalStates.contains(state)) {
                     numSelectedFinalStates += 1;
+                }
+                if (state.getLabel() != null) {
+                    numSelectedLabeledStates += 1;
                 }
             }
         }
@@ -102,6 +106,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
 
             makeFinal.setSelected(drawer.getAutomaton().isFinalState(this.state));
             makeInitial.setSelected(drawer.getAutomaton().getInitialState() == this.state);
+            makeInitial.setEnabled(true);
             deleteLabel.setEnabled(this.state.getLabel() != null);
         } else {
             makeFinal.setText(makeFinal_MULTI);
@@ -112,7 +117,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
             makeFinal.setSelected(numSelectedStates == numSelectedFinalStates);
             makeInitial.setSelected(false);
             makeInitial.setEnabled(false);
-            deleteLabel.setEnabled(true);
+            deleteLabel.setEnabled(numSelectedLabeledStates > 0);
         }
     }
 
