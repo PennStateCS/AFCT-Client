@@ -6,6 +6,7 @@ import automata.turing.TMState;
 import automata.turing.TMTransition;
 import automata.turing.TuringMachineBuildingBlocks;
 import gui.editor.EditBlockPane;
+import gui.environment.AutomatonEnvironment;
 import gui.environment.Environment;
 import gui.environment.EnvironmentFrame;
 import gui.environment.tag.CriticalTag;
@@ -75,6 +76,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
             addMenuItemHelper(menu, copyBlock);
             addMenuItemHelper(menu, replaceSymbol);
         }
+        allListenersAdded = true;
     }
 
     public void selectAndEnableMenuItems(State[] states) {
@@ -117,6 +119,9 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         JMenuItem item = (JMenuItem) e.getSource();
+        if (drawer.getAutomaton().getEnvironmentFrame() != null) {
+            ((AutomatonEnvironment)drawer.getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
+        }
 
         switch (item.getText()) {
             case makeFinal_DEFAULT:
@@ -145,7 +150,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
                 String oldlabel = this.state.getLabel();
                 oldlabel = oldlabel == null ? "" : oldlabel;
                 // TODO make sure item.getParent() works for this
-                String label = (String) JOptionPane.showInputDialog(item.getParent(),
+                String label = (String) JOptionPane.showInputDialog(null,
                         "Input a new label, or \n"
                                 + "set blank to remove the label", "New Label",
                         JOptionPane.QUESTION_MESSAGE, null, null, oldlabel);
@@ -252,6 +257,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
                 }
 
                 EditBlockPane editor = new EditBlockPane(((TMState)state).getInnerTM()); //give it a Turing Machine //just edit the Automaton directly; there is no need for a repaint either, because the other guy does not paint it
+                editor.getAutomaton().setEnvironmentFrame(drawer.getAutomaton().getEnvironmentFrame());
 
                 EnvironmentFrame rootFrame = parent.getAutomaton().getEnvironmentFrame();
 

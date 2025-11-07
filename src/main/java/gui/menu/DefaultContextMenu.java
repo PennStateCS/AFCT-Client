@@ -52,6 +52,7 @@ public class DefaultContextMenu extends ContextMenu implements ActionListener {
             addMenuItemHelper(menu, addNote);
             addMenuItemHelper(menu, adaptView);
         }
+        allListenersAdded = true;
     }
 
     public void selectAndEnableMenuItems(Point p) {

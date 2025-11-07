@@ -10,6 +10,7 @@ import java.awt.event.ActionListener;
 public abstract class ContextMenu implements ActionListener {
     protected AutomatonPane view;
     protected AutomatonDrawer drawer;
+    protected boolean allListenersAdded = false;
 
     public ContextMenu(AutomatonPane view, AutomatonDrawer drawer) {
         this.view = view;
@@ -23,7 +24,9 @@ public abstract class ContextMenu implements ActionListener {
         } else if (menu instanceof JMenu) {
             ((JMenu) menu).add(item);
         }
-        item.addActionListener(this);
+        if (!allListenersAdded) {
+            item.addActionListener(this);
+        }
     }
 
     @Override

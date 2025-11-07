@@ -21,6 +21,7 @@
 package gui.editor;
 
 import gui.environment.AutomatonEnvironment;
+import gui.environment.EnvironmentFrame;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 
@@ -93,7 +94,7 @@ public class StateTool extends Tool {
 	 *            the mouse event
 	 */
 	public void mouseDragged(MouseEvent event) {
-        ObjectSnappingHandler objectSnappingHandler = ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
+        ObjectSnappingHandler objectSnappingHandler = getObjectSnappingHandler();
         boolean doSnapping = objectSnappingHandler.whenMouseDragged(event, null, initialPointClick, getAutomaton(), state);
         Point p = event.getPoint();
         int x = state.getPoint().x + p.x - initialPointClick.x;
@@ -113,7 +114,7 @@ public class StateTool extends Tool {
 	}
 
     public void mouseReleased(MouseEvent event) {
-        ObjectSnappingHandler objectSnappingHandler = ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
+        ObjectSnappingHandler objectSnappingHandler = getObjectSnappingHandler();
         objectSnappingHandler.clearSnappingIndicators(getView());
         //state.setSelect(false);
         getView().repaint();

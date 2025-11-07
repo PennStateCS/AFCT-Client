@@ -64,6 +64,9 @@ public class MenuBarCreator {
 		if (menu.getItemCount() > 0)
 			bar.add(menu);
 
+        menu = getEditMenu(frame);
+        bar.add(menu);
+
 		menu = getInputMenu(frame);
 		if (menu.getItemCount() > 0)
 			bar.add(menu);
@@ -108,6 +111,9 @@ public class MenuBarCreator {
 		menu = getFileMenu(frame);
 		if (menu.getItemCount() > 0)
 			bar.add(menu);
+
+        menu = getEditMenu(frame);
+        bar.add(menu);
 
 		menu = getInputMenu(frame, isTuring);
 		if (menu.getItemCount() > 0)
@@ -238,10 +244,7 @@ public class MenuBarCreator {
     private static JMenu getEditMenu(EnvironmentFrame frame) {
         Environment environment = frame.getEnvironment();
         JMenu menu = new JMenu("Edit");
-        Serializable object = environment.getObject();
-
-        addItem(menu, new AboutAction());
-
+        menu.addMenuListener(new ContextActions.DynamicJMenuListener(environment, menu));
         return menu;
     }
 

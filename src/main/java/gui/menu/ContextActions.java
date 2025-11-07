@@ -4,11 +4,16 @@ import automata.State;
 import automata.Transition;
 import automata.turing.TuringMachineBuildingBlocks;
 import gui.editor.*;
+import gui.environment.Environment;
+import gui.environment.Universe;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 
 import javax.swing.*;
+import javax.swing.event.MenuEvent;
+import javax.swing.event.MenuListener;
 import java.awt.*;
+import java.io.File;
 
 public class ContextActions {
     protected AutomatonPane view;
@@ -26,8 +31,7 @@ public class ContextActions {
         defaultContextMenu = new DefaultContextMenu(view, drawer);
     }
 
-    public JPopupMenu showPopupMenu(Tool tool, Point point, Component component, boolean showDefault) {
-        JPopupMenu menu = new JPopupMenu();
+    public void addMenuItems(MenuElement menu, Tool tool, Point point, boolean showDefault) {
         boolean stateContext = false;
         boolean transitionContext = false;
 
@@ -71,9 +75,47 @@ public class ContextActions {
             defaultContextMenu.addMenuItems(menu, displayOnly);
             defaultContextMenu.selectAndEnableMenuItems(point);
         }
+    }
+
+    public JPopupMenu showPopupMenu(Tool tool, Point point, Component component, boolean showDefault) {
+        JPopupMenu menu = new JPopupMenu();
+
+        addMenuItems(menu, tool, point, showDefault);
 
         menu.show(component, point.x, point.y);
         return menu;
+    }
+
+    public void updateJMenu(JMenu menu, Tool currentTool, boolean showDefault) {
+        menu.removeAll();
+        addMenuItems(menu, currentTool, null, showDefault);
+    }
+
+    public static class DynamicJMenuListener implements MenuListener {
+        Environment environment;
+        JMenu menu;
+        public DynamicJMenuListener(Environment environment, JMenu menu) {
+            super();
+            this.environment = environment;
+            this.menu = menu;
+        }
+
+        @Override
+        public void menuSelected(MenuEvent e) {
+            //System.out.println("menuSelected");
+            EditorPane ep = (EditorPane)environment.getActive();
+            ep.getDrawer().contextActions.updateJMenu(menu, ep.getToolBar().getCurrentTool(), false);
+        }
+
+        @Override
+        public void menuDeselected(MenuEvent e) {
+            //System.out.println("menuDeselected");
+        }
+
+        @Override
+        public void menuCanceled(MenuEvent e) {
+            //System.out.println("menuCanceled");
+        }
     }
 }
 

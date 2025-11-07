@@ -22,6 +22,7 @@ package gui.editor;
 
 import automata.Automaton;
 import gui.SuperMouseAdapter;
+import gui.environment.AutomatonEnvironment;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 import java.awt.Graphics;
@@ -161,6 +162,11 @@ public abstract class Tool extends SuperMouseAdapter {
 			return index;
 		return string.indexOf(Character.toLowerCase(c));
 	}
+
+    protected ObjectSnappingHandler getObjectSnappingHandler() {
+        Automaton test = view.getCreator().getAutomaton();
+        return ((AutomatonEnvironment) view.getCreator().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
+    }
 
 	/** The view we receive events from. */
 	private AutomatonPane view;

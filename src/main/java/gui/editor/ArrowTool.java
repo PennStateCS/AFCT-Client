@@ -290,7 +290,7 @@ public class ArrowTool extends Tool {
 
 			State[] states = getView().getDrawer().getAutomaton().getStates();
 
-            ObjectSnappingHandler objectSnappingHandler = ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
+            ObjectSnappingHandler objectSnappingHandler = getObjectSnappingHandler();
             boolean doSnapping = objectSnappingHandler.whenMouseDragged(event, states, initialPointClick, getAutomaton());
             /*
             int count = 0;
@@ -520,7 +520,7 @@ public class ArrowTool extends Tool {
 		Rectangle bounds = getView().getDrawer().getSelectionBounds();
 //		if(count == 1 && bounds.isEmpty() && lastClickedState!=null) {lastClickedState.setSelect(false);}
 
-        ObjectSnappingHandler objectSnappingHandler = ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
+        ObjectSnappingHandler objectSnappingHandler = getObjectSnappingHandler();
         objectSnappingHandler.clearSnappingIndicators(getView());
         /*
         getView().getDrawer().setXSnappingIndicator(null);
