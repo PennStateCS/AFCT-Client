@@ -16,6 +16,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Set;
 
 public class StateContextMenu extends ContextMenu implements ActionListener {
     private State[] states;
@@ -54,7 +55,12 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
         replaceSymbol = new JMenuItem("Replace Symbol");
     }
 
-    public void addMenuItems(MenuElement menu, boolean skipFinal, boolean isTurningBlock) {
+    public void addMenuItems(MenuElement menu, boolean skipFinal, boolean isTurningBlock, boolean allowOnlyFinal) {
+        if (allowOnlyFinal) {
+            addMenuItemHelper(menu, makeFinal);
+            return;
+        }
+
         if (!skipFinal) {
             addMenuItemHelper(menu, makeFinal);
         }
@@ -74,11 +80,15 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
     public void selectAndEnableMenuItems(State[] states) {
         this.states = states;
         int numSelectedStates = 0;
-
+        int numSelectedFinalStates = 0;
+        Set<State> finalStates = drawer.getAutomaton().finalStates;
         for (State state : states) {
             if (state.isSelected()) {
                 this.state = state;
                 numSelectedStates += 1;
+                if (finalStates.contains(state)) {
+                    numSelectedFinalStates += 1;
+                }
             }
         }
 
@@ -97,13 +107,11 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
             deleteLabel.setText(deleteLabel_MULTI);
             setName.setText(setName_MULTI);
 
-            makeFinal.setSelected(false);
+            makeFinal.setSelected(numSelectedStates == numSelectedFinalStates);
             makeInitial.setSelected(false);
             makeInitial.setEnabled(false);
             deleteLabel.setEnabled(true);
         }
-
-
     }
 
     @Override

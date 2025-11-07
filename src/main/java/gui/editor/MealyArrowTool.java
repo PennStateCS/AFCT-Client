@@ -47,7 +47,8 @@ public class MealyArrowTool extends ArrowTool
     {
         super(view, drawer, creator);
 //        stateMenu.makeFinal.setEnabled(false);
-        stateMenu.remove(stateMenu.makeFinal);
+
+        //stateMenu.remove(stateMenu.makeFinal);
     }
     
     /**
@@ -60,6 +61,7 @@ public class MealyArrowTool extends ArrowTool
     {
         super(view, drawer);
 //        stateMenu.makeFinal.setEnabled(false);
-        stateMenu.remove(stateMenu.makeFinal);
+
+        //stateMenu.remove(stateMenu.makeFinal);
     }
 }

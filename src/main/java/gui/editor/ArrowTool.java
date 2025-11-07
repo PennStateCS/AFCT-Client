@@ -172,9 +172,11 @@ public class ArrowTool extends Tool {
 		if (event.isPopupTrigger()) {
 			Point p = getView().transformFromAutomatonToView(event.getPoint());
 			if (lastClickedState != null && shouldShowStatePopup()) {
-				stateMenu.show(lastClickedState, getView(), p);
+				//stateMenu.show(lastClickedState, getView(), p);
+                getDrawer().contextActions.showPopupMenu(this, p, getView(), false);
 			} else {
-				emptyMenu.show(getView(), p);
+				//emptyMenu.show(getView(), p);
+                getDrawer().contextActions.showPopupMenu(this, p, getView(), true);
 			}
 		}
 		lastClickedState = null;
@@ -549,350 +551,355 @@ public class ArrowTool extends Tool {
 		return false;
 	}
 
-	/**
-	 * The contextual menu class for editing states.
-	 */
-    /*
-     * I changed this from private class to protected class so I can 
-     * remove the "Final State" option from Moore and Mealy machines.
-     */
-	protected class StateMenu extends JPopupMenu implements ActionListener {
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = 1L;
-
-		public StateMenu() {
-			makeFinal = new JCheckBoxMenuItem("Final");
-			makeFinal.addActionListener(this);
-			this.add(makeFinal);
-			makeInitial = new JCheckBoxMenuItem("Initial");
-			changeLabel = new JMenuItem("Change Label");
-			deleteLabel = new JMenuItem("Clear Label");
-			deleteAllLabels = new JMenuItem("Clear All Labels");
-			editBlock = new JMenuItem("Edit Block");
-			copyBlock = new JMenuItem("Duplicate Block");
-			replaceSymbol = new JMenuItem("Replace Symbol");
-			setName = new JMenuItem("Set Name");
-			if (shouldAllowOnlyFinalStateChange())
-				return;
-			makeInitial.addActionListener(this);
-			changeLabel.addActionListener(this);
-			deleteLabel.addActionListener(this);
-			deleteAllLabels.addActionListener(this);
-			editBlock.addActionListener(this);
-			setName.addActionListener(this);
-			copyBlock.addActionListener(this);
-			replaceSymbol.addActionListener(this);
-			this.add(makeInitial);
-			this.add(changeLabel);
-			this.add(deleteLabel);
-			this.add(deleteAllLabels);
-			this.add(setName);
-		}
-
-		public void show(State state, Component comp, Point at) {
-            getAutomaton().deselectAllStates();
-            state.setSelect(true);
-
-			this.remove(editBlock);
-			this.state = state;
-			//System.out.println(getDrawer().getAutomaton().getEnvironmentFrame());
-			//System.out.println(getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment());
-			if (getDrawer().getAutomaton() instanceof TuringMachineBuildingBlocks) { //add building block options for TMBB
-				//System.out.println(getDrawer().getAutomaton().getEnvironmentFrame());
-				//System.out.println(getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment());
-				this.add(editBlock);
-				this.add(copyBlock);
-				editBlock.setEnabled(true);
-				copyBlock.setEnabled(true);
-				this.add(replaceSymbol);
-				replaceSymbol.setEnabled(true);	
-			}
-			makeFinal.setSelected(getAutomaton().isFinalState(state));
-			makeInitial.setSelected(getAutomaton().getInitialState() == state);
-			deleteLabel.setEnabled(state.getLabel() != null);
-			show(comp, at.x, at.y);
-		}
-
-		public void actionPerformed(ActionEvent e) {
-			JMenuItem item = (JMenuItem) e.getSource();
-            if (getDrawer().getAutomaton().getEnvironmentFrame() !=null)
-                ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
-
-			if (item == makeFinal) {
-				if (item.isSelected())
-					getAutomaton().addFinalState(state);
-				else
-					getAutomaton().removeFinalState(state);
-			} else if (item == makeInitial) {
-				if (!item.isSelected())
-					state = null;
-				getAutomaton().setInitialState(state);
-			} else if (item == changeLabel) {
-				String oldlabel = state.getLabel();
-				oldlabel = oldlabel == null ? "" : oldlabel;
-				String label = (String) JOptionPane.showInputDialog(this,
-						"Input a new label, or \n"
-								+ "set blank to remove the label", "New Label",
-						JOptionPane.QUESTION_MESSAGE, null, null, oldlabel);
-				if (label == null)
-					return;
-				if (label.equals(""))
-					label = null;
-				state.setLabel(label);
-			} else if (item == deleteLabel) {
-				state.setLabel(null);
-			} else if (item == deleteAllLabels) {
-				State[] states = getAutomaton().getStates();
-				for (int i = 0; i < states.length; i++)
-					states[i].setLabel(null);
-			} else if (item == editBlock) { //this implies that this was a TMState to begin with, because only TM states would have this menu option
-			
-                //not sure why need highest level automaton, but okay
-				TMState parent = (TMState) state;
-				while (((TuringMachineBuildingBlocks)parent.getAutomaton()).getParent() != null) {
-					parent = ((TuringMachineBuildingBlocks)parent.getAutomaton()).getParent();
-				}
-				//pop up box asking for building block name if myInternalName has not already been set or
-				//was set to a default machine name.
-				TMState tmState = (TMState) state;
-				if (tmState.myInternalName == null || tmState.myInternalName.contains("Machine" + tmState.getID())) {
-					JPanel panel = new JPanel(new GridLayout(3, 1));
-					JTextField field = new JTextField();
-					panel.add(new JLabel("Note: If you want to save this block as a seperate file, use 'Save As' while in the 'Edit Block' window"));
-					panel.add(new JLabel("Building Block Name" + " "));
-					panel.add(field);
-					int result = JOptionPane.showOptionDialog((Component) e.getSource(), panel, "Give Building Block a Name",
-							JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
-							null, null, null);
-					if (result != JOptionPane.YES_OPTION && result != JOptionPane.OK_OPTION) {
-						return;
-					}
-					String input = field.getText();
-					TMState parent2 = tmState;
-					while (((TuringMachineBuildingBlocks)parent2.getAutomaton()).getParent() != null) {
-						parent2 = ((TuringMachineBuildingBlocks)parent2.getAutomaton()).getParent();
-						if (parent2.myInternalName != null) {
-							if (parent2.myInternalName.equals(input + ".jff")) {
-								JOptionPane.showMessageDialog((Component) e.getSource(), "Cannot use the same name as a parent block!",
-										"A Parent Block Already Has This Name",JOptionPane.ERROR_MESSAGE);
-								return;
-							}
-						}
-					}
-					//loop through state to see if there is already a block with this name
-					for (State regState: tmState.getAutomaton().states) {
-						TMState stateTM = (TMState) regState;
-						if (stateTM.getInternalName().equals(input + ".jff")) {
-							Object[] options = { "CANCEL", "YES" };
-							int selectedOption = JOptionPane.showOptionDialog((Component) e.getSource(), "We STRONGLY suggest to NOT "
-									+ "use building blocks with the same name. Do you wish to continue anyways?", "Same Name as Another Building Block",
-							JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
-							null, options, options[0]);
-							System.out.println(selectedOption);
-							if (selectedOption != 1) {
-								return;
-							}
-							break;
-						}
-					}
-					state.setName(input);
-					System.out.println(tmState.myInternalName);
-					tmState.setInternalName(input + ".jff");
-					System.out.println(tmState.myInternalName);
-				}
-				
-				EditBlockPane editor = new EditBlockPane(((TMState)state).getInnerTM()); //give it a Turing Machine //just edit the Automaton directly; there is no need for a repaint either, because the other guy does not paint it
-
-				EnvironmentFrame rootFrame = parent.getAutomaton().getEnvironmentFrame();
-
-				editor.setBlock(state);
-				Environment envir = rootFrame.getEnvironment();
-				envir.add(editor, "Edit Block", new CriticalTag() {
-				});
-
-				envir.setActive(editor);
-			} else if (item == setName) {
-				String oldName = state.getName();
-				oldName = oldName == null ? "" : oldName;
-				String name = (String) JOptionPane.showInputDialog(this,
-						"Input a new name, or \n"
-								+ "set blank to remove the name", "New Name",
-						JOptionPane.QUESTION_MESSAGE, null, null, oldName);
-				if (name == null)
-					return;
-				if (name.equals(""))
-					name = null;
-				state.setName(name);
-
-			}else if (item == copyBlock) { 
-                //MERLIN MERLIN MERLIN MERLIN MERLIN// 
-
-//				TMState buffer = ((TuringMachine) getAutomaton()).createTMState((Point)state.getPoint()); //again, we assume that the cast will work, since copyBlock hould never be there except with Turing.
-				TMState buffer = ((TuringMachineBuildingBlocks) getAutomaton()).createTMState(new Point(state.getPoint().x+4, state.getPoint().y)); //again, we assume that the cast will work, since copyBlock hould never be there except with Turing.
-                buffer.setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
 
 
-			}
-            else if (item == replaceSymbol) {
-				
-                assert state instanceof TMState;
+//
+//	/**
+//	 * The contextual menu class for editing states.
+//	 */
+//    /*
+//     * I changed this from private class to protected class so I can
+//     * remove the "Final State" option from Moore and Mealy machines.
+//     */
+//	protected class StateMenu extends JPopupMenu implements ActionListener {
+//		/**
+//		 *
+//		 */
+//		private static final long serialVersionUID = 1L;
+//
+//		public StateMenu() {
+//			makeFinal = new JCheckBoxMenuItem("Final");
+//			makeFinal.addActionListener(this);
+//			this.add(makeFinal);
+//			makeInitial = new JCheckBoxMenuItem("Initial");
+//			changeLabel = new JMenuItem("Change Label");
+//			deleteLabel = new JMenuItem("Clear Label");
+//			deleteAllLabels = new JMenuItem("Clear All Labels");
+//			editBlock = new JMenuItem("Edit Block");
+//			copyBlock = new JMenuItem("Duplicate Block");
+//			replaceSymbol = new JMenuItem("Replace Symbol");
+//			setName = new JMenuItem("Set Name");
+//			if (shouldAllowOnlyFinalStateChange())
+//				return;
+//			makeInitial.addActionListener(this);
+//			changeLabel.addActionListener(this);
+//			deleteLabel.addActionListener(this);
+//			deleteAllLabels.addActionListener(this);
+//			editBlock.addActionListener(this);
+//			setName.addActionListener(this);
+//			copyBlock.addActionListener(this);
+//			replaceSymbol.addActionListener(this);
+//			this.add(makeInitial);
+//			this.add(changeLabel);
+//			this.add(deleteLabel);
+//			this.add(deleteAllLabels);
+//			this.add(setName);
+//		}
+//
+//		public void show(State state, Component comp, Point at) {
+//            getAutomaton().deselectAllStates();
+//            state.setSelect(true);
+//
+//			this.remove(editBlock);
+//			this.state = state;
+//			//System.out.println(getDrawer().getAutomaton().getEnvironmentFrame());
+//			//System.out.println(getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment());
+//			if (getDrawer().getAutomaton() instanceof TuringMachineBuildingBlocks) { //add building block options for TMBB
+//				//System.out.println(getDrawer().getAutomaton().getEnvironmentFrame());
+//				//System.out.println(getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment());
+//				this.add(editBlock);
+//				this.add(copyBlock);
+//				editBlock.setEnabled(true);
+//				copyBlock.setEnabled(true);
+//				this.add(replaceSymbol);
+//				replaceSymbol.setEnabled(true);
+//			}
+//			makeFinal.setSelected(getAutomaton().isFinalState(state));
+//			makeInitial.setSelected(getAutomaton().getInitialState() == state);
+//			deleteLabel.setEnabled(state.getLabel() != null);
+//			show(comp, at.x, at.y);
+//		}
+//
+//		public void actionPerformed(ActionEvent e) {
+//			JMenuItem item = (JMenuItem) e.getSource();
+//            if (getDrawer().getAutomaton().getEnvironmentFrame() !=null)
+//                ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
+//
+//			if (item == makeFinal) {
+//				if (item.isSelected())
+//					getAutomaton().addFinalState(state);
+//				else
+//					getAutomaton().removeFinalState(state);
+//			} else if (item == makeInitial) {
+//				if (!item.isSelected())
+//					state = null;
+//				getAutomaton().setInitialState(state);
+//			} else if (item == changeLabel) {
+//				String oldlabel = state.getLabel();
+//				oldlabel = oldlabel == null ? "" : oldlabel;
+//				String label = (String) JOptionPane.showInputDialog(this,
+//						"Input a new label, or \n"
+//								+ "set blank to remove the label", "New Label",
+//						JOptionPane.QUESTION_MESSAGE, null, null, oldlabel);
+//				if (label == null)
+//					return;
+//				if (label.equals(""))
+//					label = null;
+//				state.setLabel(label);
+//			} else if (item == deleteLabel) {
+//				state.setLabel(null);
+//			} else if (item == deleteAllLabels) {
+//				State[] states = getAutomaton().getStates();
+//				for (int i = 0; i < states.length; i++)
+//					states[i].setLabel(null);
+//			} else if (item == editBlock) { //this implies that this was a TMState to begin with, because only TM states would have this menu option
+//
+//                //not sure why need highest level automaton, but okay
+//				TMState parent = (TMState) state;
+//				while (((TuringMachineBuildingBlocks)parent.getAutomaton()).getParent() != null) {
+//					parent = ((TuringMachineBuildingBlocks)parent.getAutomaton()).getParent();
+//				}
+//				//pop up box asking for building block name if myInternalName has not already been set or
+//				//was set to a default machine name.
+//				TMState tmState = (TMState) state;
+//				if (tmState.myInternalName == null || tmState.myInternalName.contains("Machine" + tmState.getID())) {
+//					JPanel panel = new JPanel(new GridLayout(3, 1));
+//					JTextField field = new JTextField();
+//					panel.add(new JLabel("Note: If you want to save this block as a seperate file, use 'Save As' while in the 'Edit Block' window"));
+//					panel.add(new JLabel("Building Block Name" + " "));
+//					panel.add(field);
+//					int result = JOptionPane.showOptionDialog((Component) e.getSource(), panel, "Give Building Block a Name",
+//							JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
+//							null, null, null);
+//					if (result != JOptionPane.YES_OPTION && result != JOptionPane.OK_OPTION) {
+//						return;
+//					}
+//					String input = field.getText();
+//					TMState parent2 = tmState;
+//					while (((TuringMachineBuildingBlocks)parent2.getAutomaton()).getParent() != null) {
+//						parent2 = ((TuringMachineBuildingBlocks)parent2.getAutomaton()).getParent();
+//						if (parent2.myInternalName != null) {
+//							if (parent2.myInternalName.equals(input + ".jff")) {
+//								JOptionPane.showMessageDialog((Component) e.getSource(), "Cannot use the same name as a parent block!",
+//										"A Parent Block Already Has This Name",JOptionPane.ERROR_MESSAGE);
+//								return;
+//							}
+//						}
+//					}
+//					//loop through state to see if there is already a block with this name
+//					for (State regState: tmState.getAutomaton().states) {
+//						TMState stateTM = (TMState) regState;
+//						if (stateTM.getInternalName().equals(input + ".jff")) {
+//							Object[] options = { "CANCEL", "YES" };
+//							int selectedOption = JOptionPane.showOptionDialog((Component) e.getSource(), "We STRONGLY suggest to NOT "
+//									+ "use building blocks with the same name. Do you wish to continue anyways?", "Same Name as Another Building Block",
+//							JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
+//							null, options, options[0]);
+//							System.out.println(selectedOption);
+//							if (selectedOption != 1) {
+//								return;
+//							}
+//							break;
+//						}
+//					}
+//					state.setName(input);
+//					System.out.println(tmState.myInternalName);
+//					tmState.setInternalName(input + ".jff");
+//					System.out.println(tmState.myInternalName);
+//				}
+//
+//				EditBlockPane editor = new EditBlockPane(((TMState)state).getInnerTM()); //give it a Turing Machine //just edit the Automaton directly; there is no need for a repaint either, because the other guy does not paint it
+//
+//				EnvironmentFrame rootFrame = parent.getAutomaton().getEnvironmentFrame();
+//
+//				editor.setBlock(state);
+//				Environment envir = rootFrame.getEnvironment();
+//				envir.add(editor, "Edit Block", new CriticalTag() {
+//				});
+//
+//				envir.setActive(editor);
+//			} else if (item == setName) {
+//				String oldName = state.getName();
+//				oldName = oldName == null ? "" : oldName;
+//				String name = (String) JOptionPane.showInputDialog(this,
+//						"Input a new name, or \n"
+//								+ "set blank to remove the name", "New Name",
+//						JOptionPane.QUESTION_MESSAGE, null, null, oldName);
+//				if (name == null)
+//					return;
+//				if (name.equals(""))
+//					name = null;
+//				state.setName(name);
+//
+//			}else if (item == copyBlock) {
+//                //MERLIN MERLIN MERLIN MERLIN MERLIN//
+//
+//                //TMState buffer = ((TuringMachine) getAutomaton()).createTMState((Point)state.getPoint()); //again, we assume that the cast will work, since copyBlock hould never be there except with Turing.
+//				TMState buffer = ((TuringMachineBuildingBlocks) getAutomaton()).createTMState(new Point(state.getPoint().x+4, state.getPoint().y)); //again, we assume that the cast will work, since copyBlock hould never be there except with Turing.
+//                buffer.setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
+//
+//
+//			}
+//            else if (item == replaceSymbol) {
+//
+//                assert state instanceof TMState;
+//
+//				String replaceWith = null;
+//				String toReplace = null;
+//				Object old = JOptionPane.showInputDialog(null, "Find");
+//    			if (old == null)
+//    				return;
+//    			if(old instanceof String){
+//    				toReplace = (String)old;
+//    			}
+//
+//    			Object newString = JOptionPane.showInputDialog(null, "Replace With");
+//    			if (newString == null)
+//    				return;
+//    			if(newString instanceof String){
+//    				replaceWith = (String)newString;
+//    			}
+//
+//                replaceCharactersInBlock((TMState) state, toReplace, replaceWith);
+//				}
+//
+//
+//
+//			getView().repaint();
+//		}
+//
+//		private void replaceCharactersInBlock(TMState start, String toReplace, String replaceWith){ //this shall be a recursive method, replacing the inside and then the out
+//
+//            TuringMachineBuildingBlocks tm = start.getInnerTM();
+//
+//            for (int i = 0; i < tm.getStates().length; i++)
+//                replaceCharactersInBlock((TMState)tm.getStates()[i], toReplace, replaceWith);
+//
+//            Transition[] trans = tm.getTransitions();
+//
+//            for (int i = 0; i < trans.length; ++i){
+//                TMTransition tmTrans = (TMTransition)trans[i];
+//                for(int k = 0; k < tmTrans.tapes(); k++){
+//                    String read = tmTrans.getRead(k);
+//                    tmTrans.setRead(k, read.replaceAll(toReplace, replaceWith));
+//                    String write = tmTrans.getWrite(k);
+//                    tmTrans.setWrite (k,write.replaceAll(toReplace, replaceWith));
+//                }
+//
+//            }
+//        }
+//
+//
+//        private State state;
+//
+//        /*
+//         * Changed this from private to protected so I can remove
+//         * "Final State" option from Moore and Mealy machines.
+//         */
+//		protected JCheckBoxMenuItem makeFinal, makeInitial;
+//
+//		private JMenuItem changeLabel, deleteLabel, deleteAllLabels, editBlock, copyBlock, replaceSymbol,
+//				setName;
+//	}
+//
+//	/**
+//	 * The contextual menu class for editing transitions.
+//	 */
+//	private class TransitionMenu extends JPopupMenu {
+//
+//		/**
+//		 *
+//		 */
+//		private static final long serialVersionUID = 1L;
+//
+//	}
+//
+//	/**
+//	 * The contextual menu class for context clicks in blank space.
+//	 */
+//	private class EmptyMenu extends JPopupMenu implements ActionListener {
+//		/**
+//		 *
+//		 */
+//		private static final long serialVersionUID = 1L;
+//		public EmptyMenu() {
+//			stateLabels = new JCheckBoxMenuItem("Display State Labels");
+//			stateLabels.addActionListener(this);
+//			this.add(stateLabels);
+//			layoutGraph = new JMenuItem("Layout Graph");
+//			if (!(ArrowTool.this instanceof ArrowDisplayOnlyTool)) {
+//				layoutGraph.addActionListener(this);
+//				this.add(layoutGraph);
+//			}
+//			renameStates = new JMenuItem("Rename States");
+//			if (!(ArrowTool.this instanceof ArrowDisplayOnlyTool)) {
+//				renameStates.addActionListener(this);
+//				this.add(renameStates);
+//			}
+//
+//			addNote = new JMenuItem("Add Note");
+//			if (!(ArrowTool.this instanceof ArrowDisplayOnlyTool)) {
+//				addNote.addActionListener(this);
+//				this.add(addNote);
+//			}
+//
+//            //BEGIN SJK add
+//            adaptView = new JCheckBoxMenuItem("Auto-Zoom");
+//            if (!(ArrowTool.this instanceof ArrowDisplayOnlyTool)) {
+//                adaptView.addActionListener(this);
+//                this.add(adaptView);
+//            }
+//            //END SJK add
+//
+//
+//		}
+//
+//		public void show(Component comp, Point at) {
+//			stateLabels.setSelected(getDrawer().doesDrawStateLabels());
+//			adaptView.setSelected(getView().getAdapt());
+//			myPoint = at;
+//			show(comp, at.x, at.y);
+//		}
+//
+//		public void actionPerformed(ActionEvent e) {
+//			JMenuItem item = (JMenuItem) e.getSource();
+//			if (item == stateLabels) {
+//				getView().getDrawer().shouldDrawStateLabels(item.isSelected());
+//			} else if (item == layoutGraph) {
+//				AutomatonGraph g = new AutomatonGraph(getAutomaton());
+//				LayoutAlgorithm alg = new GEMLayoutAlgorithm();
+//				alg.layout(g, null);
+//				g.moveAutomatonStates();
+//				getView().fitToBounds(30);
+//			} else if (item == renameStates) {
+//    		    ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
+//				StateRenamer.rename(getAutomaton());
+//			} else if (item == adaptView)
+//            {
+//                getView().setAdapt(item.isSelected());
+//            } else if (item == addNote)
+//            {
+//                ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
+//                Note newNote = new Note(myPoint, "insert_text");
+//                newNote.initializeForView(getView());
+//        		getView().getDrawer().getAutomaton().addNote(newNote);
+//
+//            }
+//			getView().repaint();
+//			//boolean selected = adaptView.isSelected();
+//			emptyMenu = new EmptyMenu();
+//			//adaptView.setSelected(selected);
+//		}
+//		private Point myPoint;
+//
+//		private JCheckBoxMenuItem stateLabels;
+//		private Note curNote;
+//		private JMenuItem layoutGraph;
+//		private JMenuItem addNote;
+//		private JMenuItem renameStates, adaptView;
+//	}
 
-				String replaceWith = null;
-				String toReplace = null;						
-				Object old = JOptionPane.showInputDialog(null, "Find");		
-    			if (old == null)
-    				return;
-    			if(old instanceof String){
-    				toReplace = (String)old;
-    			}
-    				
-    			Object newString = JOptionPane.showInputDialog(null, "Replace With");
-    			if (newString == null)
-    				return;
-    			if(newString instanceof String){
-    				replaceWith = (String)newString;
-    			}
 
-                replaceCharactersInBlock((TMState) state, toReplace, replaceWith);
-				}
-			
-
-    
-			getView().repaint();
-		}
-		
-		private void replaceCharactersInBlock(TMState start, String toReplace, String replaceWith){ //this shall be a recursive method, replacing the inside and then the out
-
-            TuringMachineBuildingBlocks tm = start.getInnerTM();
-                
-            for (int i = 0; i < tm.getStates().length; i++)
-                replaceCharactersInBlock((TMState)tm.getStates()[i], toReplace, replaceWith);      
-            
-            Transition[] trans = tm.getTransitions();
-            
-            for (int i = 0; i < trans.length; ++i){
-                TMTransition tmTrans = (TMTransition)trans[i];
-                for(int k = 0; k < tmTrans.tapes(); k++){
-                    String read = tmTrans.getRead(k);
-                    tmTrans.setRead(k, read.replaceAll(toReplace, replaceWith));
-                    String write = tmTrans.getWrite(k);
-                    tmTrans.setWrite (k,write.replaceAll(toReplace, replaceWith));
-                }
-
-            }
-        }
-		
-
-        private State state;
-
-        /*
-         * Changed this from private to protected so I can remove
-         * "Final State" option from Moore and Mealy machines.
-         */
-		protected JCheckBoxMenuItem makeFinal, makeInitial;
-
-		private JMenuItem changeLabel, deleteLabel, deleteAllLabels, editBlock, copyBlock, replaceSymbol,
-				setName;
-	}
-
-	/**
-	 * The contextual menu class for editing transitions.
-	 */
-	private class TransitionMenu extends JPopupMenu {
-
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = 1L;
-
-	}
-
-	/**
-	 * The contextual menu class for context clicks in blank space.
-	 */
-	private class EmptyMenu extends JPopupMenu implements ActionListener {
-		/**
-		 * 
-		 */
-		private static final long serialVersionUID = 1L;
-		public EmptyMenu() {
-			stateLabels = new JCheckBoxMenuItem("Display State Labels");
-			stateLabels.addActionListener(this);
-			this.add(stateLabels);
-			layoutGraph = new JMenuItem("Layout Graph");
-			if (!(ArrowTool.this instanceof ArrowDisplayOnlyTool)) {
-				layoutGraph.addActionListener(this);
-				this.add(layoutGraph);
-			}
-			renameStates = new JMenuItem("Rename States");
-			if (!(ArrowTool.this instanceof ArrowDisplayOnlyTool)) {
-				renameStates.addActionListener(this);
-				this.add(renameStates);
-			}
-			
-			addNote = new JMenuItem("Add Note");
-			if (!(ArrowTool.this instanceof ArrowDisplayOnlyTool)) {
-				addNote.addActionListener(this);
-				this.add(addNote);
-			}
-
-//           BEGIN SJK add
-            adaptView = new JCheckBoxMenuItem("Auto-Zoom");
-            if (!(ArrowTool.this instanceof ArrowDisplayOnlyTool)) {
-                adaptView.addActionListener(this);
-                this.add(adaptView);
-            }
-//          END SJK add
-
-            
-		}
-
-		public void show(Component comp, Point at) {
-			stateLabels.setSelected(getDrawer().doesDrawStateLabels());
-			adaptView.setSelected(getView().getAdapt());
-			myPoint = at;
-			show(comp, at.x, at.y);
-		}
-
-		public void actionPerformed(ActionEvent e) {
-			JMenuItem item = (JMenuItem) e.getSource();
-			if (item == stateLabels) {
-				getView().getDrawer().shouldDrawStateLabels(item.isSelected());
-			} else if (item == layoutGraph) {
-				AutomatonGraph g = new AutomatonGraph(getAutomaton());
-				LayoutAlgorithm alg = new GEMLayoutAlgorithm();
-				alg.layout(g, null);
-				g.moveAutomatonStates();
-				getView().fitToBounds(30);
-			} else if (item == renameStates) {
-    		    ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
-				StateRenamer.rename(getAutomaton());
-			} else if (item == adaptView)
-            {
-                getView().setAdapt(item.isSelected());
-            } else if (item == addNote)
-            {		 	
-                ((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
-                Note newNote = new Note(myPoint, "insert_text");
-                newNote.initializeForView(getView());
-        		getView().getDrawer().getAutomaton().addNote(newNote);
-        		
-            }
-			getView().repaint();
-			//boolean selected = adaptView.isSelected();
-			emptyMenu = new EmptyMenu();
-			//adaptView.setSelected(selected);
-		}
-		private Point myPoint;
-		
-		private JCheckBoxMenuItem stateLabels;
-		private Note curNote;
-		private JMenuItem layoutGraph;
-		private JMenuItem addNote;
-		private JMenuItem renameStates, adaptView;
-	}
 
 	/** The transition creator for editing transitions. */
 	private TransitionCreator creator;
@@ -918,13 +925,13 @@ public class ArrowTool extends Tool {
      * it in a subclass. This is to remove the "Final State"
      * option in Moore and Mealy machines.
      */
-	protected StateMenu stateMenu = new StateMenu();
+	//protected StateMenu stateMenu = new StateMenu();
 
 	/** The transition menu. */
-	private TransitionMenu transitionMenu = new TransitionMenu();
+	//private TransitionMenu transitionMenu = new TransitionMenu();
 
 	/** The empty menu. */
-	private EmptyMenu emptyMenu = new EmptyMenu();
+	//private EmptyMenu emptyMenu = new EmptyMenu();
 
     private Transition selectedTransition = null;
 }

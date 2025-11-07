@@ -15,6 +15,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Objects;
 
 public class DefaultContextMenu extends ContextMenu implements ActionListener {
     private Point myPoint;
@@ -53,10 +54,10 @@ public class DefaultContextMenu extends ContextMenu implements ActionListener {
         }
     }
 
-    public void selectAndEnableMenuItems() {
+    public void selectAndEnableMenuItems(Point p) {
         stateLabels.setSelected(drawer.doesDrawStateLabels());
         adaptView.setSelected(view.getAdapt());
-        myPoint = new Point(0, 0);
+        myPoint = Objects.requireNonNullElseGet(p, () -> new Point(0, 0));
     }
 
     @Override

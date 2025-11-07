@@ -26,6 +26,7 @@ import automata.State;
 import automata.event.*;
 import gui.JMultiLineToolTip;
 import gui.editor.EditorPane;
+import gui.menu.ContextActions;
 
 import java.awt.*;
 import java.awt.event.ComponentAdapter;
@@ -51,6 +52,9 @@ public class AutomatonPane extends JPanel implements Scrollable {
 	private static final long serialVersionUID = 1L;
 
     public boolean didBoundsSelection = false;
+
+    public ContextActions contextActions;
+
 
 	/**
 	 * Instantiates an AutomatonPane.
@@ -121,6 +125,9 @@ public class AutomatonPane extends JPanel implements Scrollable {
 		addComponentListener(listener);
 		setToolTipText("Beavis"); // Tool tips require some text. :P
 		setOpaque(true);
+
+        contextActions = new ContextActions(this, drawer);
+        drawer.contextActions = contextActions;
 	}
 
 	/**

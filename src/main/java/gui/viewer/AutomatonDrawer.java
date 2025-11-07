@@ -45,6 +45,8 @@ import automata.event.AutomataStateEvent;
 import automata.event.AutomataStateListener;
 import automata.event.AutomataTransitionEvent;
 import automata.event.AutomataTransitionListener;
+import gui.menu.ContextActions;
+
 import java.util.HashSet;
 
 /**
@@ -57,6 +59,7 @@ import java.util.HashSet;
  */
 
 public class AutomatonDrawer {
+    public ContextActions contextActions;
 	/**
 	 * Instantiates an object to draw an automaton.
 	 * 
