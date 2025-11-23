@@ -30,6 +30,12 @@ public class SubmitDialog extends JDialog implements ActionListener {
     private JTextField server;
     private JTextField port;
     private JPanel mainForm;
+    private JCheckBox allProblems;
+    private JCheckBox upcomingProblems;
+    private JCheckBox uncompletedProblems;
+    private JCheckBox allAssignments;
+    private JCheckBox upcomingAssignments;
+    private JCheckBox uncompletedAssignments;
 
     private AFCTClient client;
     private String token;
@@ -153,6 +159,11 @@ public class SubmitDialog extends JDialog implements ActionListener {
                                     setModel(assignmentBox, List.of(PLACEHOLDER), false);
                                     setModel(problemBox, List.of(PLACEHOLDER), false);
                                 });
+
+                                // Display number of courses loaded
+                                int numCourses = courses.size();
+                                if (numCourses == 1) { publish(String.format("Loaded %s course", numCourses)); }
+                                else { publish(String.format("Loaded %s courses", numCourses)); }
                             } else {
                                 publish("Authentication failed.");
                             }
@@ -351,6 +362,11 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     for (Map<String, Object> assignment : assignments) {
                         titles.add((String) assignment.get("title"));
                     }
+
+                    // Display number of assignments loaded
+                    int numAssignments = assignments.size();
+                    if (numAssignments == 1) { publish(String.format("Loaded %s assignment", numAssignments)); }
+                    else { publish(String.format("Loaded %s assignments", numAssignments)); }
                 } catch (IOException ex) {
                     publish("Failed to load assignments: " + ex.getMessage());
                     titles = List.of(PLACEHOLDER);
@@ -390,6 +406,11 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     for (Map<String, Object> problem : problems) {
                         titles.add((String) problem.get("title"));
                     }
+
+                    // Display number of problems loaded
+                    int numProblems = problems.size();
+                    if (numProblems == 1) { publish(String.format("Loaded %s problem", numProblems)); }
+                    else { publish(String.format("Loaded %s problems", numProblems)); }
                 } catch (IOException ex) {
                     publish("Failed to load problems: " + ex.getMessage());
                     titles = List.of(PLACEHOLDER);
