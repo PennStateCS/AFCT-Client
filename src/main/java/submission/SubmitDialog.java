@@ -4,6 +4,7 @@ import javax.swing.*;
 
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.Color;
 
 import file.XMLCodec;
 import gui.environment.Environment;
@@ -12,7 +13,7 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.util.ArrayList;
-import java.awt.Color;
+import java.time.LocalDateTime;
 
 public class SubmitDialog extends JDialog implements ActionListener {
     private Environment env;
@@ -30,12 +31,10 @@ public class SubmitDialog extends JDialog implements ActionListener {
     private JTextField server;
     private JTextField port;
     private JPanel mainForm;
-    private JCheckBox allProblems;
-    private JCheckBox upcomingProblems;
-    private JCheckBox uncompletedProblems;
-    private JCheckBox allAssignments;
-    private JCheckBox upcomingAssignments;
-    private JCheckBox uncompletedAssignments;
+    private JRadioButton allAssignments;
+    private JRadioButton upcomingAssignments;
+    private JRadioButton allProblems;
+    private JRadioButton uncompletedProblems;
 
     private AFCTClient client;
     private String token;
@@ -118,6 +117,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
         } catch (Exception e) {
             JOptionPane.showMessageDialog(null, "Error saving temp file: " + e.getMessage());
         }
+        appendResult("");
     }
 
     private void setupEventHandlers() {
@@ -143,6 +143,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                             token = client.login(userEmail, userPassword);
                             if (token != null && !token.isBlank()) {
                                 publish("Authentication Success.");
+                                publish("");
                                 publish("Loading courses…");
 
                                 // Load courses on worker thread
@@ -170,6 +171,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                         } catch (IOException ex) {
                             publish("Authentication error: " + ex.getMessage());
                         }
+                        publish("");
                         return null;
                     }
 
@@ -201,6 +203,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     return;
                 }
                 appendResult("Selected course: " + courseBox.getSelectedItem());
+                appendResult("");
                 appendResult("Loading assignments for selected course…");
                 loadAssignmentsAsync();
             }
@@ -217,8 +220,29 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     return;
                 }
                 appendResult("Selected assignment: " + assignmentBox.getSelectedItem());
+                appendResult("");
                 appendResult("Loading problems for selected assignment…");
                 loadProblemsAsync();
+            }
+        });
+
+        allAssignments.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                appendResult("Reloading assignments...");
+                loadAssignmentsAsync();
+            }
+        });
+
+        upcomingAssignments.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                appendResult("Reloading assignments...");
+                loadAssignmentsAsync();
             }
         });
 
@@ -232,6 +256,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     return;
                 }
                 appendResult("Selected problem: " + problemBox.getSelectedItem());
+                appendResult("");
                 updateWorkingEnabled(); // Not needed for other boxes because this one cannot be filled without the others
                 updateSubmitEnabled(); // Not needed for other boxes because this one cannot be filled without the others
             }
@@ -246,6 +271,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     selectedFile = fileChooser.getSelectedFile();
                     path.setText(selectedFile.getName());
                     appendResult("Selected file: " + selectedFile.getAbsolutePath());
+                    appendResult("");
                     updateSubmitEnabled();
                 }
             }
@@ -321,6 +347,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                         } catch (IOException ex) {
                             publish("Submission failed: " + ex.getMessage());
                         }
+                        publish("");
                         return null;
                     }
 
@@ -359,18 +386,45 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     assignments = client.getAssignments(courseId);
                     titles = new ArrayList<>();
                     titles.add(PLACEHOLDER);
-                    for (Map<String, Object> assignment : assignments) {
-                        titles.add((String) assignment.get("title"));
+
+                    // Get users choice
+                    String selectedChoice = allAssignments.isSelected() ? allAssignments.getText() : upcomingAssignments.getText();
+
+                    // Load all assignments
+                    if (selectedChoice.equals("All Assignments")) {
+                        for (Map<String, Object> assignment : assignments) {
+                            titles.add((String) assignment.get("title"));
+                        }
+                    }
+
+                    // Load upcoming assignments
+                    else {
+                        // Get current time for default boxes
+                        LocalDateTime currTime = LocalDateTime.now();
+
+                        // Get assignments based on default parameters
+                        for (Map<String, Object> assignment : assignments)
+                        {
+                            // Get the date this assignment is due
+                            String dueDateStr = (String) assignment.get("dueDate");
+                            assert dueDateStr != null;
+
+                            dueDateStr = dueDateStr.charAt(dueDateStr.length() - 1) == 'Z' ? dueDateStr.substring(0, dueDateStr.length() - 1) : dueDateStr;
+
+                            if (LocalDateTime.parse(dueDateStr).isAfter(currTime)) { titles.add((String) assignment.get("title")); }
+                        }
                     }
 
                     // Display number of assignments loaded
-                    int numAssignments = assignments.size();
-                    if (numAssignments == 1) { publish(String.format("Loaded %s assignment", numAssignments)); }
-                    else { publish(String.format("Loaded %s assignments", numAssignments)); }
+                    int numTotalAssignments = assignments.size();
+                    int numDisplayAssignments = titles.toArray().length-1;
+                    publish(String.format("Loaded %s total %s", numTotalAssignments, numTotalAssignments == 1 ? "assignment" : "assignments"));
+                    publish(String.format("Displaying %s %s", numDisplayAssignments, numDisplayAssignments == 1 ? "assignment" : "assignments"));
                 } catch (IOException ex) {
                     publish("Failed to load assignments: " + ex.getMessage());
                     titles = List.of(PLACEHOLDER);
                 }
+                publish("");
                 return null;
             }
 
@@ -403,6 +457,8 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     problems = client.getProblems(assignmentId);
                     titles = new ArrayList<>();
                     titles.add(PLACEHOLDER);
+
+                    // Get problems based on default parameters
                     for (Map<String, Object> problem : problems) {
                         titles.add((String) problem.get("title"));
                     }
@@ -415,6 +471,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     publish("Failed to load problems: " + ex.getMessage());
                     titles = List.of(PLACEHOLDER);
                 }
+                publish("");
                 return null;
             }
 
