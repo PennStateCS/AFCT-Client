@@ -8,11 +8,11 @@ import java.awt.Color;
 
 import file.XMLCodec;
 import gui.environment.Environment;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
-import java.util.ArrayList;
 import java.time.LocalDateTime;
 
 public class SubmitDialog extends JDialog implements ActionListener {
@@ -23,9 +23,9 @@ public class SubmitDialog extends JDialog implements ActionListener {
     private JButton workingButton;
     private JButton submitButton;
     private JTextArea result;
-    private JComboBox<String> courseBox;
-    private JComboBox<String> assignmentBox;
-    private JComboBox<String> problemBox;
+    private JComboBox<CourseItem> courseBox;
+    private JComboBox<AssignmentItem> assignmentBox;
+    private JComboBox<ProblemItem> problemBox;
     private JButton browseButton;
     private JLabel path;
     private JTextField server;
@@ -64,7 +64,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
         port.setText("3000");
         email.setText("student@example.com");
         password.setText("password123");
-        path.setText("JFLAP File");
+        path.setText("No File Selected");
         resultText = "";
 
         // Visuals for combo boxes
@@ -81,11 +81,15 @@ public class SubmitDialog extends JDialog implements ActionListener {
         problemBox.setRenderer(renderer);
 
         // Initialize clean models with a placeholder
-        courseBox.setModel(new DefaultComboBoxModel<>(new String[]{PLACEHOLDER}));
-        assignmentBox.setModel(new DefaultComboBoxModel<>(new String[]{PLACEHOLDER}));
-        problemBox.setModel(new DefaultComboBoxModel<>(new String[]{PLACEHOLDER}));
+        setModel(courseBox, List.of(PLACEHOLDER), false);
+        setModel(assignmentBox, List.of(PLACEHOLDER), false);
+        setModel(problemBox, List.of(PLACEHOLDER), false);
 
+        // Appropriately enable/disable buttons
         assignmentBox.setEnabled(false);
+        allAssignments.setEnabled(false);
+        upcomingAssignments.setEnabled(false);
+
         problemBox.setEnabled(false);
         submitButton.setEnabled(false);
         workingButton.setEnabled(false);
@@ -120,6 +124,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
         appendResult("");
     }
 
+    // Set action listeners for user inputs
     private void setupEventHandlers() {
         signInButton.addActionListener(new ActionListener()
         {
@@ -147,24 +152,28 @@ public class SubmitDialog extends JDialog implements ActionListener {
                                 publish("Loading courses…");
 
                                 // Load courses on worker thread
-                                List<Map<String, Object>> fetched = client.getCourses(userEmail);
-                                courses = fetched;
-                                List<String> names = new ArrayList<>(fetched.size() + 1);
-                                names.add(PLACEHOLDER);
-                                for (Map<String, Object> course : fetched) {
-                                    names.add((String) course.get("name"));
+                                courses = client.getCourses(userEmail);
+
+                                // Generate model
+                                DefaultComboBoxModel<CourseItem> model = new DefaultComboBoxModel<>();
+                                model.addElement(new CourseItem("", PLACEHOLDER));
+
+                                for (Map<String, Object> course : courses) {
+                                    model.addElement(new CourseItem(course.get("id").toString(), course.get("name").toString()));
                                 }
 
+                                courseBox.setModel(model);
+                                courseBox.setEnabled(true);
+
                                 SwingUtilities.invokeLater(() -> {
-                                    setModel(courseBox, names, true);
                                     setModel(assignmentBox, List.of(PLACEHOLDER), false);
                                     setModel(problemBox, List.of(PLACEHOLDER), false);
+                                    resetSelectedFile();
                                 });
 
                                 // Display number of courses loaded
                                 int numCourses = courses.size();
-                                if (numCourses == 1) { publish(String.format("Loaded %s course", numCourses)); }
-                                else { publish(String.format("Loaded %s courses", numCourses)); }
+                                publish(String.format("Loaded %s %s", numCourses, numCourses == 1 ? "course" : "courses"));
                             } else {
                                 publish("Authentication failed.");
                             }
@@ -194,18 +203,23 @@ public class SubmitDialog extends JDialog implements ActionListener {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (isPopulating) return;
+
+                // User selected initial box with no value
                 if (courseBox.getSelectedIndex() <= 0) {
-                    // Reset dependents
+                    // Reset inputs appropriately
                     setModel(assignmentBox, List.of(PLACEHOLDER), false);
                     setModel(problemBox, List.of(PLACEHOLDER), false);
                     updateWorkingEnabled();
                     updateSubmitEnabled();
+                    resetSelectedFile();
                     return;
                 }
+
+                // User chose a valid course
                 appendResult("Selected course: " + courseBox.getSelectedItem());
                 appendResult("");
                 appendResult("Loading assignments for selected course…");
-                loadAssignmentsAsync();
+                loadAssignmentsAsync(); // Load assignments for selected course
             }
         });
 
@@ -213,19 +227,26 @@ public class SubmitDialog extends JDialog implements ActionListener {
             @Override
             public void actionPerformed(ActionEvent e) {
                 if (isPopulating) return;
+
+                // User selected initial box with no value
                 if (assignmentBox.getSelectedIndex() <= 0) {
+                    // Reset inputs appropriately
                     setModel(problemBox, List.of(PLACEHOLDER), false);
                     updateWorkingEnabled();
                     updateSubmitEnabled();
+                    resetSelectedFile();
                     return;
                 }
+
+                // User chose a valid assignment
                 appendResult("Selected assignment: " + assignmentBox.getSelectedItem());
                 appendResult("");
                 appendResult("Loading problems for selected assignment…");
-                loadProblemsAsync();
+                loadProblemsAsync(); // Load problems for selected assignments
             }
         });
 
+        // Assignment radio button (1 of 2)
         allAssignments.addActionListener(new ActionListener()
         {
             @Override
@@ -236,6 +257,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
             }
         });
 
+        // Assignment radio button (2 of 2)
         upcomingAssignments.addActionListener(new ActionListener()
         {
             @Override
@@ -249,16 +271,49 @@ public class SubmitDialog extends JDialog implements ActionListener {
         problemBox.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                ProblemItem selectedProblem;
+
                 if (isPopulating) return;
+
+                // User selected initial box with no value
                 if (problemBox.getSelectedIndex() <= 0) {
+                    // Reset inputs appropriately
                     updateWorkingEnabled();
                     updateSubmitEnabled();
+                    resetSelectedFile();
                     return;
                 }
-                appendResult("Selected problem: " + problemBox.getSelectedItem());
+
+                // User chose a valid assignment
+                selectedProblem = (ProblemItem) problemBox.getSelectedItem();
+                assert selectedProblem != null;
+
+                appendResult("Selected problem: " + parseProblemTitle(selectedProblem.toString()));
                 appendResult("");
                 updateWorkingEnabled(); // Not needed for other boxes because this one cannot be filled without the others
                 updateSubmitEnabled(); // Not needed for other boxes because this one cannot be filled without the others
+            }
+        });
+
+        // Problem radio button (1 of 2)
+        allProblems.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                appendResult("Reloading problems...");
+                loadProblemsAsync();
+            }
+        });
+
+        // Problem radio button (1 of 2)
+        uncompletedProblems.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                appendResult("Reloading problems...");
+                loadProblemsAsync();
             }
         });
 
@@ -267,6 +322,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
             public void actionPerformed(ActionEvent e) {
                 JFileChooser fileChooser = new JFileChooser();
                 int choice = fileChooser.showOpenDialog(mainForm);
+
                 if (choice == JFileChooser.APPROVE_OPTION) {
                     selectedFile = fileChooser.getSelectedFile();
                     path.setText(selectedFile.getName());
@@ -328,12 +384,15 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     @Override
                     protected Void doInBackground() {
                         try {
-                            String assignmentId = getSelectedId(assignments, assignmentBox.getSelectedIndex() - 1);
-                            String problemId = getSelectedId(problems, problemBox.getSelectedIndex() - 1);
+                            AssignmentItem assignment = (AssignmentItem) assignmentBox.getSelectedItem();
+                            ProblemItem problem = (ProblemItem) problemBox.getSelectedItem();
+
+                            assert assignment != null;
+                            assert problem != null;
 
                             Map<String, Object> submission = client.createSubmission(
-                                    assignmentId,
-                                    problemId,
+                                    assignment.id,
+                                    problem.id,
                                     "Submission from GUI",
                                     selectedFile
                             );
@@ -371,58 +430,87 @@ public class SubmitDialog extends JDialog implements ActionListener {
 
     private void loadAssignmentsAsync() {
         assignmentBox.setEnabled(false);
+        allAssignments.setEnabled(false);
+        upcomingAssignments.setEnabled(false);
+
         problemBox.setEnabled(false);
+        allProblems.setEnabled(false);
+        uncompletedProblems.setEnabled(false);
+
         setModel(assignmentBox, List.of(PLACEHOLDER), false);
         setModel(problemBox, List.of(PLACEHOLDER), false);
 
-        final int courseIdx = courseBox.getSelectedIndex() - 1; // adjust for placeholder
-        new SwingWorker<Void, String>() {
-            List<String> titles;
+        final CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
 
+        new SwingWorker<Void, String>() {
             @Override
             protected Void doInBackground() {
                 try {
-                    String courseId = getSelectedId(courses, courseIdx);
+                    String courseId;
+                    String selectedChoice;
+                    String dueDateStr;
+                    LocalDateTime currTime;
+                    boolean isUpcoming;
+                    int numTotalAssignments;
+                    int numDisplayAssignments;
+
+                    assert selectedCourse != null;
+                    courseId = selectedCourse.id;
+
+                    // Load assignments on worker thread
                     assignments = client.getAssignments(courseId);
-                    titles = new ArrayList<>();
-                    titles.add(PLACEHOLDER);
 
-                    // Get users choice
-                    String selectedChoice = allAssignments.isSelected() ? allAssignments.getText() : upcomingAssignments.getText();
+                    // Get users radio button choice
+                    selectedChoice = allAssignments.isSelected() ? allAssignments.getText() : upcomingAssignments.getText();
 
-                    // Load all assignments
-                    if (selectedChoice.equals("All Assignments")) {
-                        for (Map<String, Object> assignment : assignments) {
-                            titles.add((String) assignment.get("title"));
+                    // Get current time for default boxes
+                    currTime = LocalDateTime.now();
+
+                    // Generate model
+                    DefaultComboBoxModel<AssignmentItem> model = new DefaultComboBoxModel<>();
+                    model.addElement(new AssignmentItem("",  PLACEHOLDER));
+
+                    // Get assignments based on default parameters
+                    for (Map<String, Object> assignment : assignments)
+                    {
+                        // Get the date this assignment is due
+                        dueDateStr = assignment.get("dueDate").toString();
+                        assert dueDateStr != null;
+
+                        // Parse the date correctly
+                        dueDateStr = dueDateStr.charAt(dueDateStr.length() - 1) == 'Z' ? dueDateStr.substring(0, dueDateStr.length() - 1) : dueDateStr;
+
+                        // Find if the assignment is upcoming
+                        isUpcoming = LocalDateTime.parse(dueDateStr).isAfter(currTime);
+
+                        // Add to drop-down menu if applicable
+                        if (selectedChoice.equals("All Assignments") || selectedChoice.equals("Upcoming Assignments") && isUpcoming) {
+                            model.addElement((new AssignmentItem(
+                                    assignment.get("id").toString(),
+                                    assignment.get("title").toString()
+                            )));
                         }
                     }
 
-                    // Load upcoming assignments
-                    else {
-                        // Get current time for default boxes
-                        LocalDateTime currTime = LocalDateTime.now();
+                    // Add model to drop-down menu
+                    assignmentBox.setModel(model);
 
-                        // Get assignments based on default parameters
-                        for (Map<String, Object> assignment : assignments)
-                        {
-                            // Get the date this assignment is due
-                            String dueDateStr = (String) assignment.get("dueDate");
-                            assert dueDateStr != null;
+                    // Enable assignment inputs
+                    assignmentBox.setEnabled(true);
+                    allAssignments.setEnabled(true);
+                    upcomingAssignments.setEnabled(true);
 
-                            dueDateStr = dueDateStr.charAt(dueDateStr.length() - 1) == 'Z' ? dueDateStr.substring(0, dueDateStr.length() - 1) : dueDateStr;
-
-                            if (LocalDateTime.parse(dueDateStr).isAfter(currTime)) { titles.add((String) assignment.get("title")); }
-                        }
-                    }
+                    // Reset selected file
+                    resetSelectedFile();
 
                     // Display number of assignments loaded
-                    int numTotalAssignments = assignments.size();
-                    int numDisplayAssignments = titles.toArray().length-1;
+                    numTotalAssignments = assignments.size();
+                    numDisplayAssignments = assignmentBox.getItemCount()-1;
                     publish(String.format("Loaded %s total %s", numTotalAssignments, numTotalAssignments == 1 ? "assignment" : "assignments"));
                     publish(String.format("Displaying %s %s", numDisplayAssignments, numDisplayAssignments == 1 ? "assignment" : "assignments"));
                 } catch (IOException ex) {
                     publish("Failed to load assignments: " + ex.getMessage());
-                    titles = List.of(PLACEHOLDER);
+                    setModel(assignmentBox, List.of(PLACEHOLDER), true);
                 }
                 publish("");
                 return null;
@@ -435,7 +523,6 @@ public class SubmitDialog extends JDialog implements ActionListener {
 
             @Override
             protected void done() {
-                setModel(assignmentBox, titles, true);
                 updateWorkingEnabled();
                 updateSubmitEnabled();
             }
@@ -444,32 +531,63 @@ public class SubmitDialog extends JDialog implements ActionListener {
 
     private void loadProblemsAsync() {
         problemBox.setEnabled(false);
+        allProblems.setEnabled(false);
+        uncompletedProblems.setEnabled(false);
+
         setModel(problemBox, List.of(PLACEHOLDER), false);
 
-        final int assignmentIdx = assignmentBox.getSelectedIndex() - 1; // adjust for placeholder
         new SwingWorker<Void, String>() {
-            List<String> titles;
-
             @Override
             protected Void doInBackground() {
                 try {
-                    String assignmentId = getSelectedId(assignments, assignmentIdx);
-                    problems = client.getProblems(assignmentId);
-                    titles = new ArrayList<>();
-                    titles.add(PLACEHOLDER);
+                    // Get item and assignment id
+                    final AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
+                    String selectedChoice;
+
+                    assert selectedAssignment != null;
+
+                    problems = client.getProblems(selectedAssignment.id);
+
+                    // Get users radio button choice
+                    selectedChoice = allProblems.isSelected() ? allProblems.getText() : uncompletedProblems.getText();
+
+                    // Generate model
+                    DefaultComboBoxModel<ProblemItem> model = new DefaultComboBoxModel<>();
+                    model.addElement(new ProblemItem("", PLACEHOLDER));
 
                     // Get problems based on default parameters
                     for (Map<String, Object> problem : problems) {
-                        titles.add((String) problem.get("title"));
+                        Boolean isSolved = (Boolean) problem.get("solved");
+                        String instTitle = String.format("%s %s", problem.get("title"), isSolved ? "\u2714" : "");
+
+                        if (selectedChoice.equals("All Problems") || selectedChoice.equals("Uncompleted Problems") && !isSolved) {
+                            model.addElement(new ProblemItem(
+                                    problem.get("id").toString(),
+                                    instTitle
+                            ));
+                        }
                     }
 
+                    // Add model to drop-down menu
+                    problemBox.setModel(model);
+
+                    // Enable problem inputs
+                    problemBox.setEnabled(true);
+                    allProblems.setEnabled(true);
+                    uncompletedProblems.setEnabled(true);
+
+                    // Reset selected file
+                    resetSelectedFile();
+
                     // Display number of problems loaded
-                    int numProblems = problems.size();
-                    if (numProblems == 1) { publish(String.format("Loaded %s problem", numProblems)); }
-                    else { publish(String.format("Loaded %s problems", numProblems)); }
+                    int totalNumProblems = problems.size();
+                    int dispNumProblems = problemBox.getItemCount()-1;
+
+                    publish(String.format("Loaded %s total %s", totalNumProblems, totalNumProblems == 1 ? "problem" : "problems"));
+                    publish(String.format("Displaying %s %s", dispNumProblems, dispNumProblems == 1 ? "problem" : "problems"));
                 } catch (IOException ex) {
                     publish("Failed to load problems: " + ex.getMessage());
-                    titles = List.of(PLACEHOLDER);
+                    setModel(problemBox, List.of(PLACEHOLDER), true);
                 }
                 publish("");
                 return null;
@@ -482,21 +600,47 @@ public class SubmitDialog extends JDialog implements ActionListener {
 
             @Override
             protected void done() {
-                setModel(problemBox, titles, true);
                 updateWorkingEnabled();
                 updateSubmitEnabled();
             }
         }.execute();
     }
 
-    private void setModel(JComboBox<String> box, List<String> items, boolean enable) {
+    /* Function used to fill a drop-down menu with options
+    *   - params:
+    *       - box: drop-down menu being used to store options (must be courseBox, assignmentBox, or problemBox)
+    *       - items: a list of items used as values for the drop-down menu
+    *       - enable: should the drop-down menu be enabled or not
+    *   - return:
+    *       - void (none)
+     */
+    private <T> void setModel(JComboBox<T> box, List<String> items, boolean enable) {
         isPopulating = true;
         try {
-            DefaultComboBoxModel<String> model = new DefaultComboBoxModel<>(items.toArray(new String[0]));
-            box.setModel(model);
-            if (!items.isEmpty()) {
-                box.setSelectedIndex(0); // placeholder selected
+            DefaultComboBoxModel<T> model = new DefaultComboBoxModel<>();
+
+            for (String item : items) {
+                T value;
+
+                if (box == courseBox) {
+                    value = (T) new CourseItem("", item);
+                } else if (box == assignmentBox) {
+                    value = (T) new AssignmentItem("", item);
+                    allAssignments.setEnabled(enable);
+                    upcomingAssignments.setEnabled(enable);
+                } else if (box == problemBox) {
+                    value = (T) new ProblemItem("", item);
+                    allProblems.setEnabled(enable);
+                    uncompletedProblems.setEnabled(enable);
+                } else {
+                    value = (T) (Object) item;
+                }
+
+                model.addElement(value);
             }
+
+            box.setModel(model);
+            box.setSelectedIndex(0);
             box.setEnabled(enable);
         } finally {
             isPopulating = false;
@@ -527,21 +671,56 @@ public class SubmitDialog extends JDialog implements ActionListener {
                         assignmentBox.isEnabled() && assignmentBox.getSelectedIndex() > 0 &&
                         problemBox.isEnabled() && problemBox.getSelectedIndex() > 0;
 
-        // Set current submit file to JFLAP file, when file is null
-        if (selectedFile == null && ready) { setCurrJFLAP(email.getText(), String.valueOf(problemBox.getSelectedItem())); }
+        ProblemItem selectedProblem = (ProblemItem) problemBox.getSelectedItem();
+        assert selectedProblem != null;
+
+        // Set current submit file to JFLAP file when ready
+        if (ready) {
+            setCurrJFLAP(email.getText(), parseProblemTitle(selectedProblem.title)); }
 
         // Enable submit button (if ready)
         submitButton.setEnabled(ready);
     }
 
-    private String getSelectedId(List<Map<String, Object>> items, int index) {
-        if (items != null && index >= 0 && index < items.size()) {
-            Object id = items.get(index).get("id");
-            return id != null ? id.toString() : null;
-        }
-        return null;
+    /* Parser for the problem title, created due to the check mark
+    *   - params:
+    *       - title: the title of the selected problem that is being parsed
+    *   - returns:
+    *       - parsedTitle (String): the title with the check mark removed
+     */
+    private String parseProblemTitle(String title) {
+        String parsedTitle = title.stripTrailing();
+        parsedTitle = parsedTitle.endsWith(" \u2714") ? parsedTitle.substring(0, parsedTitle.length()-2) : parsedTitle;
+        return parsedTitle;
+    }
+
+    private void resetSelectedFile() {
+        path.setText("No file selected");
+        selectedFile = null;
     }
 
     @Override
     public void actionPerformed(ActionEvent e) { }
+}
+
+// Classes used as items for drop-down menus
+class CourseItem {
+    String id;
+    String title;
+    CourseItem(String id, String title){ this.id = id; this.title = title; }
+    public String toString() { return this.title; }
+}
+
+class AssignmentItem {
+    String id;
+    String title;
+    AssignmentItem(String id, String title){ this.id = id; this.title = title; }
+    public String toString() { return this.title; }
+}
+
+class ProblemItem {
+    String id;
+    String title;
+    ProblemItem(String id, String title){ this.id = id; this.title = title; }
+    public String toString() { return this.title; }
 }

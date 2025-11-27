@@ -172,7 +172,7 @@
       </scrollpane>
       <component id="18ab0" class="javax.swing.JLabel" binding="path">
         <constraints>
-          <grid row="14" column="2" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="0" fill="1" indent="0" use-parent-layout="false">
+          <grid row="14" column="2" row-span="1" col-span="2" vsize-policy="0" hsize-policy="0" anchor="8" fill="0" indent="0" use-parent-layout="false">
             <minimum-size width="250" height="-1"/>
             <preferred-size width="250" height="-1"/>
             <maximum-size width="250" height="-1"/>
@@ -180,6 +180,8 @@
         </constraints>
         <properties>
           <font size="14"/>
+          <horizontalAlignment value="2"/>
+          <horizontalTextPosition value="2"/>
           <text value=""/>
         </properties>
       </component>
@@ -301,7 +303,7 @@
           <grid row="11" column="3" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
-          <enabled value="true"/>
+          <enabled value="false"/>
           <selected value="true"/>
           <text value="Upcoming Assignments"/>
         </properties>
@@ -320,7 +322,7 @@
           <grid row="11" column="2" row-span="1" col-span="1" vsize-policy="0" hsize-policy="3" anchor="8" fill="0" indent="0" use-parent-layout="false"/>
         </constraints>
         <properties>
-          <enabled value="true"/>
+          <enabled value="false"/>
           <text value="All Assignments"/>
         </properties>
       </component>
