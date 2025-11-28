@@ -65,6 +65,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
         email.setText("student@example.com");
         password.setText("password123");
         path.setText("No File Selected");
+        browseButton.setEnabled(false);
         resultText = "";
 
         // Visuals for combo boxes
@@ -138,6 +139,13 @@ public class SubmitDialog extends JDialog implements ActionListener {
                 final String userPassword = new String(password.getPassword());
 
                 signInButton.setEnabled(false);
+                setModel(courseBox, List.of(PLACEHOLDER), false);
+                setModel(assignmentBox, List.of(PLACEHOLDER), false);
+                setModel(problemBox, List.of(PLACEHOLDER), false);
+                resetSelectedFile();
+                updateSelectFileEnabled();
+                updateSubmitEnabled();
+
                 appendResult("Authenticating…");
 
                 new SwingWorker<Void, String>() {
@@ -165,12 +173,6 @@ public class SubmitDialog extends JDialog implements ActionListener {
                                 courseBox.setModel(model);
                                 courseBox.setEnabled(true);
 
-                                SwingUtilities.invokeLater(() -> {
-                                    setModel(assignmentBox, List.of(PLACEHOLDER), false);
-                                    setModel(problemBox, List.of(PLACEHOLDER), false);
-                                    resetSelectedFile();
-                                });
-
                                 // Display number of courses loaded
                                 int numCourses = courses.size();
                                 publish(String.format("Loaded %s %s", numCourses, numCourses == 1 ? "course" : "courses"));
@@ -192,8 +194,6 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     @Override
                     protected void done() {
                         signInButton.setEnabled(true);
-                        updateWorkingEnabled();
-                        updateSubmitEnabled();
                     }
                 }.execute();
             }
@@ -209,7 +209,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     // Reset inputs appropriately
                     setModel(assignmentBox, List.of(PLACEHOLDER), false);
                     setModel(problemBox, List.of(PLACEHOLDER), false);
-                    updateWorkingEnabled();
+                    updateSelectFileEnabled();
                     updateSubmitEnabled();
                     resetSelectedFile();
                     return;
@@ -232,7 +232,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                 if (assignmentBox.getSelectedIndex() <= 0) {
                     // Reset inputs appropriately
                     setModel(problemBox, List.of(PLACEHOLDER), false);
-                    updateWorkingEnabled();
+                    updateSelectFileEnabled();
                     updateSubmitEnabled();
                     resetSelectedFile();
                     return;
@@ -278,7 +278,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                 // User selected initial box with no value
                 if (problemBox.getSelectedIndex() <= 0) {
                     // Reset inputs appropriately
-                    updateWorkingEnabled();
+                    updateSelectFileEnabled();
                     updateSubmitEnabled();
                     resetSelectedFile();
                     return;
@@ -290,7 +290,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
 
                 appendResult("Selected problem: " + parseProblemTitle(selectedProblem.toString()));
                 appendResult("");
-                updateWorkingEnabled(); // Not needed for other boxes because this one cannot be filled without the others
+                updateSelectFileEnabled(); // Not needed for other boxes because this one cannot be filled without the others
                 updateSubmitEnabled(); // Not needed for other boxes because this one cannot be filled without the others
             }
         });
@@ -320,15 +320,28 @@ public class SubmitDialog extends JDialog implements ActionListener {
         browseButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                if (client == null || !client.isAuthenticated()) {
+                    JOptionPane.showMessageDialog(mainForm, "You must be authenticated to add file.", "Authentication Required", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (assignmentBox.getSelectedIndex() <= 0) {
+                    JOptionPane.showMessageDialog(mainForm, "No assignment selected", "Please select an assignment to add file.", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+                if (problemBox.getSelectedIndex() <= 0) {
+                    JOptionPane.showMessageDialog(mainForm, "No problem selected", "Please select a problem to add file.", JOptionPane.WARNING_MESSAGE);
+                    return;
+                }
+
                 JFileChooser fileChooser = new JFileChooser();
                 int choice = fileChooser.showOpenDialog(mainForm);
 
                 if (choice == JFileChooser.APPROVE_OPTION) {
                     selectedFile = fileChooser.getSelectedFile();
                     path.setText(selectedFile.getName());
-                    appendResult("Selected file: " + selectedFile.getAbsolutePath());
-                    appendResult("");
-                    updateSubmitEnabled();
+
+                    appendResult("Setting file to selected file...");
+                    updateSubmitEnabled(selectedFile);
                 }
             }
         });
@@ -350,8 +363,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                 }
 
                 appendResult("Setting file to the working file…");
-
-                setCurrJFLAP(email.getText(), String.valueOf(problemBox.getSelectedItem()));
+                setCurrJFLAP(email.getText(), parseProblemTitle(problemBox.getSelectedItem().toString()));
             }
         });
 
@@ -373,7 +385,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     return;
                 }
                 if (selectedFile == null) {
-                    JOptionPane.showMessageDialog(mainForm, "No file selected", "Please select a file to submit.", JOptionPane.WARNING_MESSAGE);
+                    JOptionPane.showMessageDialog(mainForm, "No File Selected", "Please select a file to submit.", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
 
@@ -429,6 +441,8 @@ public class SubmitDialog extends JDialog implements ActionListener {
     }
 
     private void loadAssignmentsAsync() {
+        resetSelectedFile();
+
         assignmentBox.setEnabled(false);
         allAssignments.setEnabled(false);
         upcomingAssignments.setEnabled(false);
@@ -447,7 +461,6 @@ public class SubmitDialog extends JDialog implements ActionListener {
             protected Void doInBackground() {
                 try {
                     String courseId;
-                    String selectedChoice;
                     String dueDateStr;
                     LocalDateTime currTime;
                     boolean isUpcoming;
@@ -459,9 +472,6 @@ public class SubmitDialog extends JDialog implements ActionListener {
 
                     // Load assignments on worker thread
                     assignments = client.getAssignments(courseId);
-
-                    // Get users radio button choice
-                    selectedChoice = allAssignments.isSelected() ? allAssignments.getText() : upcomingAssignments.getText();
 
                     // Get current time for default boxes
                     currTime = LocalDateTime.now();
@@ -484,7 +494,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                         isUpcoming = LocalDateTime.parse(dueDateStr).isAfter(currTime);
 
                         // Add to drop-down menu if applicable
-                        if (selectedChoice.equals("All Assignments") || selectedChoice.equals("Upcoming Assignments") && isUpcoming) {
+                        if (allAssignments.isSelected() || upcomingAssignments.isSelected() && isUpcoming) {
                             model.addElement((new AssignmentItem(
                                     assignment.get("id").toString(),
                                     assignment.get("title").toString()
@@ -499,9 +509,6 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     assignmentBox.setEnabled(true);
                     allAssignments.setEnabled(true);
                     upcomingAssignments.setEnabled(true);
-
-                    // Reset selected file
-                    resetSelectedFile();
 
                     // Display number of assignments loaded
                     numTotalAssignments = assignments.size();
@@ -523,13 +530,15 @@ public class SubmitDialog extends JDialog implements ActionListener {
 
             @Override
             protected void done() {
-                updateWorkingEnabled();
+                updateSelectFileEnabled();
                 updateSubmitEnabled();
             }
         }.execute();
     }
 
     private void loadProblemsAsync() {
+        resetSelectedFile();
+
         problemBox.setEnabled(false);
         allProblems.setEnabled(false);
         uncompletedProblems.setEnabled(false);
@@ -542,14 +551,10 @@ public class SubmitDialog extends JDialog implements ActionListener {
                 try {
                     // Get item and assignment id
                     final AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
-                    String selectedChoice;
 
                     assert selectedAssignment != null;
 
                     problems = client.getProblems(selectedAssignment.id);
-
-                    // Get users radio button choice
-                    selectedChoice = allProblems.isSelected() ? allProblems.getText() : uncompletedProblems.getText();
 
                     // Generate model
                     DefaultComboBoxModel<ProblemItem> model = new DefaultComboBoxModel<>();
@@ -560,7 +565,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
                         Boolean isSolved = (Boolean) problem.get("solved");
                         String instTitle = String.format("%s %s", problem.get("title"), isSolved ? "\u2714" : "");
 
-                        if (selectedChoice.equals("All Problems") || selectedChoice.equals("Uncompleted Problems") && !isSolved) {
+                        if (allProblems.isSelected() || uncompletedProblems.isSelected() && !isSolved) {
                             model.addElement(new ProblemItem(
                                     problem.get("id").toString(),
                                     instTitle
@@ -575,9 +580,6 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     problemBox.setEnabled(true);
                     allProblems.setEnabled(true);
                     uncompletedProblems.setEnabled(true);
-
-                    // Reset selected file
-                    resetSelectedFile();
 
                     // Display number of problems loaded
                     int totalNumProblems = problems.size();
@@ -600,7 +602,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
 
             @Override
             protected void done() {
-                updateWorkingEnabled();
+                updateSelectFileEnabled();
                 updateSubmitEnabled();
             }
         }.execute();
@@ -655,14 +657,15 @@ public class SubmitDialog extends JDialog implements ActionListener {
         result.setCaretPosition(result.getDocument().getLength());
     }
 
-    private void updateWorkingEnabled() {
+    private void updateSelectFileEnabled() {
         boolean ready =
                 client != null && client.isAuthenticated() &&
                         assignmentBox.isEnabled() && assignmentBox.getSelectedIndex() > 0 &&
                         problemBox.isEnabled() && problemBox.getSelectedIndex() > 0;
 
-        // Enable working button (if ready)
+        // Enable select file buttons (if ready)
         workingButton.setEnabled(ready);
+        browseButton.setEnabled(ready);
     }
 
     private void updateSubmitEnabled() {
@@ -682,6 +685,27 @@ public class SubmitDialog extends JDialog implements ActionListener {
         submitButton.setEnabled(ready);
     }
 
+    private void updateSubmitEnabled(File selectedFile) {
+        boolean ready =
+                client != null && client.isAuthenticated() &&
+                        assignmentBox.isEnabled() && assignmentBox.getSelectedIndex() > 0 &&
+                        problemBox.isEnabled() && problemBox.getSelectedIndex() > 0;
+
+        ProblemItem selectedProblem = (ProblemItem) problemBox.getSelectedItem();
+        assert selectedProblem != null;
+
+
+        if (ready) {
+            // Set the selected file and notify user
+            path.setText(selectedFile.getName());
+            appendResult("Selected file: " + selectedFile.getAbsolutePath());
+            appendResult("");
+        }
+
+        // Enable submit button (if ready)
+        submitButton.setEnabled(ready);
+    }
+
     /* Parser for the problem title, created due to the check mark
     *   - params:
     *       - title: the title of the selected problem that is being parsed
@@ -695,32 +719,12 @@ public class SubmitDialog extends JDialog implements ActionListener {
     }
 
     private void resetSelectedFile() {
-        path.setText("No file selected");
+        browseButton.setEnabled(false);
+        workingButton.setEnabled(false);
+        path.setText("No File Selected");
         selectedFile = null;
     }
 
     @Override
     public void actionPerformed(ActionEvent e) { }
-}
-
-// Classes used as items for drop-down menus
-class CourseItem {
-    String id;
-    String title;
-    CourseItem(String id, String title){ this.id = id; this.title = title; }
-    public String toString() { return this.title; }
-}
-
-class AssignmentItem {
-    String id;
-    String title;
-    AssignmentItem(String id, String title){ this.id = id; this.title = title; }
-    public String toString() { return this.title; }
-}
-
-class ProblemItem {
-    String id;
-    String title;
-    ProblemItem(String id, String title){ this.id = id; this.title = title; }
-    public String toString() { return this.title; }
 }
