@@ -20,6 +20,7 @@
 
 package gui.action;
 
+import gui.DnDFileDropListener;
 import gui.Updater;
 import gui.environment.*;
 import gui.menu.MenuBarCreator;
@@ -27,6 +28,7 @@ import gui.pumping.CFPumpingLemmaChooser;
 import gui.pumping.RegPumpingLemmaChooser;
 
 import java.awt.*;
+import java.awt.dnd.DropTarget;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.KeyEvent;
@@ -46,6 +48,7 @@ import static gui.Globals.APP_NAME;
  * expression, or some other such editable object.
  * 
  * @author Thomas Finley
+ * @author Jesse Burdick-Pless
  */
 
 public class NewAction extends RestrictedAction {
@@ -127,6 +130,10 @@ public class NewAction extends RestrictedAction {
 			//super("JFLAP 7.1");
 			super(APP_NAME);
 			getContentPane().setLayout(new GridLayout(0, 1));
+
+            // Make this window a drop target for opening .jff files
+            new DropTarget(this, new DnDFileDropListener());
+
 			initMenu();
 			initComponents();
 			setResizable(false);

@@ -79,6 +79,7 @@ public class FrameFactory {
 		width = Math.max(width, frame.getSize().width);
 		height = Math.max(height, frame.getSize().height);
 		frame.setSize(new Dimension(width, height));
+        // TODO: maybe make new windows open offset from source window so it is not covered up (except when opened from main menu
 		frame.setVisible(true);
 
 		return frame;

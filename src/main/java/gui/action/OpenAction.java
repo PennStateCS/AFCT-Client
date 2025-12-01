@@ -50,6 +50,7 @@ import automata.turing.TuringMachineBuildingBlocks;
  * and create a new environment with that object.
  * 
  * @author Thomas Finley
+ * @author Jesse Burdick-Pless
  */
 
 public class OpenAction extends RestrictedAction {
@@ -93,37 +94,46 @@ public class OpenAction extends RestrictedAction {
 		fileChooser.setCurrentDirectory(tempFile);
 		fileChooser.rescanCurrentDirectory();
 		fileChooser.setMultiSelectionEnabled(true);
-		Codec[] codecs = null;
-		codecs = makeFilters();
 
 		// Open the dialog.
 		int result = fileChooser.showOpenDialog(source);
 		if (result != JFileChooser.APPROVE_OPTION)
 			return;
 		File[] files = fileChooser.getSelectedFiles();
-		for(int k = 0; k < files.length; k++){
-		    File file = files[k];           
-    		if (!openOrRead) {
-    			// Is this file already open?
-    			if (Universe.frameForFile(file) != null) {
-    				Universe.frameForFile(file).toFront();
-    				return;
-    			}
-    		}
-    		try {
-    			openFile(file, codecs);
-    			
-    		} catch (ParseException e) {
-    			JOptionPane.showMessageDialog(source, e.getMessage(), "Read Error",
-    					JOptionPane.ERROR_MESSAGE);
-    		} catch (DataException e) {
-    			JOptionPane.showMessageDialog(source, e.getMessage(), "Data Error",
-    					JOptionPane.ERROR_MESSAGE);
-    		}
-        }
+        openFiles(List.of(files), source);
         Universe.CHOOSER.resetChoosableFileFilters();
-		lastFileOpened = true;
 	}
+
+    public static void openFiles(List<File> files, Component source) {
+        Codec[] codecs = makeFilters();
+
+        for (File file : files) {
+            if (!openOrRead) {
+                // Is this file already open? - if it is, just bring it to the front
+                if (Universe.frameForFile(file) != null) {
+                    Universe.frameForFile(file).toFront();
+                    continue;
+                }
+            }
+            try {
+                openFile(file, codecs);
+            } catch (ParseException e) {
+                // TODO: make error messages less cryptic
+                // TODO: maybe make error message windows non-blocking
+                if (!file.getName().endsWith(".jff")) {
+                    JOptionPane.showMessageDialog(source, "Could not open file.\n\"" + file.getName() + "\" is not a .jff file.",
+                            "Read Error: \"" + file.getName() + "\"", JOptionPane.ERROR_MESSAGE);
+                } else {
+                    JOptionPane.showMessageDialog(source, e.getMessage(),
+                            "Read Error: \"" + file.getName() + "\"", JOptionPane.ERROR_MESSAGE);
+                }
+            } catch (DataException e) {
+                JOptionPane.showMessageDialog(source, e.getMessage(),
+                        "Data Error: \"" + file.getName() + "\"", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+        lastFileOpened = true;
+    }
 
 	public static java.io.Serializable readFileAndCodecs(File file) {
 		OpenAction.setOpenOrRead(true);

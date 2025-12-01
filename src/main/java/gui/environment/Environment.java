@@ -450,7 +450,10 @@ public abstract class Environment extends JPanel {
 	 */
 	public void setDirty() {
 //		EDebug.print("Change has come");
-		dirty = true;
+        if (!dirty) {
+            dirty = true;
+            environmentFrame.refreshTitle();
+        }
 	}
 
 	/**
@@ -458,7 +461,10 @@ public abstract class Environment extends JPanel {
 	 * file, or is in some other such state that a save is not required.
 	 */
 	public void clearDirty() {
-		dirty = false;
+        if (dirty) {
+            dirty = false;
+            environmentFrame.refreshTitle();
+        }
 	}
 	
 	public void setNewMainObject(Serializable obj){
@@ -479,7 +485,12 @@ public abstract class Environment extends JPanel {
 		}
 		
 	}
-	
+
+    public void setEnvironmentFrame(EnvironmentFrame environmentFrame) {
+        this.environmentFrame = environmentFrame;
+    }
+
+    private EnvironmentFrame environmentFrame;
 	
     /**For Testing multiple objects*/
     public ArrayList<Object> myObjects;

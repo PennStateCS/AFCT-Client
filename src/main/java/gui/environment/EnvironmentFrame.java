@@ -24,11 +24,13 @@ import file.Codec;
 import file.EncodeException;
 import file.Encoder;
 import file.ParseException;
+import gui.DnDFileDropListener;
 import gui.editor.EditBlockPane;
 import gui.editor.EditorPane;
 import gui.grammar.GrammarInputPane;
 
 import java.awt.BorderLayout;
+import java.awt.dnd.DropTarget;
 import java.awt.event.ComponentEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
@@ -65,6 +67,7 @@ public class EnvironmentFrame extends JFrame {
 	 */
 	public EnvironmentFrame(Environment environment) {
 		this.environment = environment;
+        environment.setEnvironmentFrame(this);
 		environment.addFileChangeListener(new FileChangeListener() {
 			public void fileChanged(FileChangeEvent e) {
 				refreshTitle();
@@ -73,6 +76,9 @@ public class EnvironmentFrame extends JFrame {
 		initMenuBar();
 		this.getContentPane().setLayout(new BorderLayout());
 		this.getContentPane().add(environment, BorderLayout.CENTER);
+
+        // Make this window a drop target for opening .jff files
+        new DropTarget(this, new DnDFileDropListener());
 
 		// Register this frame with the universe.
 		myNumber = Universe.registerFrame(this);
@@ -91,6 +97,7 @@ public class EnvironmentFrame extends JFrame {
 	 */
 	public EnvironmentFrame(Environment environment, int isTuring) {
 		this.environment = environment;
+        environment.setEnvironmentFrame(this);
 		environment.addFileChangeListener(new FileChangeListener() {
 			public void fileChanged(FileChangeEvent e) {
 				refreshTitle();
@@ -117,13 +124,18 @@ public class EnvironmentFrame extends JFrame {
 	 * @return a simple string that identifies this frame
 	 */
 	public String getDescription() {
+        String prefix = "";
+        if (environment.isDirty()) {
+            prefix = "*";
+        }
+
 		if (environment.getFile() == null)
-			return "<untitled" + myNumber + ">";
+			return prefix + "untitled " + myNumber;
         else if(environment.myObjects!=null  && environment.getActive()!=null && (environment.getActive() instanceof EditorPane || environment.getActive() instanceof GrammarInputPane)){
-            return environment.getActive().getName();        
+            return prefix + environment.getActive().getName();
         }
 		else
-			return "(" + environment.getFile().getName() + ")";
+			return prefix + environment.getFile().getName();
 	}
 
 	/**
@@ -131,7 +143,8 @@ public class EnvironmentFrame extends JFrame {
 	 * environment, or untitled if there is no file for this environment yet.
 	 */
 	protected void refreshTitle() {
-		String title = DEFAULT_TITLE + " : " + getDescription();
+		//String title = DEFAULT_TITLE + " : " + getDescription();
+		String title = getDescription();
 		setTitle(title);
 	}
 
