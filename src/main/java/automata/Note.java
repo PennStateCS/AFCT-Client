@@ -31,6 +31,7 @@ import java.awt.Point;
 import java.awt.event.MouseEvent;
 import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
+import java.util.Objects;
 
 import debug.EDebug;
 
@@ -212,6 +213,22 @@ public class Note extends JTextArea{
 	}
 
 
+//    public int hashCode1() {
+//        int result = 1;
+//        result = 31 * result + (myAutoPoint == null ? 0 : myAutoPoint.hashCode());
+//        result = 31 * result + (this.getText() == null ? 0 : this.getText().hashCode());
+//        return result;
+//    }
+//
+//    public boolean equals1(Object o){
+//        if (o == this) return true;
+//        if (o == null) return false;
+//        if (!(o instanceof Note other)) return false;
+//
+//        if (!Objects.equals(this.myAutoPoint, other.getAutoPoint())) return false;
+//        if (!Objects.equals(this.getText(), other.getText())) return false;
+//        return true;
+//    }
 	
 	
 }

@@ -29,16 +29,7 @@ import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.io.File;
 import java.io.Serializable;
-import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Comparator;
-import java.util.HashMap;
-import java.util.HashSet;
-import java.util.Iterator;
-import java.util.LinkedList;
-import java.util.List;
-import java.util.Map;
-import java.util.Set;
+import java.util.*;
 
 import javax.swing.JButton;
 import javax.swing.JOptionPane;
@@ -996,7 +987,212 @@ public class Automaton implements Serializable, Cloneable {
 		return ret;
 	}
 
-	// AUTOMATA SPECIFIC CRAP
+//    public int hashCode2Verbose(){
+//        int ret = 0;
+//        int neg = 0;
+//        int temp = 0;
+//
+//        // States
+//        for (Object o: states) {
+//            temp = ((State) o).specialHash();
+//            if (temp >= 0) {
+//                ret += temp;
+//            } else  {
+//                System.out.println("state neg");
+//                neg += temp;
+//            }
+//        }
+//
+//        // Transitions
+//        for (Object o:transitions) {
+//            temp = ((Transition) o).specialHash();
+//            if (temp >= 0) {
+//                ret += temp;
+//            } else  {
+//                System.out.println("transition neg");
+//                neg += temp;
+//            }
+//        }
+//
+//        // Notes
+//        for (Object o: myNotes) {
+//            temp = ((Note) o).specialHash();
+//            if (temp >= 0) {
+//                ret += temp;
+//            } else  {
+//                System.out.println("Notes neg");
+//                neg += temp;
+//            }
+//        }
+//
+//        // Final States
+//        for (Object o: finalStates) {
+//            temp = ((State) o).specialHash();
+//            if (temp >= 0) {
+//                ret += temp;
+//            } else  {
+//                System.out.println("Final States neg");
+//                neg += temp;
+//            }
+//        }
+//
+//        // Initial State
+//        temp = initialState == null? 0: (int)(initialState.specialHash()*Math.PI);
+//        if (temp >= 0) {
+//            ret += temp;
+//        } else  {
+//            System.out.println("Initial State neg");
+//            neg += temp;
+//        }
+//        System.out.println(" ");
+//        System.out.println(" ");
+//
+//        ret += neg;
+//        return ret;
+//    }
+//
+//    /**
+//     * Because subtraction is not commutative, and the order objects are retrieved from a Set is variable,
+//     * identical automata can have different hashcodes if negative and positive hashcodes are not accumulated separately.
+//     * @return
+//     */
+//    public int hashCode2(){
+//        int ret = 0;
+//        int neg = 0;
+//        int temp = 0;
+//
+//        // States
+//        for (Object o: states) {
+//            temp = ((State) o).specialHash();
+//            if (temp >= 0) {
+//                ret += temp;
+//            } else  {
+//                neg += temp;
+//            }
+//        }
+//
+//        // Transitions
+//        for (Object o:transitions) {
+//            temp = ((Transition) o).specialHash();
+//            if (temp >= 0) {
+//                ret += temp;
+//            } else  {
+//                neg += temp;
+//            }
+//        }
+//
+//        // Notes
+//        for (Object o: myNotes) {
+//            temp = ((Note) o).specialHash();
+//            if (temp >= 0) {
+//                ret += temp;
+//            } else  {
+//                neg += temp;
+//            }
+//        }
+//
+//        // Final States
+//        for (Object o: finalStates) {
+//            temp = ((State) o).specialHash();
+//            if (temp >= 0) {
+//                ret += temp;
+//            } else  {
+//                neg += temp;
+//            }
+//        }
+//
+//        // Initial State
+//        temp = initialState == null? 0: (int)(initialState.specialHash()*Math.PI);
+//        if (temp >= 0) {
+//            ret += temp;
+//        } else  {
+//            neg += temp;
+//        }
+//
+//        ret += neg;
+//        return ret;
+//    }
+//
+//    public int hashCode3() {
+//        int result = 1;
+//
+//        result = 31 * result + (states == null ? 0 : states.hashCode());
+//        System.out.println(result);
+//        result = 31 * result + (transitions == null ? 0 : transitions.hashCode());
+//        System.out.println(result);
+//        result = 31 * result + (myNotes == null ? 0 : myNotes.hashCode());
+//        System.out.println(result);
+//        result = 31 * result + (finalStates == null ? 0 : finalStates.hashCode());
+//        System.out.println(result);
+//        result = 31 * result + (initialState == null ? 0 : initialState.hashCode());
+//        System.out.println(result);
+//        System.out.println(" ");
+//
+//        return result;
+//    }
+//
+//    public boolean equals1(Object o){
+//        if (o == this) return true;
+//        if (o == null) return false;
+//        if (!(o instanceof Automaton other)) return false;
+//        // States
+//        for (State state: states) {
+//            if (!other.states.contains(state)) {
+//                return false;
+//            }
+//        }
+//
+//        // Transitions
+//        for (Object transition: transitions) {
+//            if (!other.transitions.contains(transition)) {
+//                return false;
+//            }
+//        }
+//
+//        // Notes
+//        for (int i = 0; i < myNotes.size(); i++) {
+//            if (!other.myNotes.get(i).equals(myNotes.get(i))) {
+//                return false;
+//            }
+//        }
+//
+//
+//        // Final States
+//        for (State finalState: finalStates) {
+//            if (!other.finalStates.contains(finalState)) {
+//                return false;
+//            }
+//        }
+//
+//        // Initial State
+//        if (!other.initialState.equals(initialState)) {
+//            return false;
+//        }
+//        return true;
+//    }
+//
+//    public boolean equals2(Object obj) {
+//        if (this == obj) {
+//            return true;
+//        }
+//        if (obj == null || getClass() != obj.getClass()) {
+//            return false;
+//        }
+//
+//        Automaton other = (Automaton) obj;
+//        boolean test = states.equals(other.states);
+//        boolean a = Objects.equals(this.states, other.states);
+//        boolean b = Objects.equals(this.transitions, other.transitions);
+//        boolean c = Objects.equals(this.finalStates, other.finalStates);
+//        boolean d = Objects.equals(this.initialState, other.initialState);
+//        return Objects.equals(this.states, other.states) &&
+//                Objects.equals(this.transitions, other.transitions) &&
+//                Objects.equals(this.finalStates, other.finalStates) &&
+//                Objects.equals(this.initialState, other.initialState);
+//    }
+
+
+    // AUTOMATA SPECIFIC CRAP
 	// This includes lots of stuff not strictly necessary for the
 	// defintion of automata, but stuff that makes it at least
 	// somewhat efficient in the process.

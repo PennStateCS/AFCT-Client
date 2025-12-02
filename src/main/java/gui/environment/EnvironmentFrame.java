@@ -297,6 +297,9 @@ public class EnvironmentFrame extends JFrame {
 			}
 			environment.setEncoder(codec);
 			environment.clearDirty();
+            if (environment instanceof AutomatonEnvironment) {
+                ((AutomatonEnvironment) environment).getUndoKeeper().updateInitialState();
+            }
 			return true;
 		} catch (ParseException e) {
 			JOptionPane.showMessageDialog(this, e.getMessage(), "Write Error",

@@ -36,7 +36,7 @@ import debug.EDebug;
  * 
  * Let's use it statically for now (testing / prototype), so we don't have to change environment frame to instantiate it.
  * @author Henry Qin
- *
+ * @author Jesse Burdick-Pless
  */
 public class UndoKeeper { 
     	
@@ -48,12 +48,16 @@ public class UndoKeeper {
     //private final int DEFAULT_NUM = 50;
 
     private int numUndo;
-    
+
+    private Automaton initialState;
+    private int initialUndos = 0;
+
     public UndoKeeper(Automaton master){
     	myMaster = master;
     	myDeck = new LinkedList<Automaton>();
     	myBackDeck = new LinkedList<Automaton>();
         numUndo = Universe.curProfile.undo_num;
+        //initialState = (Automaton) myMaster.clone();
     }
 
     public void setNumUndo(int nn){
@@ -129,9 +133,10 @@ public class UndoKeeper {
 //        EDebug.print("Master's hash is " + myMaster.hashCode());
 //        EDebug.print("Top hash is " + p.hashCode());
         
-        if (myDeck.size() == 0 && p.hashCode() == myMaster.hashCode()) return;
-        	
-        
+        if (myDeck.size() == 0 && p.hashCode() == myMaster.hashCode()) {
+            checkIfInInitialState();
+            return;
+        }
     	
 		sensitive = true;
         myBackDeck.push((Automaton) myMaster.clone());
@@ -143,6 +148,8 @@ public class UndoKeeper {
 
 		sensitive = false;
 		myMaster.getEnvironmentFrame().repaint();
+
+        checkIfInInitialState();
     }
 
     public void redo(){
@@ -158,6 +165,26 @@ public class UndoKeeper {
             Automaton.become(myMaster, myBackDeck.pop());
 
 		myMaster.getEnvironmentFrame().repaint();
+        checkIfInInitialState();
+    }
 
+    public void updateInitialState(){
+        //initialState = (Automaton) myMaster.clone();
+        initialUndos = myDeck.size();
+    }
+
+    private boolean isInInitialState(){
+//        int initHash = initialState.hashCode();
+//        int currHash = myMaster.hashCode();
+//
+//        return initHash == currHash;
+        //return initialState.equals(myMaster);
+        return myDeck.size() == initialUndos;
+    }
+
+    private void checkIfInInitialState(){
+        if (isInInitialState()) {
+            myMaster.getEnvironmentFrame().getEnvironment().clearDirty();
+        }
     }
 }

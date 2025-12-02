@@ -23,6 +23,7 @@ package automata;
 import java.awt.Point;
 import java.io.Serializable;
 import java.util.ArrayList;
+import java.util.Objects;
 import java.util.StringTokenizer;
 
 import debug.EDebug;
@@ -281,11 +282,45 @@ public class State implements Serializable {
          + (getLabel() == null ? -1 
         		 : getLabel().hashCode());
     }
-	
-	
-	public void setNote(Note note){
+
+
+//    public int hashCode2() {
+//        int result = 1;
+//        result = 31 * result + (Integer.hashCode(id));
+//        result = 31 * result + (point == null ? 0 : point.hashCode());
+//        result = 31 * result + (name == null ? 0 : name.hashCode());
+//        result = 31 * result + (label == null ? 0 : label.hashCode());
+//        result = 31 * result + (myNote == null ? 0 : myNote.hashCode());
+//        return result;
+//    }
+//
+//    public int hashCode111() {
+//        return Objects.hash(id, point, name, label, myNote);
+//    }
+//
+//    public boolean equals1(Object o) {
+//        if (o == this) return true;
+//        if (o == null) return false;
+//        if (!(o instanceof State other)) return false;
+//
+//        if (!Objects.equals(this.id, other.getID())) return false;
+//        if (!Objects.equals(this.point, other.getPoint())) return false;
+//        if (!Objects.equals(this.name, other.getName())) return false;
+//        if (!Objects.equals(this.label, other.getLabel())) return false;
+//        if (!Objects.equals(this.myNote, other.getNote())) return false;
+//        return true;
+//    }
+
+
+
+
+    public void setNote(Note note){
 		myNote = note;
 	}
+
+    public Note getNote(){
+        return myNote;
+    }
 	
 	private Note myNote;
 
