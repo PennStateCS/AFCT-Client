@@ -1,5 +1,6 @@
 package gui;
 
+import automata.Automaton;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
@@ -41,6 +42,9 @@ public class Globals {
     public static ArrayList<ExtensionPopup> popups = new ArrayList<>();
 
     public static Updater updater = new Updater();
+
+    public static String lastCopiedString = null;
+    public static Automaton lastCopiedAutomaton = null;
 
     public enum Status {
         ERROR, WARNING, GOOD

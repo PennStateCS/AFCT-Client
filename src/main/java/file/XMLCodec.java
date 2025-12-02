@@ -26,6 +26,8 @@ import java.util.Map;
 import javax.xml.parsers.*;
 import org.w3c.dom.*;
 import org.w3c.dom.Document;
+import org.xml.sax.InputSource;
+
 import javax.xml.transform.*;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
@@ -133,6 +135,65 @@ public class XMLCodec extends Codec {
 			throw new EncodeException("Could not open file to write!");
 		}
 	}
+
+    /**
+     * Given a structure, this will attempt to serialize the object and return the serialized result.
+     *
+     * @param structure the structure to serialize
+     * @return the serialized result String
+     * @throws EncodeException if there was no XML transducer available for the structure
+     */
+    public static String serialize(Serializable structure) {
+        Transducer transducer = null;
+        try {
+            transducer = TransducerFactory.getTransducer(structure);
+            /*
+             * If we are saving a pumping lemma, the associated structure would
+             * actually be a pumping lemma chooser. Thus, we have to get the
+             * lemma from the chooser.
+             */
+            Document dom;
+            if(structure instanceof gui.pumping.PumpingLemmaChooser)
+                dom = transducer.toDOM(((gui.pumping.PumpingLemmaChooser)structure).getCurrent());
+            else
+                dom = transducer.toDOM(structure);
+
+            DOMPrettier.makePretty(dom);
+            String result = dom.toString();
+            return result;
+        } catch (IllegalArgumentException e) {
+            throw new EncodeException("No XML transducer available for this structure!");
+        }
+    }
+
+    /**
+     * Given a serialized String, this will return the associated JFLAP structure.
+     *
+     * @param xmlString the serialized String to decode into a structure
+     * @return a JFLAP structure resulting from the interpretation of the serialized String
+     * @throws ParseException if there was a problem reading the file
+     */
+    public static Serializable deserialize(String xmlString) {
+        DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+        try {
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            InputSource is = new InputSource(new StringReader(xmlString));
+            Document doc = builder.parse(is);
+            Transducer transducer = TransducerFactory.getTransducer(doc);
+            return transducer.fromDOM(doc);
+        } catch (ParserConfigurationException e) {
+            throw new ParseException("Java could not create the parser!");
+        } catch (IOException e) {
+            throw new ParseException("Could not open file to read!");
+        } catch (org.xml.sax.SAXException e) {
+            throw new ParseException("Could not parse XML!\n" + e.getMessage());
+        } catch (ExceptionInInitializerError e) {
+            // Hmm. That shouldn't be.
+            System.err.println("STATIC INIT:");
+            e.getException().printStackTrace();
+            throw new ParseException("Unexpected Error!");
+        }
+    }
 
 	/**
 	 * Returns if this type of structure can be encoded with this encoder. This

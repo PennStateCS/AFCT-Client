@@ -767,6 +767,34 @@ public class Automaton implements Serializable, Cloneable {
 		return buffer.toString();
 	}
 
+    /**
+     * Returns a string representation of the selected portion of this Automaton.
+     */
+    public String selectedToString() {
+        StringBuffer buffer = new StringBuffer();
+        buffer.append(super.toString());
+        buffer.append('\n');
+        State[] states = getStates();
+        for (State state : states) {
+            if (state.isSelected()) {
+                if (initialState == state) buffer.append("--> ");
+                buffer.append(state);
+                if (isFinalState(state)) buffer.append(" **FINAL**");
+                buffer.append('\n');
+                Transition[] transitions = getTransitionsFromState(state);
+                for (Transition transition : transitions) {
+                    if (transition.from.isSelected() && transition.to.isSelected()) {
+                        buffer.append('\t');
+                        buffer.append(transition);
+                        buffer.append('\n');
+                    }
+                }
+            }
+        }
+
+        return buffer.toString();
+    }
+
 	/**
 	 * Adds a <CODE>AutomataStateListener</CODE> to this automata.
 	 * 
@@ -1319,7 +1347,7 @@ public class Automaton implements Serializable, Cloneable {
         
     }
 
-    private int duplicateOffset = 15;
+    private static int duplicateOffset = 15;
 
     public void duplicateSelected() {
         State[] states = getStates();
@@ -1332,7 +1360,7 @@ public class Automaton implements Serializable, Cloneable {
                 Point point = new Point(x, y);
                 State newState = createState(point);
                 newState.setSelect(true);
-                if (finalStates.contains(state)) {
+                if (isFinalState(state)) {
                     addFinalState(newState);
                 }
                 newStates.put(state, newState);
@@ -1353,18 +1381,100 @@ public class Automaton implements Serializable, Cloneable {
             }
         }
 
-//        Transition[] transitionss = getTransitions();
-//        for (Transition transition : transitionss) {
-//            if (transition.from.isSelected() && transition.to.isSelected()) {
-//                Transition toBeAdded = (Transition) transition.clone();
-//                toBeAdded.setFromState(newStates.get(transition.from));
-//                toBeAdded.setToState(newStates.get(transition.to));
-//                addTransition(toBeAdded);
-//            }
-//        }
-
         for (State state : states) {
             state.setSelect(false);
         }
+    }
+
+    public static void copyBetweenAutomaton(Automaton from, Automaton to, boolean overwriteInitialState) {
+        State[] states = from.getStates();
+        HashMap<State, State> newStates = new HashMap<>();
+
+        State[] oldStates = to.getStates();
+        for (State state : oldStates) {
+            state.setSelect(false);
+        }
+
+        for (State state : states) {
+            int x = state.getPoint().x + duplicateOffset;
+            int y = state.getPoint().y + duplicateOffset;
+            Point point = new Point(x, y);
+            State newState = to.createState(point);
+            newState.setSelect(true);
+            if (from.isFinalState(state)) {
+                to.addFinalState(newState);
+            }
+            if (from.isInitialState(state)) {
+                if (overwriteInitialState || to.getInitialState() == null) {
+                    to.setInitialState(newState);
+                }
+            }
+            newStates.put(state, newState);
+        }
+
+        for (State state : states) {
+            Transition[] transitions = from.getTransitionsFromState(state);
+            for (Transition transition : transitions) {
+                if (transition.from.isSelected() && transition.to.isSelected()) {
+                    Transition toBeAdded = (Transition) transition.clone();
+                    toBeAdded.setFromState(newStates.get(transition.from));
+                    toBeAdded.setToState(newStates.get(transition.to));
+                    to.addTransition(toBeAdded);
+                }
+            }
+        }
+    }
+
+    public Automaton newAutomatonFromSelected() {
+        Automaton automaton;
+        // Try to create a new object.
+        try {
+            // I am a bad person for writing this hack.
+//			if (this instanceof TuringMachine)
+//				a = new TuringMachine(((TuringMachine) this).tapes());
+//			else
+            //a = (Automaton) getClass().newInstance();
+            automaton = (Automaton) getClass().getDeclaredConstructor().newInstance();
+        } catch (Throwable e) {
+            // Well golly, we're sure screwed now!
+            System.err.println("Warning: clone of automaton failed!");
+            return null;
+        }
+
+        State[] states = getStates();
+        HashMap<State, State> newStates = new HashMap<>();
+
+        for (State state : states) {
+            if (state.isSelected()) {
+                int x = state.getPoint().x + duplicateOffset;
+                int y = state.getPoint().y + duplicateOffset;
+                Point point = new Point(x, y);
+                State newState = automaton.createState(point);
+                newState.setSelect(true);
+                if (isFinalState(state)) {
+                    automaton.addFinalState(newState);
+                }
+                if (isInitialState(state)) {
+                    automaton.setInitialState(newState);
+                }
+                newStates.put(state, newState);
+            }
+        }
+
+        for (State state : states) {
+            if (state.isSelected()) {
+                Transition[] transitions = getTransitionsFromState(state);
+                for (Transition transition : transitions) {
+                    if (transition.from.isSelected() && transition.to.isSelected()) {
+                        Transition toBeAdded = (Transition) transition.clone();
+                        toBeAdded.setFromState(newStates.get(transition.from));
+                        toBeAdded.setToState(newStates.get(transition.to));
+                        automaton.addTransition(toBeAdded);
+                    }
+                }
+            }
+        }
+
+        return automaton;
     }
 }

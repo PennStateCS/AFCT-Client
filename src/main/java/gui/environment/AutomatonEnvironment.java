@@ -21,6 +21,12 @@
 package gui.environment;
 
 import automata.State;
+import file.Codec;
+import file.ParseException;
+import file.XMLCodec;
+import file.xml.Transducer;
+import file.xml.TransducerFactory;
+import gui.Globals;
 import gui.editor.ObjectSnappingHandler;
 import gui.editor.UndoKeeper;
 import automata.Automaton;
@@ -30,6 +36,12 @@ import automata.event.AutomataTransitionEvent;
 import automata.event.AutomataTransitionListener;
 import automata.event.AutomataNoteEvent;
 import automata.event.AutomataNoteListener;
+
+import javax.swing.*;
+import java.awt.*;
+import java.awt.datatransfer.*;
+import java.io.IOException;
+import java.util.Objects;
 
 /**
  * @author Unknown
@@ -127,17 +139,61 @@ public class AutomatonEnvironment extends Environment {
 
     @Override
     public void handleCopy() {
-
+        // Get new Automaton from selection
+        Automaton tempAutomaton = automaton.newAutomatonFromSelected();
+        // Serialize the Automaton
+        String selected = XMLCodec.serialize(tempAutomaton);
+        // Record what was copied
+        Globals.lastCopiedString = selected;
+        Globals.lastCopiedAutomaton = tempAutomaton;
+        // Put the serialized Automaton onto the clipboard
+        StringSelection stringSelection = new StringSelection(selected);
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard.setContents(stringSelection, null);
     }
 
     @Override
     public void handleCut() {
-
+        handleCopy();
+        handleDelete();
     }
 
     @Override
     public void handlePaste() {
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        Transferable contents;
+        try {
+            contents = clipboard.getContents(null);
+        } catch (IllegalStateException e) {
+            JOptionPane.showMessageDialog(this, "The clipboard is currently unavailable.",
+                    "AFCT", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
 
+        if (contents == null) {
+            JOptionPane.showMessageDialog(this, "The clipboard is empty.",
+                    "AFCT", JOptionPane.ERROR_MESSAGE);
+        } else if (!contents.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+            JOptionPane.showMessageDialog(this, "The clipboard doesn't contain an AFCT structure.",
+                    "AFCT", JOptionPane.ERROR_MESSAGE);
+        } else {
+            try {
+                String pastedText = (String) contents.getTransferData(DataFlavor.stringFlavor);
+
+                if (!Objects.equals(pastedText, Globals.lastCopiedString)) {
+                    Automaton tempAutomaton = (Automaton) XMLCodec.deserialize(pastedText);
+                    Globals.lastCopiedString = pastedText;
+                    Globals.lastCopiedAutomaton = tempAutomaton;
+                }
+                Automaton.copyBetweenAutomaton(Globals.lastCopiedAutomaton, automaton, false);
+            } catch (UnsupportedFlavorException | IOException e) {
+                JOptionPane.showMessageDialog(this, "The clipboard doesn't contain an AFCT structure.",
+                        "AFCT", JOptionPane.ERROR_MESSAGE);
+            } catch (ParseException e) {
+                JOptionPane.showMessageDialog(this, "The clipboard contains an invalid AFCT structure.",
+                        "AFCT", JOptionPane.ERROR_MESSAGE);
+            }
+        }
     }
 
     @Override
