@@ -31,6 +31,10 @@ import automata.event.AutomataTransitionListener;
 import automata.event.AutomataNoteEvent;
 import automata.event.AutomataNoteListener;
 
+/**
+ * @author Unknown
+ * @author Jesse Burdick-Pless
+ */
 public class AutomatonEnvironment extends Environment {
 	/**
 	 * 
@@ -117,7 +121,8 @@ public class AutomatonEnvironment extends Environment {
 
     @Override
     public void handleDuplicate() {
-
+        myKeeper.saveStatus();
+        automaton.duplicateSelected();
     }
 
     @Override

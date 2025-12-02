@@ -61,6 +61,7 @@ import gui.viewer.AutomatonPane;
  * @see automata.Transition
  * 
  * @author Thomas Finley
+ * @author Jesse Burdick-Pless
  */
 
 public class Automaton implements Serializable, Cloneable {
@@ -1318,4 +1319,52 @@ public class Automaton implements Serializable, Cloneable {
         
     }
 
+    private int duplicateOffset = 15;
+
+    public void duplicateSelected() {
+        State[] states = getStates();
+        HashMap<State, State> newStates = new HashMap<>();
+
+        for (State state : states) {
+            if (state.isSelected()) {
+                int x = state.getPoint().x + duplicateOffset;
+                int y = state.getPoint().y + duplicateOffset;
+                Point point = new Point(x, y);
+                State newState = createState(point);
+                newState.setSelect(true);
+                if (finalStates.contains(state)) {
+                    addFinalState(newState);
+                }
+                newStates.put(state, newState);
+            }
+        }
+
+        for (State state : states) {
+            if (state.isSelected()) {
+                Transition[] transitions = getTransitionsFromState(state);
+                for (Transition transition : transitions) {
+                    if (transition.from.isSelected() && transition.to.isSelected()) {
+                        Transition toBeAdded = (Transition) transition.clone();
+                        toBeAdded.setFromState(newStates.get(transition.from));
+                        toBeAdded.setToState(newStates.get(transition.to));
+                        addTransition(toBeAdded);
+                    }
+                }
+            }
+        }
+
+//        Transition[] transitionss = getTransitions();
+//        for (Transition transition : transitionss) {
+//            if (transition.from.isSelected() && transition.to.isSelected()) {
+//                Transition toBeAdded = (Transition) transition.clone();
+//                toBeAdded.setFromState(newStates.get(transition.from));
+//                toBeAdded.setToState(newStates.get(transition.to));
+//                addTransition(toBeAdded);
+//            }
+//        }
+
+        for (State state : states) {
+            state.setSelect(false);
+        }
+    }
 }
