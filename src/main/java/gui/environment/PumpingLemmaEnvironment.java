@@ -39,4 +39,39 @@ public class PumpingLemmaEnvironment extends Environment
     {
         super(lemma);
     }
+
+    @Override
+    public void handleDelete() {
+
+    }
+
+    @Override
+    public void handleDuplicate() {
+
+    }
+
+    @Override
+    public void handleCopy() {
+
+    }
+
+    @Override
+    public void handleCut() {
+
+    }
+
+    @Override
+    public void handlePaste() {
+
+    }
+
+    @Override
+    public void handleUndo() {
+
+    }
+
+    @Override
+    public void handleRedo() {
+
+    }
 }

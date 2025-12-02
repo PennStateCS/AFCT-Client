@@ -79,4 +79,39 @@ public class RegularEnvironment extends Environment {
 		getExpression().asString(); // Force resolution of reference.
 		return super.isDirty();
 	}
+
+    @Override
+    public void handleDelete() {
+
+    }
+
+    @Override
+    public void handleDuplicate() {
+
+    }
+
+    @Override
+    public void handleCopy() {
+
+    }
+
+    @Override
+    public void handleCut() {
+
+    }
+
+    @Override
+    public void handlePaste() {
+
+    }
+
+    @Override
+    public void handleUndo() {
+
+    }
+
+    @Override
+    public void handleRedo() {
+
+    }
 }

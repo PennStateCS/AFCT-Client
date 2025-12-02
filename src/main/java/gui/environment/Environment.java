@@ -486,6 +486,14 @@ public abstract class Environment extends JPanel {
 		
 	}
 
+    public abstract void handleDelete();
+    public abstract void handleDuplicate();
+    public abstract void handleCopy();
+    public abstract void handleCut();
+    public abstract void handlePaste();
+    public abstract void handleUndo();
+    public abstract void handleRedo();
+
     public void setEnvironmentFrame(EnvironmentFrame environmentFrame) {
         this.environmentFrame = environmentFrame;
     }

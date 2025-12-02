@@ -99,7 +99,42 @@ public class AutomatonEnvironment extends Environment {
         return objectSnappingHandler;
     }
 
-	/**
+    @Override
+    public void handleDelete() {
+
+    }
+
+    @Override
+    public void handleDuplicate() {
+
+    }
+
+    @Override
+    public void handleCopy() {
+
+    }
+
+    @Override
+    public void handleCut() {
+
+    }
+
+    @Override
+    public void handlePaste() {
+
+    }
+
+    @Override
+    public void handleUndo() {
+        myKeeper.restoreStatus();
+    }
+
+    @Override
+    public void handleRedo() {
+        myKeeper.redo();
+    }
+
+    /**
 	 * The transition and state listener for an automaton detects if there are
 	 * changes in the environment, and if so, sets the dirty bit.
 	 */

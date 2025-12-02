@@ -105,6 +105,15 @@ public class ToolBar extends JToolBar implements ActionListener {
 			group.add(button);
 			this.add(button);
 			button.addActionListener(this);
+
+            if (tool instanceof UndoTool) {
+                this.undoButton = button;
+                button.setEnabled(false);
+            } else if (tool instanceof RedoTool) {
+                this.redoButton = button;
+                button.setEnabled(false);
+            }
+
 			key = tool.getKey();
 			if (key == null)
 				continue;
@@ -114,14 +123,6 @@ public class ToolBar extends JToolBar implements ActionListener {
 			Object o = new Object();
 			imap.put(key, o);
 			amap.put(o, new ButtonClicker(button));
-
-            if (tool instanceof UndoTool) {
-                this.undoButton = button;
-                button.setEnabled(false);
-            } else if (tool instanceof RedoTool) {
-                this.redoButton = button;
-                button.setEnabled(false);
-            }
 		}
 	}
 
