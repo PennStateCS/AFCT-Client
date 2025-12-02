@@ -20,6 +20,7 @@
 
 package gui.environment;
 
+import automata.State;
 import gui.editor.ObjectSnappingHandler;
 import gui.editor.UndoKeeper;
 import automata.Automaton;
@@ -36,6 +37,8 @@ public class AutomatonEnvironment extends Environment {
 	 */
 	private static final long serialVersionUID = 1L;
 
+    private Automaton automaton;
+
 	/**
 	 * Instantiates an <CODE>AutomatonEnvironment</CODE> for the given
 	 * automaton. By default this method will set up an environment with an
@@ -47,6 +50,7 @@ public class AutomatonEnvironment extends Environment {
 	 */
 	public AutomatonEnvironment(Automaton automaton) {
 		super(automaton);
+        this.automaton = automaton;
 		Listener listener = new Listener();
 		automaton.addStateListener(listener);
 		automaton.addTransitionListener(listener);
@@ -101,7 +105,14 @@ public class AutomatonEnvironment extends Environment {
 
     @Override
     public void handleDelete() {
+        myKeeper.saveStatus();
+        State[] states = automaton.getStates();
 
+        for (State state : states) {
+            if (state.isSelected()) {
+                automaton.removeState(state);
+            }
+        }
     }
 
     @Override
