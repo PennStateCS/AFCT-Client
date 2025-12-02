@@ -286,6 +286,8 @@ public abstract class AutomatonTransducer extends AbstractTransducer {
 		ArrayList<Node> tNodes = new ArrayList<Node>();
 		boolean bool = false;
 		for (int k = 0; k < allNodes.getLength(); k++) {
+            Node test1 = allNodes.item(k);
+            String test2 = allNodes.item(k).getNodeName();
 			if (allNodes.item(k).getNodeName().equals(TRANSITION_NAME)) {
 				tNodes.add(allNodes.item(k));
 			}

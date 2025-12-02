@@ -158,11 +158,18 @@ public class XMLCodec extends Codec {
             else
                 dom = transducer.toDOM(structure);
 
+            // Turn the Document into a String
             DOMPrettier.makePretty(dom);
-            String result = dom.toString();
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            Transformer transformer = transformerFactory.newTransformer();
+            StringWriter stringWriter = new StringWriter();
+            transformer.transform(new DOMSource(dom), new StreamResult(stringWriter));
+            String result = stringWriter.toString();
             return result;
         } catch (IllegalArgumentException e) {
             throw new EncodeException("No XML transducer available for this structure!");
+        } catch (TransformerException e) {
+            throw new EncodeException("No XML Transformer available for this structure!");
         }
     }
 
