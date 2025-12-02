@@ -22,6 +22,7 @@ package gui.editor;
 import gui.environment.Universe;
 import gui.environment.Profile;
 
+import java.awt.*;
 import java.util.Deque;
 import java.util.LinkedList;
 
@@ -118,6 +119,8 @@ public class UndoKeeper {
 //        EDebug.print(myDeck.size());
 
         while (myDeck.size() > numUndo) myDeck.removeLast();
+
+        updateUndoRedoButtonState();
     }
 
     /*Undo*/
@@ -150,6 +153,7 @@ public class UndoKeeper {
 		myMaster.getEnvironmentFrame().repaint();
 
         checkIfInInitialState();
+        updateUndoRedoButtonState();
     }
 
     public void redo(){
@@ -166,6 +170,7 @@ public class UndoKeeper {
 
 		myMaster.getEnvironmentFrame().repaint();
         checkIfInInitialState();
+        updateUndoRedoButtonState();
     }
 
     public void updateInitialState(){
@@ -186,5 +191,11 @@ public class UndoKeeper {
         if (isInInitialState()) {
             myMaster.getEnvironmentFrame().getEnvironment().clearDirty();
         }
+    }
+
+    private void updateUndoRedoButtonState(){
+        EditorPane ep = (EditorPane)myMaster.getEnvironmentFrame().getEnvironment().getActive();
+        ep.toolbar.enableOrDisableUndo(!myDeck.isEmpty());
+        ep.toolbar.enableOrDisableRedo(!myBackDeck.isEmpty());
     }
 }
