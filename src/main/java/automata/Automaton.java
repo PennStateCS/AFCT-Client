@@ -580,6 +580,19 @@ public class Automaton implements Serializable, Cloneable {
 		}
 		return cachedStates;
 	}
+
+
+    public State[] getSelectedStates() {
+        State[] states = getStates();
+        ArrayList<State> selectedStates = new ArrayList<>();
+        for (State state : states) {
+            if (state.isSelected()) {
+                selectedStates.add(state);
+            }
+        }
+
+        return selectedStates.toArray(new State[0]);
+    }
 	
 	public void selectStatesWithinBounds(Rectangle bounds){
 //        if (bounds.width == -1 && bounds.height == -1) {
@@ -1360,54 +1373,14 @@ public class Automaton implements Serializable, Cloneable {
 
     private static int duplicateOffset = 15;
 
-    public void duplicateSelected() {
-        State[] states = getStates();
+    private static void copyStatesAndTransitions(Automaton from, Automaton to, boolean overwriteInitialState, boolean onlyCopySelected) {
+        State[] states;
+        if (onlyCopySelected) {
+            states = from.getSelectedStates();
+        } else {
+            states = from.getStates();
+        }
         HashMap<State, State> newStates = new HashMap<>();
-
-        for (State state : states) {
-            if (state.isSelected()) {
-                int x = state.getPoint().x + duplicateOffset;
-                int y = state.getPoint().y + duplicateOffset;
-                Point point = new Point(x, y);
-                State newState = createState(point);
-                newState.setSelect(true);
-                if (isFinalState(state)) {
-                    addFinalState(newState);
-                }
-                if (newState instanceof TMState) {
-                    ((TMState) newState).setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
-                }
-                newStates.put(state, newState);
-            }
-        }
-
-        for (State state : states) {
-            if (state.isSelected()) {
-                Transition[] transitions = getTransitionsFromState(state);
-                for (Transition transition : transitions) {
-                    if (transition.from.isSelected() && transition.to.isSelected()) {
-                        Transition toBeAdded = (Transition) transition.clone();
-                        toBeAdded.setFromState(newStates.get(transition.from));
-                        toBeAdded.setToState(newStates.get(transition.to));
-                        addTransition(toBeAdded);
-                    }
-                }
-            }
-        }
-
-        for (State state : states) {
-            state.setSelect(false);
-        }
-    }
-
-    public static void copyBetweenAutomaton(Automaton from, Automaton to, boolean overwriteInitialState) {
-        State[] states = from.getStates();
-        HashMap<State, State> newStates = new HashMap<>();
-
-        State[] oldStates = to.getStates();
-        for (State state : oldStates) {
-            state.setSelect(false);
-        }
 
         for (State state : states) {
             int x = state.getPoint().x + duplicateOffset;
@@ -1426,20 +1399,30 @@ public class Automaton implements Serializable, Cloneable {
             if (newState instanceof TMState) {
                 ((TMState) newState).setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
             }
+            // TODO: should the name be copied as well?
+            //newState.setName(state.getName());
+            if (state.getNote() != null) {
+                to.addNote(new Note(state.getNote().getAutoPoint(), state.getNote().getText()));
+            }
+            newState.setLabel(state.getLabel());
             newStates.put(state, newState);
         }
 
         int numIncompatibleTransitions = 0;
         for (State state : states) {
-            Transition[] transitions = from.getTransitionsFromState(state);
-            for (Transition transition : transitions) {
-                Transition toBeAdded = (Transition) transition.clone();
-                toBeAdded.setFromState(newStates.get(transition.from));
-                toBeAdded.setToState(newStates.get(transition.to));
-                try {
-                    to.addTransition(toBeAdded);
-                } catch (IncompatibleTransitionException e) {
-                    numIncompatibleTransitions++;
+            if (state.isSelected()) {
+                Transition[] transitions = from.getTransitionsFromState(state);
+                for (Transition transition : transitions) {
+                    if (!onlyCopySelected || (transition.from.isSelected() && transition.to.isSelected())) {
+                        Transition toBeAdded = (Transition) transition.clone();
+                        toBeAdded.setFromState(newStates.get(transition.from));
+                        toBeAdded.setToState(newStates.get(transition.to));
+                        try {
+                            to.addTransition(toBeAdded);
+                        } catch (IncompatibleTransitionException e) {
+                            numIncompatibleTransitions++;
+                        }
+                    }
                 }
             }
         }
@@ -1447,6 +1430,99 @@ public class Automaton implements Serializable, Cloneable {
             JOptionPane.showMessageDialog(to.getEnvironmentFrame(), numIncompatibleTransitions + " incompatible transitions were skipped.",
                     "AFCT", JOptionPane.WARNING_MESSAGE);
         }
+    }
+
+    public void duplicateSelected() {
+//        State[] states = getStates();
+//        HashMap<State, State> newStates = new HashMap<>();
+//
+//        for (State state : states) {
+//            if (state.isSelected()) {
+//                int x = state.getPoint().x + duplicateOffset;
+//                int y = state.getPoint().y + duplicateOffset;
+//                Point point = new Point(x, y);
+//                State newState = createState(point);
+//                newState.setSelect(true);
+//                if (isFinalState(state)) {
+//                    addFinalState(newState);
+//                }
+//                if (newState instanceof TMState) {
+//                    ((TMState) newState).setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
+//                }
+//                newStates.put(state, newState);
+//            }
+//        }
+//
+//        for (State state : states) {
+//            if (state.isSelected()) {
+//                Transition[] transitions = getTransitionsFromState(state);
+//                for (Transition transition : transitions) {
+//                    if (transition.from.isSelected() && transition.to.isSelected()) {
+//                        Transition toBeAdded = (Transition) transition.clone();
+//                        toBeAdded.setFromState(newStates.get(transition.from));
+//                        toBeAdded.setToState(newStates.get(transition.to));
+//                        addTransition(toBeAdded);
+//                    }
+//                }
+//            }
+//        }
+
+        copyStatesAndTransitions(this, this, false, true);
+
+        for (State state : states) {
+            state.setSelect(false);
+        }
+    }
+
+    public static void copyBetweenAutomaton(Automaton from, Automaton to, boolean overwriteInitialState) {
+        State[] oldStates = to.getStates();
+        for (State state : oldStates) {
+            state.setSelect(false);
+        }
+
+        copyStatesAndTransitions(from, to, overwriteInitialState, false);
+
+//        State[] states = from.getStates();
+//        HashMap<State, State> newStates = new HashMap<>();
+//
+//        for (State state : states) {
+//            int x = state.getPoint().x + duplicateOffset;
+//            int y = state.getPoint().y + duplicateOffset;
+//            Point point = new Point(x, y);
+//            State newState = to.createState(point);
+//            newState.setSelect(true);
+//            if (from.isFinalState(state)) {
+//                to.addFinalState(newState);
+//            }
+//            if (from.isInitialState(state)) {
+//                if (overwriteInitialState || to.getInitialState() == null) {
+//                    to.setInitialState(newState);
+//                }
+//            }
+//            if (newState instanceof TMState) {
+//                ((TMState) newState).setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
+//            }
+//            newStates.put(state, newState);
+//        }
+//
+//        int numIncompatibleTransitions = 0;
+//        for (State state : states) {
+//            Transition[] transitions = from.getTransitionsFromState(state);
+//            for (Transition transition : transitions) {
+//                Transition toBeAdded = (Transition) transition.clone();
+//                toBeAdded.setFromState(newStates.get(transition.from));
+//                toBeAdded.setToState(newStates.get(transition.to));
+//                try {
+//                    to.addTransition(toBeAdded);
+//                } catch (IncompatibleTransitionException e) {
+//                    numIncompatibleTransitions++;
+//                }
+//            }
+//        }
+//        if (numIncompatibleTransitions > 0) {
+//            JOptionPane.showMessageDialog(to.getEnvironmentFrame(), numIncompatibleTransitions + " incompatible transitions were skipped.",
+//                    "AFCT", JOptionPane.WARNING_MESSAGE);
+//        }
     }
 
     public Automaton newAutomatonFromSelected() {
@@ -1465,42 +1541,44 @@ public class Automaton implements Serializable, Cloneable {
             return null;
         }
 
-        State[] states = getStates();
-        HashMap<State, State> newStates = new HashMap<>();
+        copyStatesAndTransitions(this, automaton, false, true);
 
-        for (State state : states) {
-            if (state.isSelected()) {
-                int x = state.getPoint().x + duplicateOffset;
-                int y = state.getPoint().y + duplicateOffset;
-                Point point = new Point(x, y);
-                State newState = automaton.createState(point);
-                newState.setSelect(true);
-                if (isFinalState(state)) {
-                    automaton.addFinalState(newState);
-                }
-                if (isInitialState(state)) {
-                    automaton.setInitialState(newState);
-                }
-                if (newState instanceof TMState) {
-                    ((TMState) newState).setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
-                }
-                newStates.put(state, newState);
-            }
-        }
-
-        for (State state : states) {
-            if (state.isSelected()) {
-                Transition[] transitions = getTransitionsFromState(state);
-                for (Transition transition : transitions) {
-                    if (transition.from.isSelected() && transition.to.isSelected()) {
-                        Transition toBeAdded = (Transition) transition.clone();
-                        toBeAdded.setFromState(newStates.get(transition.from));
-                        toBeAdded.setToState(newStates.get(transition.to));
-                        automaton.addTransition(toBeAdded);
-                    }
-                }
-            }
-        }
+//        State[] states = getStates();
+//        HashMap<State, State> newStates = new HashMap<>();
+//
+//        for (State state : states) {
+//            if (state.isSelected()) {
+//                int x = state.getPoint().x + duplicateOffset;
+//                int y = state.getPoint().y + duplicateOffset;
+//                Point point = new Point(x, y);
+//                State newState = automaton.createState(point);
+//                newState.setSelect(true);
+//                if (isFinalState(state)) {
+//                    automaton.addFinalState(newState);
+//                }
+//                if (isInitialState(state)) {
+//                    automaton.setInitialState(newState);
+//                }
+//                if (newState instanceof TMState) {
+//                    ((TMState) newState).setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
+//                }
+//                newStates.put(state, newState);
+//            }
+//        }
+//
+//        for (State state : states) {
+//            if (state.isSelected()) {
+//                Transition[] transitions = getTransitionsFromState(state);
+//                for (Transition transition : transitions) {
+//                    if (transition.from.isSelected() && transition.to.isSelected()) {
+//                        Transition toBeAdded = (Transition) transition.clone();
+//                        toBeAdded.setFromState(newStates.get(transition.from));
+//                        toBeAdded.setToState(newStates.get(transition.to));
+//                        automaton.addTransition(toBeAdded);
+//                    }
+//                }
+//            }
+//        }
 
         return automaton;
     }

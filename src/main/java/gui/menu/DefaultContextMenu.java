@@ -80,13 +80,13 @@ public class DefaultContextMenu extends ContextMenu implements ActionListener {
                 ((AutomatonEnvironment)drawer.getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
                 StateRenamer.rename(drawer.getAutomaton());
             case addNote_TEXT:
-                view.setAdapt(item.isSelected());
-                break;
-            case adaptView_TEXT:
                 ((AutomatonEnvironment)drawer.getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
                 Note newNote = new Note(myPoint, "insert_text");
                 newNote.initializeForView(view);
                 drawer.getAutomaton().addNote(newNote);
+                break;
+            case adaptView_TEXT:
+                view.setAdapt(item.isSelected());
                 break;
         }
         view.repaint();
