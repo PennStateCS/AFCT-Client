@@ -61,8 +61,9 @@ public class Profile {
 	public String epsilonText = "u03B5";
 	private String emptyString = lambda;
 	public String Color = "Original";
-	public int undo_num = 50;
-	
+	//public int undo_num = 50;
+	public int undo_num = -1;
+
 	/** The tag name for the empty string preference. */
 	public static final String EMPTY_STRING_NAME = "empty_string";
 

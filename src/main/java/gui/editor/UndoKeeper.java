@@ -118,7 +118,10 @@ public class UndoKeeper {
 //            EDebug.print(((LinkedList)myDeck).get(i).hashCode());
 //        EDebug.print(myDeck.size());
 
-        while (myDeck.size() > numUndo) myDeck.removeLast();
+        // Disable undo limit if numUndo=-1
+        if (numUndo >= 0) {
+            while (myDeck.size() > numUndo) myDeck.removeLast();
+        }
 
         updateUndoRedoButtonState();
     }

@@ -214,6 +214,7 @@ public class ArrowTool extends Tool {
 	 * popup trigger.
 	 */
 	public void mousePressed(MouseEvent event) {
+        //TODO: this will save the status unnecessarily if the user simply clicks on nothing
 		if (getDrawer().getAutomaton().getEnvironmentFrame() !=null) {
     			((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
 		} else {
