@@ -593,6 +593,15 @@ public class Automaton implements Serializable, Cloneable {
 		}
 	}
 
+    public void addSelectToStatesWithinBounds(Rectangle bounds){
+        State[] states = getStates();
+        for (int k = 0; k < states.length; k++){
+            if(bounds.contains(states[k].getPoint())){
+				states[k].setSelect(true);
+			}
+        }
+    }
+
     public void deselectAllStates(){
         State[] states = getStates();
         for (State state : states) {
