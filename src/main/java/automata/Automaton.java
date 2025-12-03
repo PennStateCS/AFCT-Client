@@ -1411,10 +1411,13 @@ public class Automaton implements Serializable, Cloneable {
             // TODO: should the name be copied as well?
             //newState.setName(state.getName());
             if (state.getNote() != null) {
-                Note note = new Note(state.getNote().getAutoPoint(), state.getNote().getText());
+                Point oldNotePoint = state.getNote().getAutoPoint();
+                Point newNotePoint = new Point(oldNotePoint.x + duplicateOffset, oldNotePoint.y + duplicateOffset);
+                Note note = new Note(newNotePoint, state.getNote().getText());
                 newState.setNote(note);
                 if (to.view != null) {
                     note.initializeForView(to.view);
+                    note.getView().repaint();
                 }
                 to.addNote(note);
             }
@@ -1443,6 +1446,9 @@ public class Automaton implements Serializable, Cloneable {
         if (numIncompatibleTransitions > 0) {
             JOptionPane.showMessageDialog(to.getEnvironmentFrame(), numIncompatibleTransitions + " incompatible transitions were skipped.",
                     "AFCT", JOptionPane.WARNING_MESSAGE);
+        }
+        if (to.view != null) {
+            to.view.repaint();
         }
     }
 
