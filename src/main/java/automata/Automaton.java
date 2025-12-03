@@ -20,6 +20,7 @@
 
 package automata;
 
+import automata.turing.TMState;
 import gui.action.OpenAction;
 import gui.environment.EnvironmentFrame;
 
@@ -1372,6 +1373,9 @@ public class Automaton implements Serializable, Cloneable {
                 if (isFinalState(state)) {
                     addFinalState(newState);
                 }
+                if (newState instanceof TMState) {
+                    ((TMState) newState).setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
+                }
                 newStates.put(state, newState);
             }
         }
@@ -1418,6 +1422,9 @@ public class Automaton implements Serializable, Cloneable {
                     to.setInitialState(newState);
                 }
             }
+            if (newState instanceof TMState) {
+                ((TMState) newState).setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
+            }
             newStates.put(state, newState);
         }
 
@@ -1463,6 +1470,9 @@ public class Automaton implements Serializable, Cloneable {
                 }
                 if (isInitialState(state)) {
                     automaton.setInitialState(newState);
+                }
+                if (newState instanceof TMState) {
+                    ((TMState) newState).setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
                 }
                 newStates.put(state, newState);
             }
