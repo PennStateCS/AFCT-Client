@@ -493,6 +493,7 @@ public abstract class Environment extends JPanel {
     public abstract void handlePaste();
     public abstract void handleUndo();
     public abstract void handleRedo();
+    public abstract void handleSelectAll();
 
     public void setEnvironmentFrame(EnvironmentFrame environmentFrame) {
         this.environmentFrame = environmentFrame;

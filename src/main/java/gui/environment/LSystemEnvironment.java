@@ -91,6 +91,7 @@ public class LSystemEnvironment extends Environment {
 	/** The L-system input pane. */
 	private LSystemInputPane input = null;
 
+    //TODO
     @Override
     public void handleDelete() {
 
@@ -123,6 +124,11 @@ public class LSystemEnvironment extends Environment {
 
     @Override
     public void handleRedo() {
+
+    }
+
+    @Override
+    public void handleSelectAll() {
 
     }
 }

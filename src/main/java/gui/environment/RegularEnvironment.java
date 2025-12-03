@@ -80,6 +80,7 @@ public class RegularEnvironment extends Environment {
 		return super.isDirty();
 	}
 
+    //TODO
     @Override
     public void handleDelete() {
 
@@ -112,6 +113,11 @@ public class RegularEnvironment extends Environment {
 
     @Override
     public void handleRedo() {
+
+    }
+
+    @Override
+    public void handleSelectAll() {
 
     }
 }

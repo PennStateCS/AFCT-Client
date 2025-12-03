@@ -40,6 +40,7 @@ public class PumpingLemmaEnvironment extends Environment
         super(lemma);
     }
 
+    //TODO
     @Override
     public void handleDelete() {
 
@@ -72,6 +73,11 @@ public class PumpingLemmaEnvironment extends Environment
 
     @Override
     public void handleRedo() {
+
+    }
+
+    @Override
+    public void handleSelectAll() {
 
     }
 }

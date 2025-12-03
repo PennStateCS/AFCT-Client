@@ -5,6 +5,10 @@ import gui.environment.Environment;
 import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 
+/**
+ * UNUSED
+ * @author Jesse Burdick-Pless
+ */
 public class EditorKeyListener extends KeyAdapter {
     /**
      * General constants

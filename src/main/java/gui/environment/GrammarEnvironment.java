@@ -105,6 +105,7 @@ public class GrammarEnvironment extends Environment {
 	/** The grammar input pane. */
 	private GrammarInputPane input = null;
 
+    //TODO
     @Override
     public void handleDelete() {
 
@@ -137,6 +138,11 @@ public class GrammarEnvironment extends Environment {
 
     @Override
     public void handleRedo() {
+
+    }
+
+    @Override
+    public void handleSelectAll() {
 
     }
 }

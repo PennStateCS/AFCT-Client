@@ -206,6 +206,14 @@ public class AutomatonEnvironment extends Environment {
         myKeeper.redo();
     }
 
+    @Override
+    public void handleSelectAll() {
+        State[] states = automaton.getStates();
+        for (State state : states) {
+            state.setSelect(true);
+        }
+    }
+
     /**
 	 * The transition and state listener for an automaton detects if there are
 	 * changes in the environment, and if so, sets the dirty bit.

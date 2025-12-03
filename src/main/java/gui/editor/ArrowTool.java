@@ -198,11 +198,8 @@ public class ArrowTool extends Tool {
         if (newLastClickedState != null) {
             if (!newLastClickedState.isSelected()) {
                 getView().didBoundsSelection = false;
+                getAutomaton().deselectAllStates();
             }
-        }
-
-        if (!getView().didBoundsSelection) {
-            getAutomaton().deselectAllStates();
         }
 
 		initialPointClick.setLocation(event.getPoint());

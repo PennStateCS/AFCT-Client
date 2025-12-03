@@ -8,6 +8,9 @@ import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 
+/**
+ * @author Jesse Burdick-Pless
+ */
 public class EditorKeyBindings {
     public static void SetUpKeyBindings(EnvironmentFrame environmentFrame) {
         Environment environment = environmentFrame.getEnvironment();
@@ -78,6 +81,15 @@ public class EditorKeyBindings {
             @Override
             public void actionPerformed(ActionEvent e) {
                 environment.handleRedo();
+            }
+        });
+
+        // ctrl+a action
+        addCTRLAction("selectall", KeyEvent.VK_A, inputMap, actionMap, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                environment.handleSelectAll();
+                environmentFrame.getContentPane().repaint();
             }
         });
     }
