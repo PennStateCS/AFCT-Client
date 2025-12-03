@@ -195,7 +195,7 @@ public class Profile {
             }
         });
 
-        legacyUseLegacySubmissionGui = true; //TODO: should defaults to false
+        legacyUseLegacySubmissionGui = false;
         legacyUseLegacySubmissionGuiCheckBox = new JCheckBoxMenuItem("Use legacy submission interface");
         legacyUseLegacySubmissionGuiCheckBox.setSelected(legacyUseLegacySubmissionGui);
         legacyUseLegacySubmissionGuiCheckBox.addActionListener(new ActionListener() {
