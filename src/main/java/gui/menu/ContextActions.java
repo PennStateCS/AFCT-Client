@@ -12,6 +12,8 @@ import gui.viewer.AutomatonPane;
 import javax.swing.*;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
+import javax.swing.event.PopupMenuEvent;
+import javax.swing.event.PopupMenuListener;
 import java.awt.*;
 import java.io.File;
 
@@ -53,7 +55,7 @@ public class ContextActions {
                     allowOnlyFinal = ((ArrowTool) tool).shouldAllowOnlyFinalStateChange();
                 }
                 stateContextMenu.addMenuItems(menu, skipFinal, isTuringBlock, allowOnlyFinal);
-                stateContextMenu.selectAndEnableMenuItems(states);
+                stateContextMenu.selectAndEnableMenuItems(states, point);
             }
 
             /*
@@ -79,6 +81,21 @@ public class ContextActions {
 
     public JPopupMenu showPopupMenu(Tool tool, Point point, Component component, boolean showDefault) {
         JPopupMenu menu = new JPopupMenu();
+        // Add a PopupMenuListener
+        menu.addPopupMenuListener(new PopupMenuListener() {
+            @Override
+            public void popupMenuWillBecomeVisible(PopupMenuEvent e) {}
+
+            @Override
+            public void popupMenuWillBecomeInvisible(PopupMenuEvent e) {
+                // This fixes a bug where a state could be partly highlighted and partly normal for a moment while the
+                // PopupMenu was closing
+                view.repaint();
+            }
+
+            @Override
+            public void popupMenuCanceled(PopupMenuEvent e) {}
+        });
 
         addMenuItems(menu, tool, point, showDefault);
 

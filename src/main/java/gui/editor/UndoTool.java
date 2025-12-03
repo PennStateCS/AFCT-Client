@@ -75,7 +75,8 @@ public class UndoTool extends Tool {
 	 * @return the key stroke to switch to this tool
 	 */
 	public KeyStroke getKey() {
-        return KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK);
+        return null;
+        //return KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK);
 		//return KeyStroke.getKeyStroke('u');
 	}
 

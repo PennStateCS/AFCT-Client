@@ -26,6 +26,7 @@ import file.Encoder;
 import file.ParseException;
 import gui.DnDFileDropListener;
 import gui.editor.EditBlockPane;
+import gui.editor.EditorKeyBindings;
 import gui.editor.EditorPane;
 import gui.grammar.GrammarInputPane;
 
@@ -68,6 +69,7 @@ public class EnvironmentFrame extends JFrame {
 	public EnvironmentFrame(Environment environment) {
 		this.environment = environment;
         environment.setEnvironmentFrame(this);
+        EditorKeyBindings.SetUpKeyBindings(this);
 		environment.addFileChangeListener(new FileChangeListener() {
 			public void fileChanged(FileChangeEvent e) {
 				refreshTitle();
@@ -98,6 +100,7 @@ public class EnvironmentFrame extends JFrame {
 	public EnvironmentFrame(Environment environment, int isTuring) {
 		this.environment = environment;
         environment.setEnvironmentFrame(this);
+        EditorKeyBindings.SetUpKeyBindings(this);
 		environment.addFileChangeListener(new FileChangeListener() {
 			public void fileChanged(FileChangeEvent e) {
 				refreshTitle();

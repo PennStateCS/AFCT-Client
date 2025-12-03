@@ -20,6 +20,13 @@
 
 package gui.environment;
 
+import automata.State;
+import file.Codec;
+import file.ParseException;
+import file.XMLCodec;
+import file.xml.Transducer;
+import file.xml.TransducerFactory;
+import gui.Globals;
 import gui.editor.ObjectSnappingHandler;
 import gui.editor.UndoKeeper;
 import automata.Automaton;
@@ -30,11 +37,23 @@ import automata.event.AutomataTransitionListener;
 import automata.event.AutomataNoteEvent;
 import automata.event.AutomataNoteListener;
 
+import javax.swing.*;
+import java.awt.*;
+import java.awt.datatransfer.*;
+import java.io.IOException;
+import java.util.Objects;
+
+/**
+ * @author Unknown
+ * @author Jesse Burdick-Pless
+ */
 public class AutomatonEnvironment extends Environment {
 	/**
 	 * 
 	 */
 	private static final long serialVersionUID = 1L;
+
+    private Automaton automaton;
 
 	/**
 	 * Instantiates an <CODE>AutomatonEnvironment</CODE> for the given
@@ -47,6 +66,7 @@ public class AutomatonEnvironment extends Environment {
 	 */
 	public AutomatonEnvironment(Automaton automaton) {
 		super(automaton);
+        this.automaton = automaton;
 		Listener listener = new Listener();
 		automaton.addStateListener(listener);
 		automaton.addTransitionListener(listener);
@@ -99,7 +119,102 @@ public class AutomatonEnvironment extends Environment {
         return objectSnappingHandler;
     }
 
-	/**
+    @Override
+    public void handleDelete() {
+        myKeeper.saveStatus();
+        State[] states = automaton.getStates();
+
+        for (State state : states) {
+            if (state.isSelected()) {
+                automaton.removeState(state);
+            }
+        }
+    }
+
+    @Override
+    public void handleDuplicate(boolean shiftHeld) {
+        myKeeper.saveStatus();
+        automaton.duplicateSelected(shiftHeld);
+    }
+
+    @Override
+    public void handleCopy() {
+        // Get new Automaton from selection
+        Automaton tempAutomaton = automaton.newAutomatonFromSelected();
+        // Serialize the Automaton
+        String selected = XMLCodec.serialize(tempAutomaton);
+        // Record what was copied
+        Globals.lastCopiedString = selected;
+        Globals.lastCopiedAutomaton = tempAutomaton;
+        // Put the serialized Automaton onto the clipboard
+        StringSelection stringSelection = new StringSelection(selected);
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        clipboard.setContents(stringSelection, null);
+    }
+
+    @Override
+    public void handleCut() {
+        handleCopy();
+        handleDelete();
+    }
+
+    @Override
+    public void handlePaste(boolean shiftHeld) {
+        Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
+        Transferable contents;
+        try {
+            contents = clipboard.getContents(null);
+        } catch (IllegalStateException e) {
+            JOptionPane.showMessageDialog(this, "The clipboard is currently unavailable.",
+                    "AFCT", JOptionPane.ERROR_MESSAGE);
+            return;
+        }
+
+        if (contents == null) {
+            JOptionPane.showMessageDialog(this, "The clipboard is empty.",
+                    "AFCT", JOptionPane.ERROR_MESSAGE);
+        } else if (!contents.isDataFlavorSupported(DataFlavor.stringFlavor)) {
+            JOptionPane.showMessageDialog(this, "The clipboard doesn't contain an AFCT structure.",
+                    "AFCT", JOptionPane.ERROR_MESSAGE);
+        } else {
+            try {
+                String pastedText = (String) contents.getTransferData(DataFlavor.stringFlavor);
+
+                if (!Objects.equals(pastedText, Globals.lastCopiedString)) {
+                    Automaton tempAutomaton = (Automaton) XMLCodec.deserialize(pastedText);
+                    Globals.lastCopiedString = pastedText;
+                    Globals.lastCopiedAutomaton = tempAutomaton;
+                }
+                Automaton.copyBetweenAutomaton(Globals.lastCopiedAutomaton, automaton, false, shiftHeld);
+            } catch (UnsupportedFlavorException | IOException e) {
+                JOptionPane.showMessageDialog(this, "The clipboard doesn't contain an AFCT structure.",
+                        "AFCT", JOptionPane.ERROR_MESSAGE);
+            } catch (ParseException e) {
+                JOptionPane.showMessageDialog(this, "The clipboard contains an invalid AFCT structure.",
+                        "AFCT", JOptionPane.ERROR_MESSAGE);
+            }
+        }
+    }
+
+    @Override
+    public void handleUndo() {
+        myKeeper.restoreStatus();
+    }
+
+    @Override
+    public void handleRedo() {
+        myKeeper.redo();
+    }
+
+    @Override
+    public void handleSelectAll() {
+        State[] states = automaton.getStates();
+        for (State state : states) {
+            state.setSelect(true);
+        }
+    }
+
+    /**
 	 * The transition and state listener for an automaton detects if there are
 	 * changes in the environment, and if so, sets the dirty bit.
 	 */

@@ -89,7 +89,7 @@ public class UndoKeeper {
         myDeck.push((Automaton)myMaster.clone()); //push on head
     	    
 //        EDebug.print("The master that is getting pushed on has hascode = " + myMaster.hashCode());
-        System.out.println();
+        //System.out.println();
 
 //        EDebug.print("Second place");
 //        for (int i = 0; i < myDeck.size(); i++)
@@ -118,7 +118,10 @@ public class UndoKeeper {
 //            EDebug.print(((LinkedList)myDeck).get(i).hashCode());
 //        EDebug.print(myDeck.size());
 
-        while (myDeck.size() > numUndo) myDeck.removeLast();
+        // Disable undo limit if numUndo=-1
+        if (numUndo >= 0) {
+            while (myDeck.size() > numUndo) myDeck.removeLast();
+        }
 
         updateUndoRedoButtonState();
     }

@@ -79,7 +79,7 @@ public class GrammarEnvironment extends Environment {
 		return getGrammar(UnboundGrammar.class);
 	}
 
-	/**
+    /**
 	 * Returns the context free grammar.
 	 * 
 	 * @see gui.grammar.GrammarInputPane#getGrammar()
@@ -104,4 +104,45 @@ public class GrammarEnvironment extends Environment {
 
 	/** The grammar input pane. */
 	private GrammarInputPane input = null;
+
+    //TODO
+    @Override
+    public void handleDelete() {
+
+    }
+
+    @Override
+    public void handleDuplicate(boolean shiftHeld) {
+
+    }
+
+    @Override
+    public void handleCopy() {
+
+    }
+
+    @Override
+    public void handleCut() {
+
+    }
+
+    @Override
+    public void handlePaste(boolean shiftHeld) {
+
+    }
+
+    @Override
+    public void handleUndo() {
+
+    }
+
+    @Override
+    public void handleRedo() {
+
+    }
+
+    @Override
+    public void handleSelectAll() {
+
+    }
 }

@@ -53,7 +53,7 @@ public class SetUndoAmountAction extends RestrictedAction {
 	 *            the environment that holds the serializable object
 	 */
 	public SetUndoAmountAction () {
-		super("Set Undo Amount", null);
+		super("Set Undo Limit", null);
 		//this.environment = environment;
 	}
 
@@ -67,7 +67,7 @@ public class SetUndoAmountAction extends RestrictedAction {
         int n;
         while (true){
 //            str = JOptionPane.showInputDialog(null, "Please type the number of Undos:", "How many undo?", ""+Universe.curProfile.undo_num,  JOptionPane.PLAIN_MESSAGE);
-            str = JOptionPane.showInputDialog("Please type the number of Undos:", ""+Universe.curProfile.undo_num);
+            str = JOptionPane.showInputDialog("Please type a number for the Undo limit (or -1 for no limit)", ""+Universe.curProfile.undo_num);
             try {
                 n = Integer.parseInt(str);
             }

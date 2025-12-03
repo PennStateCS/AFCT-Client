@@ -22,15 +22,12 @@ public class DefaultContextMenu extends ContextMenu implements ActionListener {
     private Note curNote;
 
     private JCheckBoxMenuItem stateLabels;
-    private JMenuItem layoutGraph, addNote, renameStates, adaptView;
+    private JMenuItem layoutGraph, renameStates, adaptView;
 
     private static final String stateLabels_TEXT = "Display State Labels";
     private static final String layoutGraph_TEXT = "Layout Graph";
     private static final String renameStates_TEXT = "Rename States";
-    private static final String addNote_TEXT = "Add Note";
     private static final String adaptView_TEXT = "Auto-Zoom";
-
-    private static final String DEFAULT_NOTE_TEXT = "insert_text";
 
 
     public DefaultContextMenu(AutomatonPane view, AutomatonDrawer drawer) {
@@ -39,7 +36,6 @@ public class DefaultContextMenu extends ContextMenu implements ActionListener {
         stateLabels = new JCheckBoxMenuItem(stateLabels_TEXT);
         layoutGraph = new JMenuItem(layoutGraph_TEXT);
         renameStates = new JMenuItem(renameStates_TEXT);
-        addNote = new JMenuItem(addNote_TEXT);
         adaptView = new JCheckBoxMenuItem(adaptView_TEXT);
     }
 
@@ -77,16 +73,15 @@ public class DefaultContextMenu extends ContextMenu implements ActionListener {
                 view.fitToBounds(30);
                 break;
             case renameStates_TEXT:
+                //TODO make it more clear what this is doing.
                 ((AutomatonEnvironment)drawer.getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
                 StateRenamer.rename(drawer.getAutomaton());
+                break;
             case addNote_TEXT:
-                view.setAdapt(item.isSelected());
+                addNote(myPoint);
                 break;
             case adaptView_TEXT:
-                ((AutomatonEnvironment)drawer.getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
-                Note newNote = new Note(myPoint, "insert_text");
-                newNote.initializeForView(view);
-                drawer.getAutomaton().addNote(newNote);
+                view.setAdapt(item.isSelected());
                 break;
         }
         view.repaint();

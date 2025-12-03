@@ -57,6 +57,8 @@ import automata.turing.TuringMachineBuildingBlocks;
 import debug.EDebug;
 
 import static gui.editor.IconKeeper.getArrowToolIcon;
+import static java.awt.event.InputEvent.CTRL_DOWN_MASK;
+import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 
 /**
  * The arrow tool is used mostly for editing existing objects.
@@ -141,7 +143,11 @@ public class ArrowTool extends Tool {
 		Transition trans = getDrawer().transitionAtPoint(event.getPoint());
 		if (trans == null){
 			Rectangle bounds = new Rectangle(0, 0, -1, -1);
-			getView().getDrawer().getAutomaton().selectStatesWithinBounds(bounds);
+            if (ctrlAndShiftUp(event)) {
+                getView().getDrawer().getAutomaton().selectStatesWithinBounds(bounds);
+            } else {
+                getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds);
+            }
 
             lastClickedState = getDrawer().stateAtPoint(event.getPoint());
             if (lastClickedState != null) {
@@ -183,11 +189,32 @@ public class ArrowTool extends Tool {
 		lastClickedTransition = null;
 	}
 
-	/**
+    private boolean ctrlAndShiftUp(InputEvent event) {
+        // Check currently pressed keys
+        int modifiersEx = event.getModifiersEx();
+        // Check if Ctrl is NOT pressed
+        boolean isCtrlUp = (modifiersEx & CTRL_DOWN_MASK) == 0;
+        // Check if Shift is NOT pressed
+        boolean isShiftUp = (modifiersEx & SHIFT_DOWN_MASK) == 0;
+        // Ctrl and Shift are both up
+        return isCtrlUp && isShiftUp;
+    }
+
+    private boolean shiftUp(InputEvent event) {
+        // Check currently pressed keys
+        int modifiersEx = event.getModifiersEx();
+        // Check if Shift is NOT pressed
+        boolean isShiftUp = (modifiersEx & SHIFT_DOWN_MASK) == 0;
+        return isShiftUp;
+    }
+
+
+    /**
 	 * On a mouse press, allows the state to be dragged about unless this is a
 	 * popup trigger.
 	 */
 	public void mousePressed(MouseEvent event) {
+        //TODO: this will save the status unnecessarily if the user simply clicks on nothing
 		if (getDrawer().getAutomaton().getEnvironmentFrame() !=null) {
     			((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
 		} else {
@@ -198,11 +225,10 @@ public class ArrowTool extends Tool {
         if (newLastClickedState != null) {
             if (!newLastClickedState.isSelected()) {
                 getView().didBoundsSelection = false;
+                if (ctrlAndShiftUp(event)) {
+                    getAutomaton().deselectAllStates();
+                }
             }
-        }
-
-        if (!getView().didBoundsSelection) {
-            getAutomaton().deselectAllStates();
         }
 
 		initialPointClick.setLocation(event.getPoint());
@@ -241,7 +267,11 @@ public class ArrowTool extends Tool {
 			}
 
 			Rectangle bounds = new Rectangle(0, 0, -1, -1);
-			getView().getDrawer().getAutomaton().selectStatesWithinBounds(bounds);
+            if (shiftUp(event)) {
+                getView().getDrawer().getAutomaton().selectStatesWithinBounds(bounds);
+            } else {
+                getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds);
+            }
 			getView().getDrawer().setSelectionBounds(bounds);
 		}
 
@@ -473,7 +503,11 @@ public class ArrowTool extends Tool {
 			bounds = new Rectangle(leftX, topY, Math.abs(nowX-initialPointClick.x), Math.abs(nowY-initialPointClick.y));
 
             if (!transitionInFlux){
-                getView().getDrawer().getAutomaton().selectStatesWithinBounds(bounds);
+                if (shiftUp(event)) {
+                    getView().getDrawer().getAutomaton().selectStatesWithinBounds(bounds);
+                } else {
+                    getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds);
+                }
                 getView().getDrawer().setSelectionBounds(bounds);
             }
 

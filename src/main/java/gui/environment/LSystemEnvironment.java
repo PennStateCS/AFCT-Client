@@ -90,4 +90,45 @@ public class LSystemEnvironment extends Environment {
 
 	/** The L-system input pane. */
 	private LSystemInputPane input = null;
+
+    //TODO
+    @Override
+    public void handleDelete() {
+
+    }
+
+    @Override
+    public void handleDuplicate(boolean shiftHeld) {
+
+    }
+
+    @Override
+    public void handleCopy() {
+
+    }
+
+    @Override
+    public void handleCut() {
+
+    }
+
+    @Override
+    public void handlePaste(boolean shiftHeld) {
+
+    }
+
+    @Override
+    public void handleUndo() {
+
+    }
+
+    @Override
+    public void handleRedo() {
+
+    }
+
+    @Override
+    public void handleSelectAll() {
+
+    }
 }
