@@ -305,8 +305,9 @@ public class Automaton implements Serializable, Cloneable {
 	 * Adds a <CODE>Transition</CODE> to this automaton. This method may do
 	 * nothing if the transition is already in the automaton.
 	 * 
-	 * @param trans
-	 *            the transition object to add to the automaton
+	 * @param trans the transition object to add to the automaton
+     *
+     * @throws IncompatibleTransitionException
 	 */
 	public void addTransition(Transition trans) {
 		if (!getTransitionClass().isInstance(trans) || trans == null) {
@@ -1428,14 +1429,23 @@ public class Automaton implements Serializable, Cloneable {
             newStates.put(state, newState);
         }
 
+        int numIncompatibleTransitions = 0;
         for (State state : states) {
             Transition[] transitions = from.getTransitionsFromState(state);
             for (Transition transition : transitions) {
                 Transition toBeAdded = (Transition) transition.clone();
                 toBeAdded.setFromState(newStates.get(transition.from));
                 toBeAdded.setToState(newStates.get(transition.to));
-                to.addTransition(toBeAdded);
+                try {
+                    to.addTransition(toBeAdded);
+                } catch (IncompatibleTransitionException e) {
+                    numIncompatibleTransitions++;
+                }
             }
+        }
+        if (numIncompatibleTransitions > 0) {
+            JOptionPane.showMessageDialog(to.getEnvironmentFrame(), numIncompatibleTransitions + " incompatible transitions were skipped.",
+                    "AFCT", JOptionPane.WARNING_MESSAGE);
         }
     }
 
