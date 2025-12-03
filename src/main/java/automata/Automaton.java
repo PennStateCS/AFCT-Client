@@ -1382,7 +1382,7 @@ public class Automaton implements Serializable, Cloneable {
 
     private static int duplicateOffset = 15;
 
-    private static void copyStatesAndTransitions(Automaton from, Automaton to, boolean overwriteInitialState, boolean onlyCopySelected) {
+    private static void copyStatesAndTransitions(Automaton from, Automaton to, boolean overwriteInitialState, boolean onlyCopySelected, boolean copyStateNames) {
         State[] states;
         if (onlyCopySelected) {
             states = from.getSelectedStates();
@@ -1409,7 +1409,9 @@ public class Automaton implements Serializable, Cloneable {
                 ((TMState) newState).setInnerTM((TuringMachineBuildingBlocks)((TMState) state).getInnerTM().clone()); //all states have an inner TM, although this inner TM might have zero states within it, in which case it acts as a simple state.
             }
             // TODO: should the name be copied as well?
-            //newState.setName(state.getName());
+            if (copyStateNames) {
+                newState.setName(state.getName());
+            }
             if (state.getNote() != null) {
                 Point oldNotePoint = state.getNote().getAutoPoint();
                 Point newNotePoint = new Point(oldNotePoint.x + duplicateOffset, oldNotePoint.y + duplicateOffset);
@@ -1452,7 +1454,7 @@ public class Automaton implements Serializable, Cloneable {
         }
     }
 
-    public void duplicateSelected() {
+    public void duplicateSelected(boolean copyStateNames) {
 //        State[] states = getStates();
 //        HashMap<State, State> newStates = new HashMap<>();
 //
@@ -1486,21 +1488,21 @@ public class Automaton implements Serializable, Cloneable {
 //                }
 //            }
 //        }
+        State[] oldStates = getStates();
+        copyStatesAndTransitions(this, this, false, true, copyStateNames);
 
-        copyStatesAndTransitions(this, this, false, true);
-
-        for (State state : states) {
+        for (State state : oldStates) {
             state.setSelect(false);
         }
     }
 
-    public static void copyBetweenAutomaton(Automaton from, Automaton to, boolean overwriteInitialState) {
+    public static void copyBetweenAutomaton(Automaton from, Automaton to, boolean overwriteInitialState, boolean copyStateNames) {
         State[] oldStates = to.getStates();
         for (State state : oldStates) {
             state.setSelect(false);
         }
 
-        copyStatesAndTransitions(from, to, overwriteInitialState, false);
+        copyStatesAndTransitions(from, to, overwriteInitialState, false, copyStateNames);
 
 //        State[] states = from.getStates();
 //        HashMap<State, State> newStates = new HashMap<>();
@@ -1561,7 +1563,7 @@ public class Automaton implements Serializable, Cloneable {
             return null;
         }
 
-        copyStatesAndTransitions(this, automaton, false, true);
+        copyStatesAndTransitions(this, automaton, false, true, true);
 
 //        State[] states = getStates();
 //        HashMap<State, State> newStates = new HashMap<>();

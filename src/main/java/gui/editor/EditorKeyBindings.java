@@ -40,7 +40,15 @@ public class EditorKeyBindings {
         addCTRLAction("duplicate", KeyEvent.VK_D, inputMap, actionMap, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                environment.handleDuplicate();
+                environment.handleDuplicate(false);
+            }
+        });
+
+        // ctrl+shift+d action
+        addCTRLShiftAction("duplicatespecial", KeyEvent.VK_D, inputMap, actionMap, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                environment.handleDuplicate(true);
             }
         });
 
@@ -64,7 +72,15 @@ public class EditorKeyBindings {
         addCTRLAction("paste", KeyEvent.VK_V, inputMap, actionMap, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                environment.handlePaste();
+                environment.handlePaste(false);
+            }
+        });
+
+        // ctrl+shift+v action
+        addCTRLShiftAction("pastespecial", KeyEvent.VK_V, inputMap, actionMap, new AbstractAction() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                environment.handlePaste(true);
             }
         });
 
@@ -77,7 +93,7 @@ public class EditorKeyBindings {
         });
 
         // ctrl+shift+z action
-        addAction("redo", KeyStroke.getKeyStroke(KeyEvent.VK_Z, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK), inputMap, actionMap, new AbstractAction() {
+        addCTRLShiftAction("redo", KeyEvent.VK_Z, inputMap, actionMap, new AbstractAction() {
             @Override
             public void actionPerformed(ActionEvent e) {
                 environment.handleRedo();
@@ -106,6 +122,11 @@ public class EditorKeyBindings {
 
     private static void addCTRLAction(String actionName, int keyEvent, InputMap inputMap, ActionMap actionMap, AbstractAction action) {
         inputMap.put(KeyStroke.getKeyStroke(keyEvent, InputEvent.CTRL_DOWN_MASK), actionName);
+        actionMap.put(actionName, action);
+    }
+
+    private static void addCTRLShiftAction(String actionName, int keyEvent, InputMap inputMap, ActionMap actionMap, AbstractAction action) {
+        inputMap.put(KeyStroke.getKeyStroke(keyEvent, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK), actionName);
         actionMap.put(actionName, action);
     }
 }

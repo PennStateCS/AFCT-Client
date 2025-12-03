@@ -132,9 +132,9 @@ public class AutomatonEnvironment extends Environment {
     }
 
     @Override
-    public void handleDuplicate() {
+    public void handleDuplicate(boolean shiftHeld) {
         myKeeper.saveStatus();
-        automaton.duplicateSelected();
+        automaton.duplicateSelected(shiftHeld);
     }
 
     @Override
@@ -159,7 +159,7 @@ public class AutomatonEnvironment extends Environment {
     }
 
     @Override
-    public void handlePaste() {
+    public void handlePaste(boolean shiftHeld) {
         Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         Transferable contents;
         try {
@@ -185,7 +185,7 @@ public class AutomatonEnvironment extends Environment {
                     Globals.lastCopiedString = pastedText;
                     Globals.lastCopiedAutomaton = tempAutomaton;
                 }
-                Automaton.copyBetweenAutomaton(Globals.lastCopiedAutomaton, automaton, false);
+                Automaton.copyBetweenAutomaton(Globals.lastCopiedAutomaton, automaton, false, shiftHeld);
             } catch (UnsupportedFlavorException | IOException e) {
                 JOptionPane.showMessageDialog(this, "The clipboard doesn't contain an AFCT structure.",
                         "AFCT", JOptionPane.ERROR_MESSAGE);

@@ -87,7 +87,7 @@ public class RegularEnvironment extends Environment {
     }
 
     @Override
-    public void handleDuplicate() {
+    public void handleDuplicate(boolean shiftHeld) {
 
     }
 
@@ -102,7 +102,7 @@ public class RegularEnvironment extends Environment {
     }
 
     @Override
-    public void handlePaste() {
+    public void handlePaste(boolean shiftHeld) {
 
     }
 
