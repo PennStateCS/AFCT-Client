@@ -1,5 +1,6 @@
 package gui.menu;
 
+import automata.Note;
 import automata.State;
 import automata.Transition;
 import automata.turing.TMState;
@@ -17,11 +18,13 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Objects;
 import java.util.Set;
 
 public class StateContextMenu extends ContextMenu implements ActionListener {
     private State[] states;
     private State state;
+    private Point myPoint;
 
     protected final JCheckBoxMenuItem makeFinal, makeInitial;
 
@@ -70,6 +73,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
         addMenuItemHelper(menu, deleteLabel);
         addMenuItemHelper(menu, deleteAllLabels);
         addMenuItemHelper(menu, setName);
+        addMenuItemHelper(menu, addNote);
 
         if (isTurningBlock) {
             addMenuItemHelper(menu, editBlock);
@@ -79,7 +83,8 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
         allListenersAdded = true;
     }
 
-    public void selectAndEnableMenuItems(State[] states) {
+    public void selectAndEnableMenuItems(State[] states, Point p) {
+        myPoint = Objects.requireNonNullElseGet(p, () -> new Point(0, 0));
         this.states = states;
         int numSelectedStates = 0;
         int numSelectedFinalStates = 0;
@@ -201,6 +206,13 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
                     if (state.isSelected()) {
                         state.setName(name);
                     }
+                }
+                break;
+            case addNote_TEXT:
+                Note note = addNote(myPoint);
+                State clickedState = drawer.stateAtPoint(myPoint);
+                if (clickedState != null) {
+                    clickedState.setNote(note);
                 }
                 break;
             case editBlock_DEFAULT:

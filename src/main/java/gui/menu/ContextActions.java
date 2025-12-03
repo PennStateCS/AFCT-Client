@@ -55,7 +55,7 @@ public class ContextActions {
                     allowOnlyFinal = ((ArrowTool) tool).shouldAllowOnlyFinalStateChange();
                 }
                 stateContextMenu.addMenuItems(menu, skipFinal, isTuringBlock, allowOnlyFinal);
-                stateContextMenu.selectAndEnableMenuItems(states);
+                stateContextMenu.selectAndEnableMenuItems(states, point);
             }
 
             /*

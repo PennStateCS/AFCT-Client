@@ -1244,6 +1244,13 @@ public class Automaton implements Serializable, Cloneable {
 //                Objects.equals(this.initialState, other.initialState);
 //    }
 
+    public void setView(AutomatonPane view) {
+        this.view = view;
+    }
+
+    public AutomatonPane getView() {
+        return view;
+    }
 
     // AUTOMATA SPECIFIC CRAP
 	// This includes lots of stuff not strictly necessary for the
@@ -1264,6 +1271,8 @@ public class Automaton implements Serializable, Cloneable {
 
 	/** The cached array of final states. */
 	private State[] cachedFinalStates = null;
+
+    private AutomatonPane view;
 
 	/**
 	 * The collection of final states in this automaton. This is a subset of the
@@ -1402,7 +1411,12 @@ public class Automaton implements Serializable, Cloneable {
             // TODO: should the name be copied as well?
             //newState.setName(state.getName());
             if (state.getNote() != null) {
-                to.addNote(new Note(state.getNote().getAutoPoint(), state.getNote().getText()));
+                Note note = new Note(state.getNote().getAutoPoint(), state.getNote().getText());
+                newState.setNote(note);
+                if (to.view != null) {
+                    note.initializeForView(to.view);
+                }
+                to.addNote(note);
             }
             newState.setLabel(state.getLabel());
             newStates.put(state, newState);

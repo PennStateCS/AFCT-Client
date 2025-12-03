@@ -122,6 +122,7 @@ public class AutomatonPane extends JPanel implements Scrollable {
 		Listener listener = new Listener();
 		drawer.getAutomaton().addStateListener(listener);
 		drawer.getAutomaton().addTransitionListener(listener);
+        drawer.getAutomaton().setView(this);
 		addComponentListener(listener);
 		setToolTipText("Beavis"); // Tool tips require some text. :P
 		setOpaque(true);
