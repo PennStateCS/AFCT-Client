@@ -344,7 +344,7 @@ public class LegacySubmitDialog extends JDialog implements ActionListener {
     }
 
     private void setInitialUIValues() {
-        Preferences prefs = Preferences.userNodeForPackage(submission.SubmitDialog.class);
+        Preferences prefs = Preferences.userNodeForPackage(submission.LegacySubmitDialog.class);
         String defaultServer = "";
 
         if (this.getClass().getResource("/SETTINGS/SERVER") != null) {

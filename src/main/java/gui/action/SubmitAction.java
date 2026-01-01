@@ -75,12 +75,20 @@ public class SubmitAction extends RestrictedAction {
             LegacySubmitDialog d = new LegacySubmitDialog(this.environment);
             d.setVisible(true);
         } else {
-            SubmitDialog d = new SubmitDialog(this.environment);
-            d.setContentPane(d.getMainPanel());
-            d.pack();
-            d.setLocationRelativeTo(null);
-            d.setResizable(false);
-            d.setVisible(true);
+            SubmitDialog d = Universe.submitDialogForEnvironment(this.environment);
+            if (d == null) {
+                d = new SubmitDialog(this.environment);
+                d.setContentPane(d.getMainPanel());
+                d.pack();
+                d.setLocationRelativeTo(null);
+                d.setResizable(false);
+                d.setVisible(true);
+                Universe.registerSubmitDialog(this.environment, d);
+            } else {
+                d.refreshDialog();
+                d.setVisible(true);
+                d.toFront();
+            }
         }
 	}
 
