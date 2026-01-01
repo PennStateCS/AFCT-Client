@@ -179,6 +179,9 @@ public class SubmitDialog extends JDialog implements ActionListener {
                     @Override
                     protected Void doInBackground() {
                         try {
+                            // TODO: make it so that you only have to log in once during a session,
+                            //  and it will keep you logged in,
+                            //  and use the existing session across different submit dialogs
                             client = new AFCTClient(serverUrl + ":" + portText);
                             token = client.login(userEmail, userPassword);
                             if (token != null && !token.isBlank()) {
@@ -689,11 +692,18 @@ public class SubmitDialog extends JDialog implements ActionListener {
         result.setCaretPosition(result.getDocument().getLength());
     }
 
+    private boolean isClientReady() {
+        boolean ready = client != null
+                && client.isAuthenticated()
+                && assignmentBox.isEnabled()
+                && assignmentBox.getSelectedIndex() > 0
+                && problemBox.isEnabled()
+                && problemBox.getSelectedIndex() > 0;
+        return ready;
+    }
+
     private void updateSelectFileEnabled() {
-        boolean ready =
-                client != null && client.isAuthenticated() &&
-                        assignmentBox.isEnabled() && assignmentBox.getSelectedIndex() > 0 &&
-                        problemBox.isEnabled() && problemBox.getSelectedIndex() > 0;
+        boolean ready = isClientReady();
 
         // Enable select file buttons (if ready)
         workingButton.setEnabled(ready);
@@ -701,10 +711,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
     }
 
     private void updateSubmitEnabled() {
-        boolean ready =
-                client != null && client.isAuthenticated() &&
-                        assignmentBox.isEnabled() && assignmentBox.getSelectedIndex() > 0 &&
-                        problemBox.isEnabled() && problemBox.getSelectedIndex() > 0;
+        boolean ready = isClientReady();
 
         ProblemItem selectedProblem = (ProblemItem) problemBox.getSelectedItem();
         assert selectedProblem != null;
@@ -718,10 +725,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
     }
 
     private void updateSubmitEnabled(File selectedFile) {
-        boolean ready =
-                client != null && client.isAuthenticated() &&
-                        assignmentBox.isEnabled() && assignmentBox.getSelectedIndex() > 0 &&
-                        problemBox.isEnabled() && problemBox.getSelectedIndex() > 0;
+        boolean ready = isClientReady();
 
         ProblemItem selectedProblem = (ProblemItem) problemBox.getSelectedItem();
         assert selectedProblem != null;
