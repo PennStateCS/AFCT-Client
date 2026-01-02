@@ -16,7 +16,7 @@ import java.util.Map;
 import java.time.LocalDateTime;
 import java.util.prefs.Preferences;
 
-public class SubmitDialog extends JDialog implements ActionListener {
+public class SubmitDialog extends JFrame implements ActionListener {
     private Environment env;
     private JTextField email;
     private JPasswordField password;
