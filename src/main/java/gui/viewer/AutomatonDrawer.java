@@ -508,13 +508,16 @@ public class AutomatonDrawer {
 	 *         <CODE>null</CODE> if no transition is at this point
 	 */
 	public Transition transitionAtPoint(Point point) {
+        int fudge = 2;
+        fudge = 3; // TODO - change this based on zoom level so when zoomed out it is easier to click transitions
+
 		if (!valid)
 			refreshArrowMap();
 		Set<CurvedArrow> arrows = arrowToTransitionMap.keySet();
 		Iterator<CurvedArrow> it = arrows.iterator();
 		while (it.hasNext()) {
 			CurvedArrow arrow = (CurvedArrow) it.next();
-			if (arrow.isNear(point, 2))
+			if (arrow.isNear(point, fudge))
 				return (Transition) arrowToTransitionMap.get(arrow);
 		}
 		return null;

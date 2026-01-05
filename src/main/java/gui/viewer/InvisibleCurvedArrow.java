@@ -90,12 +90,7 @@ public class InvisibleCurvedArrow extends CurvedArrow {
 	public void drawHighlight(Graphics2D g) {
 		if (needsRefresh)
 			refreshCurve();
-		Graphics2D g2 = (Graphics2D) g.create();
-		g2.setStroke(new java.awt.BasicStroke(6.0f));
-		g2.setColor(HIGHLIGHT_COLOR);
-		g2.transform(affineToText);
-		g2.fill(bounds);
-		g2.dispose();
+		drawGlowHighlight(g, false);
 	}
 
 	/**

@@ -20,12 +20,7 @@
 
 package gui.viewer;
 
-import java.awt.Color;
-import java.awt.FontMetrics;
-import java.awt.Graphics2D;
-import java.awt.Graphics;
-import java.awt.Point;
-import java.awt.RenderingHints;
+import java.awt.*;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 
@@ -164,7 +159,46 @@ public class CurvedArrow {
 	}
 
     public void drawControlPoint(Graphics2D g){ //adjust later to center of circle = focus point
-        g.drawOval((int)curve.getCtrlX() - 5, (int)curve.getCtrlY() - 5, 10,10);
+        //g.drawOval((int)curve.getCtrlX() - 5, (int)curve.getCtrlY() - 5, 10,10);
+
+        int controlPointDiameter = 10;
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setColor(CONTROL_POINT_INNER_COLOR);
+        g2.fillOval((int)curve.getCtrlX() - 5, (int)curve.getCtrlY() - 5, controlPointDiameter, controlPointDiameter);
+        g2.setColor(CONTROL_POINT_OUTER_COLOR);
+        g2.drawOval((int)curve.getCtrlX() - 5, (int)curve.getCtrlY() - 5, controlPointDiameter, controlPointDiameter);
+    }
+
+    protected void drawGlowHighlight(Graphics2D g, boolean drawCurve) {
+        // Draw highlight
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setStroke(new java.awt.BasicStroke(6.0f));
+        g2.setColor(HIGHLIGHT_COLOR);
+        if (drawCurve) {
+            g2.draw(curve);
+        }
+        g2.transform(affineToText);
+        g2.fill(bounds);
+        g2.dispose();
+
+        // Draw arrow and text on top of highlight
+        draw(g);
+    }
+
+    private void drawGlowHighlight(Graphics2D g) {
+        drawGlowHighlight(g, true);
+    }
+
+    private void drawDashedHighlight(Graphics2D g) {
+        // Draw arrow and text
+        draw(g);
+
+        // Draw dashed arrow on top
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setStroke(dashedStroke);
+        g2.setColor(HIGHLIGHT_COLOR);
+        g2.draw(curve);
+        g2.dispose();
     }
 
 	/**
@@ -174,15 +208,17 @@ public class CurvedArrow {
 	 *            the graphics to draw the highlight of the curve upon
 	 */
 	public void drawHighlight(Graphics2D g) {
-		if (needsRefresh)
-			refreshCurve();
-		Graphics2D g2 = (Graphics2D) g.create();
-		g2.setStroke(new java.awt.BasicStroke(6.0f));
-		g2.setColor(HIGHLIGHT_COLOR);
-		g2.draw(curve);
-		g2.transform(affineToText);
-		g2.fill(bounds);
-		g2.dispose();
+		if (needsRefresh) {
+            refreshCurve();
+        }
+
+        int highlightType = 0;
+
+        if (highlightType == 0) {
+            drawGlowHighlight(g);
+        } else if (highlightType == 1) {
+            drawDashedHighlight(g);
+        }
 	}
 
 	/**
@@ -465,10 +501,28 @@ public class CurvedArrow {
 	private static double HEIGHT = 30.0;
 
 	/** Color when a transition is highlighted, default is red **/
-	public static java.awt.Color HIGHLIGHT_COLOR = new java.awt.Color(255, 0, 0);
-	
+//	public static java.awt.Color HIGHLIGHT_COLOR = new java.awt.Color(255, 0, 0);
+	public static java.awt.Color HIGHLIGHT_COLOR = new java.awt.Color(138, 180, 248, (int) (255 * 0.6));
+
 	/** Color of the arrow, default is black**/
 	public static java.awt.Color ARROW_COLOR = new java.awt.Color(0,0,0);
 
+    /** Color of the control point, default is light blue**/
+	public static java.awt.Color CONTROL_POINT_INNER_COLOR = new java.awt.Color(41, 182, 242);
+
+    /** Color of the control point outer ring, default is white**/
+    public static java.awt.Color CONTROL_POINT_OUTER_COLOR = new java.awt.Color(255, 255, 255);
+
     public Transition myTransition;
+
+    public float[] dashPattern = {3.0f, 3.0f};
+
+    public BasicStroke dashedStroke = new BasicStroke(
+            1.0f,             // Line width
+            BasicStroke.CAP_BUTT,   // End cap style
+            BasicStroke.JOIN_BEVEL, // Line join style
+            10.0f,                  // Miter limit
+            dashPattern,            // The dash pattern array
+            0.0f                    // Dash phase (offset)
+    );
 }
