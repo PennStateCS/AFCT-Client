@@ -14,8 +14,9 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.time.LocalDateTime;
+import java.util.prefs.Preferences;
 
-public class SubmitDialog extends JDialog implements ActionListener {
+public class SubmitDialog extends JFrame implements ActionListener {
     private Environment env;
     private JTextField email;
     private JPasswordField password;
@@ -44,6 +45,20 @@ public class SubmitDialog extends JDialog implements ActionListener {
     private List<Map<String, Object>> problems;
     private String resultText;
 
+    // Default values
+    private final String defaultServer = "http://localhost";
+    private final String defaultPort = "3000";
+    private final String defaultEmail = "student@example.com";
+    private final String defaultPassword = "password123";
+
+    // Preferences
+    private final String PREF_SERVER = "server";
+    private final String PREF_PORT = "port";
+    private final String PREF_EMAIL = "email";
+    private final String PREF_PASSWORD = "password";
+    private final String PREF_HOMEWORK = "homework";
+    private final String PREF_PROBLEM = "problem";
+
     // Event guarding
     private volatile boolean isPopulating = false;
 
@@ -58,12 +73,14 @@ public class SubmitDialog extends JDialog implements ActionListener {
 
     private void initializeComponents(Environment env)
     {
+        Preferences prefs = Preferences.userNodeForPackage(submission.LegacySubmitDialog.class);
+
         // Initialize
         this.setEnv(env);
-        server.setText("http://localhost");
-        port.setText("3000");
-        email.setText("student@example.com");
-        password.setText("password123");
+        server.setText(prefs.get(PREF_SERVER, defaultServer));
+        port.setText(prefs.get(PREF_PORT, defaultPort));
+        email.setText(prefs.get(PREF_EMAIL, defaultEmail));
+        password.setText(prefs.get(PREF_PASSWORD, defaultPassword));
         path.setText("No File Selected");
         browseButton.setEnabled(false);
         resultText = "";
@@ -94,6 +111,14 @@ public class SubmitDialog extends JDialog implements ActionListener {
         problemBox.setEnabled(false);
         submitButton.setEnabled(false);
         workingButton.setEnabled(false);
+    }
+
+    private void savePreferences(String serverUrl, String portText, String userEmail, String userPassword) {
+        Preferences prefs = Preferences.userNodeForPackage(submission.SubmitDialog.class);
+        prefs.put(PREF_SERVER, serverUrl);
+        prefs.put(PREF_PORT, portText);
+        prefs.put(PREF_EMAIL, userEmail);
+        prefs.put(PREF_PASSWORD, userPassword);
     }
 
     /*
@@ -148,10 +173,15 @@ public class SubmitDialog extends JDialog implements ActionListener {
 
                 appendResult("Authenticating…");
 
+                savePreferences(serverUrl, portText, userEmail, userPassword);
+
                 new SwingWorker<Void, String>() {
                     @Override
                     protected Void doInBackground() {
                         try {
+                            // TODO: make it so that you only have to log in once during a session,
+                            //  and it will keep you logged in,
+                            //  and use the existing session across different submit dialogs
                             client = new AFCTClient(serverUrl + ":" + portText);
                             token = client.login(userEmail, userPassword);
                             if (token != null && !token.isBlank()) {
@@ -440,6 +470,11 @@ public class SubmitDialog extends JDialog implements ActionListener {
         return mainForm;
     }
 
+    public void refreshDialog() {
+        updateSelectFileEnabled();
+        updateSubmitEnabled();
+    }
+
     private void loadAssignmentsAsync() {
         resetSelectedFile();
 
@@ -657,11 +692,18 @@ public class SubmitDialog extends JDialog implements ActionListener {
         result.setCaretPosition(result.getDocument().getLength());
     }
 
+    private boolean isClientReady() {
+        boolean ready = client != null
+                && client.isAuthenticated()
+                && assignmentBox.isEnabled()
+                && assignmentBox.getSelectedIndex() > 0
+                && problemBox.isEnabled()
+                && problemBox.getSelectedIndex() > 0;
+        return ready;
+    }
+
     private void updateSelectFileEnabled() {
-        boolean ready =
-                client != null && client.isAuthenticated() &&
-                        assignmentBox.isEnabled() && assignmentBox.getSelectedIndex() > 0 &&
-                        problemBox.isEnabled() && problemBox.getSelectedIndex() > 0;
+        boolean ready = isClientReady();
 
         // Enable select file buttons (if ready)
         workingButton.setEnabled(ready);
@@ -669,10 +711,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
     }
 
     private void updateSubmitEnabled() {
-        boolean ready =
-                client != null && client.isAuthenticated() &&
-                        assignmentBox.isEnabled() && assignmentBox.getSelectedIndex() > 0 &&
-                        problemBox.isEnabled() && problemBox.getSelectedIndex() > 0;
+        boolean ready = isClientReady();
 
         ProblemItem selectedProblem = (ProblemItem) problemBox.getSelectedItem();
         assert selectedProblem != null;
@@ -686,10 +725,7 @@ public class SubmitDialog extends JDialog implements ActionListener {
     }
 
     private void updateSubmitEnabled(File selectedFile) {
-        boolean ready =
-                client != null && client.isAuthenticated() &&
-                        assignmentBox.isEnabled() && assignmentBox.getSelectedIndex() > 0 &&
-                        problemBox.isEnabled() && problemBox.getSelectedIndex() > 0;
+        boolean ready = isClientReady();
 
         ProblemItem selectedProblem = (ProblemItem) problemBox.getSelectedItem();
         assert selectedProblem != null;

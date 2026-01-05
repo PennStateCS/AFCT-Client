@@ -21,6 +21,8 @@
 package gui.environment;
 
 import file.*;
+import submission.SubmitDialog;
+
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
@@ -93,6 +95,7 @@ public class Universe {
 			// The environment doesn't have a file.
 		}
 		environmentToFrame.remove(frame.getEnvironment());
+        unregisterSubmitDialog(frame.getEnvironment());
 
 		// If there are no other frames open, prompt for newness.
 		if (numberOfFrames() == 0)
@@ -199,4 +202,41 @@ public class Universe {
 	}
 	
 	public static Profile curProfile = new Profile();
+
+
+    /** The mapping of environments to submit dialogs. */
+    private static Map<Environment, SubmitDialog> environmentToSubmitDialog = new HashMap<>();
+
+    /**
+     * Given an environment, this returns the submit dialog associated with that environment.
+     *
+     * @param environment an environment that may have some submit dialog
+     * @return the submit dialog associated with this environment, or <CODE>null</CODE>
+     *         if there is no submit dialog associated with this environment
+     */
+    public static SubmitDialog submitDialogForEnvironment(Environment environment) {
+        return (SubmitDialog) environmentToSubmitDialog.get(environment);
+    }
+
+    /**
+     * Registers a submit dialog.
+     *
+     * @param dialog the submit dialog to register
+     */
+    public static void registerSubmitDialog(Environment environment, SubmitDialog dialog) {
+        environmentToSubmitDialog.put(environment, dialog);
+    }
+
+    /**
+     * Unregisters a submit dialog.
+     *
+     * @param environment the environment to unregister the submit dialog from
+     */
+    public static void unregisterSubmitDialog(Environment environment) {
+        if (environmentToSubmitDialog.containsKey(environment)) {
+            SubmitDialog d = submitDialogForEnvironment(environment);
+            environmentToSubmitDialog.remove(environment);
+            d.dispose();
+        }
+    }
 }
