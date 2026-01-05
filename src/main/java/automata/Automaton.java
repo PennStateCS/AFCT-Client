@@ -617,12 +617,23 @@ public class Automaton implements Serializable, Cloneable {
         }
     }
 
-    public void deselectAllStates(){
+    public void deselectStatesAndTransitions() {
+        deselectAllStates();
+        deselectAllTransitions();
+    }
+
+    public void deselectAllStates() {
         State[] states = getStates();
         for (State state : states) {
             state.setSelect(false);
         }
-        // TODO: make this also deselect all transitions too?
+    }
+
+    public void deselectAllTransitions() {
+        Transition[] transitions = getTransitions();
+        for (Transition t : transitions) {
+            t.isSelected = false;
+        }
     }
 
     public void saveStatePoint(State state) {

@@ -130,14 +130,14 @@ public class ArrowTool extends Tool {
                 if (trans.isSelected){
                     trans.isSelected = false;
                     selectedTransition = null;
-                } 
-                else{
+                } else {
                     if (selectedTransition != null) selectedTransition.isSelected = false;
                     trans.isSelected = true;
                     selectedTransition = trans;
-                     
                 }
                 return;
+            } else {
+                getDrawer().getAutomaton().deselectAllTransitions();
             }
         }
 		Transition trans = getDrawer().transitionAtPoint(event.getPoint());
@@ -238,6 +238,7 @@ public class ArrowTool extends Tool {
                     event.getPoint());
         } else {
             lastClickedState.setSelect(true);
+            getAutomaton().deselectAllTransitions();
         }
 
 		// Should we show a popup menu?
@@ -257,6 +258,7 @@ public class ArrowTool extends Tool {
 		}
 		else if (lastClickedTransition != null) {
 			initialPointClick.setLocation(event.getPoint());
+            getAutomaton().deselectAllStates();
 		}	
 		else {
 			ArrayList<Note> notes = getDrawer().getAutomaton().getNotes();
@@ -276,8 +278,6 @@ public class ArrowTool extends Tool {
 		}
 
         //reset the selectedTransition after an Undo has happened.
-
-        
         Transition[] trans = getAutomaton().getTransitions();
         for (int i = 0; i < trans.length; i++)
             if (trans[i].isSelected){
@@ -412,8 +412,7 @@ public class ArrowTool extends Tool {
 			Point p = event.getPoint();
 			int x = p.x - initialPointClick.x;
 			int y = p.y - initialPointClick.y;
-			State f = lastClickedTransition.getFromState(), t = lastClickedTransition
-					.getToState();
+			State f = lastClickedTransition.getFromState(), t = lastClickedTransition.getToState();
 			if (f==t){
 
                 //uncomment this code for Transitions movement
@@ -521,15 +520,18 @@ public class ArrowTool extends Tool {
             Point myClickP = event.getPoint();
             Point2D control = ca.getCurve().getCtrlPt();
 
-            if (transitionInFlux || Math.sqrt((control.getX() - myClickP.x)*(control.getX() - myClickP.x) 
-                        + (control.getY() - myClickP.y)*(control.getY() - myClickP.y)) < 15){
-                            selectedTransition.setControl(myClickP);
-        //                System.out.println("Move it damn it");
-                             ca.refreshCurve();
-                             transitionInFlux = true;
-                             return;
-                        }
+            if (transitionInFlux || Math.sqrt((control.getX() - myClickP.x) * (control.getX() - myClickP.x)
+                    + (control.getY() - myClickP.y) * (control.getY() - myClickP.y)) < 15) {
+                selectedTransition.setControl(myClickP);
+                //                System.out.println("Move it damn it");
+                ca.refreshCurve();
+                transitionInFlux = true;
+            }
 
+        }
+
+        if (!transitionInFlux) {
+            getAutomaton().deselectAllTransitions();
         }
 	}
 

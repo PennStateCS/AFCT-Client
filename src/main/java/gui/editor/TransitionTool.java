@@ -105,7 +105,7 @@ public class TransitionTool extends Tool {
 		if (first == null)
 			return;
 		hover = first.getPoint();
-        getAutomaton().deselectAllStates();
+        getAutomaton().deselectStatesAndTransitions();
         getView().didBoundsSelection = false;
 	}
 
