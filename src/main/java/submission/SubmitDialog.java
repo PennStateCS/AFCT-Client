@@ -8,6 +8,7 @@ import java.awt.Color;
 
 import file.XMLCodec;
 import gui.environment.Environment;
+import gui.environment.Universe;
 
 import java.io.File;
 import java.io.IOException;
@@ -471,6 +472,7 @@ public class SubmitDialog extends JFrame implements ActionListener {
     }
 
     public void refreshDialog() {
+        Universe.frameForEnvironment(this.env);
         updateSelectFileEnabled();
         updateSubmitEnabled();
     }

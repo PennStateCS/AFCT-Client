@@ -82,6 +82,7 @@ public class SubmitAction extends RestrictedAction {
                 d.pack();
                 d.setLocationRelativeTo(null);
                 d.setResizable(false);
+                d.refreshDialog();
                 d.setVisible(true);
                 Universe.registerSubmitDialog(this.environment, d);
             } else {
