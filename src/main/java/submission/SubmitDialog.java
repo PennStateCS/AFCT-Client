@@ -446,6 +446,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
                     return;
                 }
 
+                // Automatically select the current file
+                setCurrJFLAP(email.getText(), parseProblemTitle(problemBox.getSelectedItem().toString()));
+
                 if (selectedFile == null) {
                     JOptionPane.showMessageDialog(mainForm, "No File Selected", "Please select a file to submit.", JOptionPane.WARNING_MESSAGE);
                     return;
