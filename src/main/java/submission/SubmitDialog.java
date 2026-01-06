@@ -11,6 +11,8 @@ import gui.environment.Environment;
 import gui.environment.EnvironmentFrame;
 import gui.environment.Universe;
 
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
@@ -71,6 +73,7 @@ public class SubmitDialog extends JFrame implements ActionListener {
     {
         initializeComponents(env);
         setupEventHandlers();
+
     }
 
     private void initializeComponents(Environment env)
@@ -152,8 +155,24 @@ public class SubmitDialog extends JFrame implements ActionListener {
         appendResult("");
     }
 
-    // Set action listeners for user inputs
+    /**
+     * Sets action listeners for user inputs.
+     */
     private void setupEventHandlers() {
+        handlers_signIn();
+
+        handlers_course();
+
+        handlers_assignment();
+
+        handlers_problem();
+
+        handlers_file();
+
+        handlers_submit();
+    }
+
+    private void handlers_signIn() {
         signInButton.addActionListener(new ActionListener()
         {
             @Override
@@ -230,7 +249,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 }.execute();
             }
         });
+    }
 
+    private void handlers_course() {
         courseBox.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -254,7 +275,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 loadAssignmentsAsync(); // Load assignments for selected course
             }
         });
+    }
 
+    private void handlers_assignment() {
         assignmentBox.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -299,7 +322,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 loadAssignmentsAsync();
             }
         });
+    }
 
+    private void handlers_problem() {
         problemBox.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -348,7 +373,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 loadProblemsAsync();
             }
         });
+    }
 
+    private void handlers_file() {
         browseButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -398,7 +425,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 setCurrJFLAP(email.getText(), parseProblemTitle(problemBox.getSelectedItem().toString()));
             }
         });
+    }
 
+    private void handlers_submit() {
         submitButton.addActionListener(new ActionListener()
         {
             @Override
@@ -416,6 +445,7 @@ public class SubmitDialog extends JFrame implements ActionListener {
                     JOptionPane.showMessageDialog(mainForm, "No problem selected", "Please select a problem to submit.", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
+
                 if (selectedFile == null) {
                     JOptionPane.showMessageDialog(mainForm, "No File Selected", "Please select a file to submit.", JOptionPane.WARNING_MESSAGE);
                     return;
@@ -464,6 +494,23 @@ public class SubmitDialog extends JFrame implements ActionListener {
                         submitButton.setEnabled(true);
                     }
                 }.execute();
+            }
+        });
+    }
+
+    /**
+     * Unused: only reload when student hits the submit button - that will reduce the amount of temps files and writes to disk, which should improve performance.
+     */
+    private void handlers_window_FileRefresh() {
+        // Actually, maybe only reload when student hits the submit button
+        // Add the WindowListener that will auto reload the working file when the submit GUI is selected
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowActivated(WindowEvent e) {
+                // Runs when the window is selected/activated
+                System.out.println("Window Activated! Running custom code.");
+                // Should check if the file has actually changed before reloading it...
+                setCurrJFLAP(email.getText(), parseProblemTitle(problemBox.getSelectedItem().toString()));
             }
         });
     }
