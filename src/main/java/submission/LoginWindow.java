@@ -16,6 +16,7 @@ public class LoginWindow {
     private JTextField portTF;
     private JTextField emailTF;
     private JPasswordField passwordTF;
+    private JButton loginButton;
 
     public LoginWindow() {
         contentPane = new JPanel();
@@ -23,6 +24,7 @@ public class LoginWindow {
         portTF = new JTextField();
         emailTF = new JTextField();
         passwordTF = new JPasswordField();
+        loginButton = new JButton("Login");
 
         setupGui();
         // TODO: when the login window closes, save creds to perfs
@@ -67,12 +69,10 @@ public class LoginWindow {
         //TODO: maybe add button to allow showing the password instead of just the dots.
         //passwordTF.setMargin(new Insets(0, 12, 0, 40));
 
-        // Create loginButton
-        JButton loginButton = new JButton("Login");
+        // Add loginButton to contentPane
         changeSize(loginButton, 16);
         loginButton.setPreferredSize(new Dimension(360, 36));
         //loginButton.setMargin(new Insets(6, 12, 6, 12));
-        // Add loginButton to contentPane
         c = setConstraints(1, 0, 0, y++, GridBagConstraints.LINE_START);
         //c.insets = new Insets(5, hozInset, vrtInset, hozInset);
         c.insets = new Insets(10, hozInset, vrtInset, hozInset);
@@ -93,8 +93,8 @@ public class LoginWindow {
         inputPanel.add(headerLabel, c);
 
         // Add component to inputPanel
-        c = setConstraints(1, 0, 0, y++, GridBagConstraints.LINE_START);
-        c.fill = GridBagConstraints.HORIZONTAL;
+        c = setConstraints(1, 1, 0, y++, GridBagConstraints.LINE_START);
+        //c.fill = GridBagConstraints.HORIZONTAL;
         changeSize(component, 16);
         //component.setPreferredSize(new Dimension(360, 36)); // Bad way of setting this - breaks vertical centering
         if (setMargin) {

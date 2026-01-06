@@ -1,6 +1,7 @@
 package submission;
 
 import javax.swing.*;
+import javax.swing.border.Border;
 import java.awt.*;
 
 import static gui.Globals.*;
@@ -19,7 +20,7 @@ public class SubmitWindow {
     private JButton problemRefreshButton;
     private JRadioButton allProblems;
     private JRadioButton uncompletedProblems;
-    private JLabel currentAutomata; // TODO: maybe rename to "currentFile"?
+    private JLabel currentFileLabel;
     private JButton viewCurrentButton;
     private JButton submitButton;
 
@@ -35,7 +36,7 @@ public class SubmitWindow {
         problemRefreshButton = new JButton();
         allProblems = new JRadioButton("All Problems");
         uncompletedProblems = new JRadioButton("Uncompleted Problems");
-        currentAutomata = new JLabel("No Automata/File Selected");
+        currentFileLabel = new JLabel("No File Selected");
         viewCurrentButton = new JButton("View");
         submitButton = new JButton("Submit");
 
@@ -78,18 +79,40 @@ public class SubmitWindow {
         // Add current file info
         c.gridy = y++;
         contentPane.add(createCurrentFilePanel(), c);
+
+        // Add submitButton to contentPane
+        changeSize(submitButton, 16);
+        //submitButton.setPreferredSize(new Dimension(360, 36));
+        //submitButton.setMargin(new Insets(6, 12, 6, 12));
+        c = setConstraints(1, 0, 0, y++, GridBagConstraints.LINE_START);
+        //c.insets = new Insets(5, hozInset, vrtInset, hozInset);
+        c.insets = new Insets(vrtInset + 5, hozInset, vrtInset, hozInset);
+        contentPane.add(submitButton, c);
     }
 
     private JPanel createCurrentFilePanel() {
-        // Maybe add a border to the label?
-        currentAutomata = new JLabel("Current Automata/File Selected");
+        GridBagConstraints c;
+
+        // Stylize currentFileLabel
+        changeSize(currentFileLabel, 14);
+        unBoldFont(currentFileLabel);
+        //italicFont(currentFileLabel);
+
+        // Create fileLabelPanel
+        JPanel fileLabelPanel = new JPanel(new GridBagLayout());
+        fileLabelPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+
+        // Add currentFileLabel to fileLabelPanel
+        c = setConstraints(1, 1, 0, 0);
+        c.insets = new Insets(6, 12, 6, 12);
+        fileLabelPanel.add(currentFileLabel, c);
 
         // Create filePanel
-        JPanel filePanel = createInputPanel(currentAutomata, "File to Submit", false);
-        GridBagConstraints c;
+        JPanel filePanel = createInputPanel(fileLabelPanel, "File to Submit", false);
 
         // Add viewCurrentButton to filePanel
         c = setConstraints(0, 0, 1, 1);
+        changeSize(viewCurrentButton, 16);
         filePanel.add(viewCurrentButton, c);
 
         return filePanel;

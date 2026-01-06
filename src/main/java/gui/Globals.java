@@ -250,6 +250,10 @@ public class Globals {
         changeSize(component, fontSize);
     }
 
+    public static void italicFont(Component component) {
+        component.setFont(component.getFont().deriveFont(Font.ITALIC));
+    }
+
     public static Icon styleRefreshButton(JButton refreshButton) {
         Icon icon = getRefreshIcon();
         refreshButton.setIcon(icon);
