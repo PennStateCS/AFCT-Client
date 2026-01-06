@@ -227,6 +227,11 @@ public class SubmitDialog extends JFrame implements ActionListener {
                                 // Display number of courses loaded
                                 int numCourses = courses.size();
                                 publish(String.format("Loaded %s %s", numCourses, numCourses == 1 ? "course" : "courses"));
+
+                                // If there is only one course, select it and load the assignments for that course
+                                if (numCourses == 1) {
+                                    courseBox.setSelectedIndex(1);
+                                }
                             } else {
                                 publish("Authentication failed.");
                             }
