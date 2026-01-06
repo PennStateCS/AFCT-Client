@@ -112,6 +112,10 @@ public class Globals {
         return c;
     }
 
+    public static void setAllInsets(GridBagConstraints constraints, int insetAmount) {
+        constraints.insets = new Insets(insetAmount, insetAmount, insetAmount, insetAmount);
+    }
+
     public static void allowHTMLInComponent(JTextArea textComponent) {
         textComponent.putClientProperty(htmlProperty, null);
         textComponent.addPropertyChangeListener(evt -> {

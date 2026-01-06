@@ -1,8 +1,11 @@
 package submission;
 
 
+import gui.Globals;
 import gui.popups.UpdatePopup;
 
+import javax.swing.*;
+import java.awt.*;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Calendar;
@@ -22,6 +25,16 @@ public class SessionHandler {
     private String email = null;
     private String password = null;
 
+    // GUI elements
+    private final JFrame frame;
+    private final JPanel cards;
+    private final LoginWindow loginWindow;
+    private final SubmitWindow submitWindow;
+
+    // GUI identifiers
+    private static final String LOGIN = "LOGIN";
+    private static final String SUBMIT = "SUBMIT";
+
     // Preferences
     public static final String PREF_HAS_USED_SAVED_CREDS = "has_used_saved_creds";
     public static final String PREF_SAVED_CREDS_EXPIRE_AFTER = "saved_creds_expire_after";
@@ -35,7 +48,25 @@ public class SessionHandler {
     public SessionHandler() {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
         this.dateFormat = DateFormat.getDateInstance(DateFormat.SHORT);
-        //this.client = new AFCTClient();
+
+        // GUI elements
+        this.frame = new JFrame();
+        this.cards = new JPanel(new CardLayout());
+        this.loginWindow = new LoginWindow();
+        this.submitWindow = new SubmitWindow();
+        this.setupGUI();
+    }
+
+    private void setupGUI() {
+        frame.getContentPane().add(cards);
+
+        cards.add(LOGIN, loginWindow.getContentPane());
+
+        cards.add(SUBMIT, submitWindow.getContentPane());
+    }
+
+    private void show() {
+        frame.setTitle("Login - " + Globals.APP_NAME);
     }
 
     public AFCTClient getClient() {
