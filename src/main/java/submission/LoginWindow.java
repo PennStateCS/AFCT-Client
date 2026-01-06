@@ -71,6 +71,7 @@ public class LoginWindow {
         JButton loginButton = new JButton("Login");
         changeSize(loginButton, 16);
         loginButton.setPreferredSize(new Dimension(360, 36));
+        //loginButton.setMargin(new Insets(6, 12, 6, 12));
         // Add loginButton to contentPane
         c = setConstraints(1, 0, 0, y++, GridBagConstraints.LINE_START);
         //c.insets = new Insets(5, hozInset, vrtInset, hozInset);
@@ -94,9 +95,9 @@ public class LoginWindow {
         // Add textField to textInputPanel
         c = setConstraints(1, 0, 0, y++, GridBagConstraints.LINE_START);
         c.fill = GridBagConstraints.HORIZONTAL;
-        textField.setPreferredSize(new Dimension(360, 36));
-        textField.setMargin(new Insets(0, 12, 0, 12));
+        //textField.setPreferredSize(new Dimension(360, 36));
         changeSize(textField, 16);
+        textField.setMargin(new Insets(6, 12, 6, 12));
         textInputPanel.add(textField, c);
 
         return textInputPanel;
