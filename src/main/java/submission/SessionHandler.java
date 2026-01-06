@@ -13,6 +13,8 @@ import java.util.Date;
 import java.util.Objects;
 import java.util.prefs.Preferences;
 
+import static gui.Globals.sizeAndCenterWindow;
+
 
 public class SessionHandler {
     public final Preferences preferences;
@@ -55,6 +57,12 @@ public class SessionHandler {
         this.loginWindow = new LoginWindow();
         this.submitWindow = new SubmitWindow();
         this.setupGUI();
+
+        // TODO: remove after testing
+        CardLayout cl = (CardLayout)(cards.getLayout());
+        cl.show(cards, LOGIN);
+        frame.pack();
+        frame.setVisible(true);
     }
 
     private void setupGUI() {
