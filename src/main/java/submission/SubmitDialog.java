@@ -8,6 +8,7 @@ import java.awt.Color;
 
 import file.XMLCodec;
 import gui.environment.Environment;
+import gui.environment.EnvironmentFrame;
 import gui.environment.Universe;
 
 import java.io.File;
@@ -472,7 +473,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
     }
 
     public void refreshDialog() {
-        Universe.frameForEnvironment(this.env);
+        // TODO: load current file here
+        EnvironmentFrame frame = Universe.frameForEnvironment(this.env);
+        this.setTitle(frame.getDescription() + " - Submit");
         updateSelectFileEnabled();
         updateSubmitEnabled();
     }
