@@ -7,6 +7,7 @@ import java.awt.event.ActionListener;
 import java.awt.Color;
 
 import file.XMLCodec;
+import gui.Globals;
 import gui.environment.Environment;
 import gui.environment.EnvironmentFrame;
 import gui.environment.Universe;
@@ -18,7 +19,10 @@ import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.prefs.Preferences;
+
+import static submission.SessionHandler.*;
 
 public class SubmitDialog extends JFrame implements ActionListener {
     private Environment env;
@@ -55,14 +59,6 @@ public class SubmitDialog extends JFrame implements ActionListener {
     private final String defaultEmail = "student@example.com";
     private final String defaultPassword = "password123";
 
-    // Preferences
-    private final String PREF_SERVER = "server";
-    private final String PREF_PORT = "port";
-    private final String PREF_EMAIL = "email";
-    private final String PREF_PASSWORD = "password";
-    private final String PREF_HOMEWORK = "homework";
-    private final String PREF_PROBLEM = "problem";
-
     // Event guarding
     private volatile boolean isPopulating = false;
 
@@ -78,7 +74,7 @@ public class SubmitDialog extends JFrame implements ActionListener {
 
     private void initializeComponents(Environment env)
     {
-        Preferences prefs = Preferences.userNodeForPackage(submission.LegacySubmitDialog.class);
+        Preferences prefs = Globals.sessionHandler.preferences;
 
         // Initialize
         this.setEnv(env);
@@ -119,7 +115,7 @@ public class SubmitDialog extends JFrame implements ActionListener {
     }
 
     private void savePreferences(String serverUrl, String portText, String userEmail, String userPassword) {
-        Preferences prefs = Preferences.userNodeForPackage(submission.SubmitDialog.class);
+        Preferences prefs = Globals.sessionHandler.preferences;
         prefs.put(PREF_SERVER, serverUrl);
         prefs.put(PREF_PORT, portText);
         prefs.put(PREF_EMAIL, userEmail);
@@ -819,6 +815,12 @@ public class SubmitDialog extends JFrame implements ActionListener {
         workingButton.setEnabled(false);
         path.setText("No File Selected");
         selectedFile = null;
+    }
+
+    public boolean credentialsChanged(String server, String port, String email, String password) {
+        boolean serverChanged = Objects.equals(server, this.server.getText());
+        boolean portChanged = Objects.equals(port, this.port.getText());
+        return false;
     }
 
     @Override

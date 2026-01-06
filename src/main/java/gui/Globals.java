@@ -6,6 +6,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sun.tools.javac.Main;
 import gui.popups.ExtensionPopup;
+import submission.AFCTClient;
+import submission.SessionHandler;
 
 import javax.swing.*;
 import java.awt.*;
@@ -45,6 +47,8 @@ public class Globals {
 
     public static String lastCopiedString = null;
     public static Automaton lastCopiedAutomaton = null;
+
+    public static SessionHandler sessionHandler = new SessionHandler();
 
     public enum Status {
         ERROR, WARNING, GOOD

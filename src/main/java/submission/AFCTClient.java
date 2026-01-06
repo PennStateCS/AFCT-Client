@@ -8,9 +8,9 @@ import java.net.URL;
 import java.nio.charset.StandardCharsets;
 import java.util.List;
 import java.util.Map;
+import java.util.prefs.Preferences;
 
-public class AFCTClient
-{
+public class AFCTClient {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private final String baseUrl;
     private String token;
@@ -18,7 +18,23 @@ public class AFCTClient
     private int readTimeoutMs = 30000;
 
     public AFCTClient(String baseUrl) {
-        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        //this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        this.baseUrl = fixUrl(baseUrl);
+    }
+
+    public static String fixUrl(String baseUrl) {
+        String fixedUrl = baseUrl.trim();
+        // Strip ending "/" if present
+        if (baseUrl.endsWith("/")) {
+            fixedUrl = baseUrl.substring(0, baseUrl.length() - 1).trim();
+        }
+
+        // TODO: test *https* on AFCT server
+        // Add "http://" to the beginning if it is missing
+        if (!fixedUrl.startsWith("http://") && !fixedUrl.startsWith("https://")) {
+            fixedUrl = "http://" + fixedUrl;
+        }
+        return fixedUrl;
     }
 
     public AFCTClient timeouts(int connectMs, int readMs) {
