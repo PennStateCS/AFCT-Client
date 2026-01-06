@@ -339,6 +339,7 @@ public class UpdatePopup implements ExtensionPopup {
             }
         }
 
+
         return show(UpdateStatus.AVAILABLE);
     }
 
@@ -350,9 +351,18 @@ public class UpdatePopup implements ExtensionPopup {
         CardLayout cl = (CardLayout)(cards.getLayout());
 
         switch (updateAvailable) {
-            case AVAILABLE, REMIND_LATER -> cl.show(cards, UPDATE_AVAILABLE_PANEL);
-            case NO_UPDATES ->  cl.show(cards, NO_UPDATES_PANEL);
-            case LOADING ->  cl.show(cards, LOADING);
+            case AVAILABLE, REMIND_LATER -> {
+                frame.setTitle("Update: " + JUST_NAME + latestVersion);
+                cl.show(cards, UPDATE_AVAILABLE_PANEL);
+            }
+            case NO_UPDATES -> {
+                frame.setTitle(Globals.APP_NAME);
+                cl.show(cards, NO_UPDATES_PANEL);
+            }
+            case LOADING -> {
+                frame.setTitle("Checking for updates...");
+                cl.show(cards, LOADING);
+            }
         }
 
         return updateAvailable;
