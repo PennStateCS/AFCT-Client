@@ -28,6 +28,9 @@ public class IconKeeper {
     private static final String REDO_ICON_NEW = "/ICON/JBP-Icons/redo-wip2.png";
     private static final String BLOCK_TRANSITION_ICON_NEW = "/ICON/JBP-Icons/block-transition-wip-dark.png";
 
+    // Other icons
+    private static final String REFRESH_ICON = "/ICON/Trimble-Modus-Icons/refresh.png";
+
 
     /**
      * Returns the tool icon from the given path.
@@ -139,5 +142,15 @@ public class IconKeeper {
      */
     public static Icon getBlockTransitionToolIcon(Object tool) {
         return getToolIcon(tool, BLOCK_TRANSITION_ICON, BLOCK_TRANSITION_ICON_NEW);
+    }
+
+    /**
+     * Returns the refresh icon.
+     *
+     * @return the refresh icon
+     */
+    public static Icon getRefreshIcon() {
+        java.net.URL url = IconKeeper.class.getResource(REFRESH_ICON);
+        return new javax.swing.ImageIcon(url);
     }
 }

@@ -60,7 +60,7 @@ public class SessionHandler {
 
         // TODO: remove after testing
         CardLayout cl = (CardLayout)(cards.getLayout());
-        cl.show(cards, LOGIN);
+        cl.show(cards, SUBMIT);
         frame.pack();
         frame.setVisible(true);
     }
@@ -68,7 +68,7 @@ public class SessionHandler {
     private void setupGUI() {
         frame.getContentPane().add(cards);
 
-        cards.add(LOGIN, loginWindow.getContentPane());
+        //cards.add(LOGIN, loginWindow.getContentPane());
 
         cards.add(SUBMIT, submitWindow.getContentPane());
     }

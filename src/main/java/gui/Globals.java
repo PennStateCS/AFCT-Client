@@ -18,6 +18,7 @@ import java.util.ArrayList;
 import java.util.Objects;
 import java.util.prefs.Preferences;
 
+import static gui.editor.IconKeeper.getRefreshIcon;
 import static java.lang.Math.floor;
 
 /**
@@ -236,6 +237,10 @@ public class Globals {
         component.setFont(component.getFont().deriveFont((float) fontSize));
     }
 
+    public static void unBoldFont(Component component) {
+        component.setFont(component.getFont().deriveFont(Font.PLAIN));
+    }
+
     public static void boldFont(Component component) {
         component.setFont(component.getFont().deriveFont(Font.BOLD));
     }
@@ -243,6 +248,16 @@ public class Globals {
     public static void boldFontAndChangeSize(Component component, int fontSize) {
         boldFont(component);
         changeSize(component, fontSize);
+    }
+
+    public static Icon styleRefreshButton(JButton refreshButton) {
+        Icon icon = getRefreshIcon();
+        refreshButton.setIcon(icon);
+
+        // Optional: remove borders for a cleaner look
+        //refreshButton.setBorderPainted(false);
+        //refreshButton.setContentAreaFilled(false);
+        return icon;
     }
 
     public static void errorPrint(String output) {

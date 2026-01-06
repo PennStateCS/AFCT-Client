@@ -79,27 +79,37 @@ public class LoginWindow {
         contentPane.add(loginButton, c);
     }
 
-    private JPanel createTextInputPanel(JTextField textField, String headerText) {
-        JPanel textInputPanel = new JPanel(new GridBagLayout());
+    public static JPanel createInputPanel(Component component, String headerText, boolean setMargin) {
+        JPanel inputPanel = new JPanel(new GridBagLayout());
         GridBagConstraints c;
         int y = 0;
 
         // Create headerLabel
         JLabel headerLabel = new JLabel(headerText);
         changeSize(headerLabel, 16);
-        // Add headerLabel to textInputPanel
+        // Add headerLabel to inputPanel
         c = setConstraints(0, 0, 0, y++, GridBagConstraints.LINE_START);
         c.insets = new Insets(0, 0, 5, 0);
-        textInputPanel.add(headerLabel, c);
+        inputPanel.add(headerLabel, c);
 
-        // Add textField to textInputPanel
+        // Add component to inputPanel
         c = setConstraints(1, 0, 0, y++, GridBagConstraints.LINE_START);
         c.fill = GridBagConstraints.HORIZONTAL;
-        //textField.setPreferredSize(new Dimension(360, 36));
-        changeSize(textField, 16);
-        textField.setMargin(new Insets(6, 12, 6, 12));
-        textInputPanel.add(textField, c);
+        changeSize(component, 16);
+        //component.setPreferredSize(new Dimension(360, 36)); // Bad way of setting this - breaks vertical centering
+        if (setMargin) {
+            ((JTextField) component).setMargin(new Insets(6, 12, 6, 12));
+        }
+        inputPanel.add(component, c);
 
-        return textInputPanel;
+        return inputPanel;
+    }
+
+    public static JPanel createTextInputPanel(JTextField textField, String headerText) {
+        return createInputPanel(textField, headerText, true);
+    }
+
+    public static JPanel createComboBoxPanel(JComboBox comboBox, String headerText) {
+        return createInputPanel(comboBox, headerText, false);
     }
 }
