@@ -47,6 +47,9 @@ public class SubmitWindow {
         submitButton = new JButton("Submit");
 
         setupGui();
+
+        //TODO: DELETE - just for testing
+        problemDetailsPanel.setDetailsText("Create a Deterministic Finite State Automaton that accepts strings that contain any number of b's and at least one a, in any order.");
     }
 
     public JPanel getContentPane() {
