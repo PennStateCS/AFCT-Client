@@ -44,8 +44,8 @@ public class LoginWindow {
         result = new JTextArea();
 
         setupGui();
-        setupEventHandlers();
         populateGui(sessionHandler);
+        setupEventHandlers();
     }
 
     public JPanel getContentPane() {

@@ -9,11 +9,9 @@ import java.awt.*;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
-import java.util.Calendar;
-import java.util.Date;
+import java.time.LocalDateTime;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.prefs.Preferences;
 
 import static gui.Globals.sizeAndCenterWindow;
@@ -28,27 +26,21 @@ public class SessionHandler {
 
     private AFCTClient client = null;
     private String token = null;
-    private List<Map<String, Object>> courses;
-    private List<Map<String, Object>> assignments;
-    private List<Map<String, Object>> problems;
-
+    private Map<String, Map<String, Object>> courses;
+    private List<Map<String, Map<String, Object>>> assignments;
+    private List<Map<String, Map<String, Object>>> problems;
 
     private String server = null;
     private String port = null;
     private String email = null;
     private String password = null;
 
-    // GUI elements
-    private final JFrame frame;
-    private final JFrame loginFrame;
-    private final JFrame submitFrame;
-    private final JPanel cards;
-    private final LoginWindow loginWindow;
-    private final SubmitWindow submitWindow;
+    // Submit windows
+    private ArrayList<SubmitWindow> submitWindows;
 
-    // GUI identifiers
-    private static final String LOGIN = "LOGIN";
-    private static final String SUBMIT = "SUBMIT";
+    // Login GUI elements
+    private final JFrame loginFrame;
+    private final LoginWindow loginWindow;
 
     // Preferences
     public static final String PREF_HAS_USED_SAVED_CREDS = "has_used_saved_creds";
@@ -69,41 +61,29 @@ public class SessionHandler {
     public SessionHandler() {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
         this.dateFormat = DateFormat.getDateInstance(DateFormat.SHORT);
+        this.submitWindows = new ArrayList<>();
+        this.courses = new HashMap<>();
 
         // GUI elements
-        this.frame = new JFrame();
         this.loginFrame = new JFrame();
-        this.submitFrame = new JFrame();
-        this.cards = new JPanel(new CardLayout());
-        this.loginWindow = new LoginWindow(frame, this);
-        this.submitWindow = new SubmitWindow(this.frame);
+
+        this.loginWindow = new LoginWindow(loginFrame, this);
         this.setupGUI();
 
         // TODO: remove after testing
-        CardLayout cl = (CardLayout)(cards.getLayout());
-        cl.show(cards, LOGIN);
-        //frame.pack();
-        //frame.setVisible(true);
-    }
-
-    private void setupGUI() {
-        frame.getContentPane().add(cards);
-
-        //cards.add(LOGIN, loginWindow.getContentPane());
-
-        //cards.add(SUBMIT, submitWindow.getContentPane());
-
-        loginFrame.getContentPane().add(loginWindow.getContentPane());
-        loginFrame.pack();
-        loginFrame.setVisible(true);
-
+        JFrame submitFrame = new JFrame();
+        SubmitWindow submitWindow = new SubmitWindow();
+        submitWindows.add(submitWindow);
         submitFrame.getContentPane().add(submitWindow.getContentPane());
         submitFrame.pack();
         submitFrame.setVisible(true);
     }
 
-    private void show() {
-        frame.setTitle("Login - " + Globals.APP_NAME);
+    private void setupGUI() {
+        loginFrame.getContentPane().add(loginWindow.getContentPane());
+        loginFrame.setTitle("Login - " + Globals.APP_NAME);
+        loginFrame.pack();
+        loginFrame.setVisible(true);
     }
 
     public AFCTClient getClient() {
@@ -145,7 +125,6 @@ public class SessionHandler {
     
 
     /**
-     *
      * Saved credentials will not be used to auto re-authenticate if they have not been used in the last 7 days.
      *
      * @return
@@ -225,30 +204,52 @@ public class SessionHandler {
         new SwingWorker<Void, String>() {
             @Override
             protected Void doInBackground() {
-                submitWindow.toggleCourseBox(false);
+                for (SubmitWindow submitWindow : submitWindows) {
+                    submitWindow.toggleCourseBox(false);
+                }
                 client = getClient();
                 if (client != null) {
                     try {
                         // Load courses on worker thread
-                        courses = client.getCourses(email);
+                        List<Map<String, Object>> courseList = client.getCourses(email);
+
                         // Generate model
                         DefaultComboBoxModel<CourseItem> model = new DefaultComboBoxModel<>();
                         model.addElement(new CourseItem("", SubmitWindow.PLACEHOLDER));
 
-                        for (Map<String, Object> course : courses) {
+                        for (Map<String, Object> course : courseList) {
                             model.addElement(new CourseItem(course.get("id").toString(), course.get("name").toString()));
+                            courses.put(course.get("id").toString(), course);
                         }
 
-                        submitWindow.courseBox.setModel(model);
-                        submitWindow.toggleCourseBox(true);
+                        // Update course combobox for all SubmitWindows, without changing which course is selected
+                        for (SubmitWindow submitWindow : submitWindows) {
+                            CourseItem selectedCourse = (CourseItem) submitWindow.courseBox.getSelectedItem();
+                            if (submitWindow.courseBox.getSelectedIndex() > 0 && selectedCourse != null) {
+                                submitWindow.isPopulating = true;
+                                submitWindow.courseBox.setModel(model);
+                                for (int i = 0; i < submitWindow.courseBox.getItemCount(); i++) {
+                                    if (submitWindow.courseBox.getItemAt(i).id.equals(selectedCourse.id)) {
+                                        submitWindow.courseBox.setSelectedIndex(i);
+                                        submitWindow.isPopulating = false;
+                                        break;
+                                    }
+                                }
+                            } else {
+                                submitWindow.courseBox.setModel(model);
+                            }
+                            submitWindow.toggleCourseBox(true);
+                        }
 
                         // Display number of courses loaded
-                        int numCourses = courses.size();
+                        int numCourses = courseList.size();
                         publish(String.format("Loaded %s %s", numCourses, numCourses == 1 ? "course" : "courses"));
 
                         // If there is only one course, select it and load the assignments for that course
                         if (numCourses == 1) {
-                            submitWindow.courseBox.setSelectedIndex(1);
+                            // TODO: figure this out
+                            //courseBox.setSelectedIndex(1);
+                            //loadAssignmentsAsync();
                         }
                     } catch (IOException ex) {
                         publish("Error loading courses: " + ex.getMessage());
@@ -259,7 +260,11 @@ public class SessionHandler {
 
             @Override
             protected void process(List<String> chunks) {
-                for (String s : chunks) submitWindow.appendResult(s);
+                for (String s : chunks) {
+                    for (SubmitWindow submitWindow : submitWindows) {
+                        submitWindow.appendResult(s);
+                    }
+                };
             }
 
             @Override
@@ -267,5 +272,50 @@ public class SessionHandler {
                 //signInButton.setEnabled(true);
             }
         }.execute();
+    }
+
+    private void loadAssignmentsAsync() {
+
+    }
+
+    public void populateAssignments(SubmitWindow submitWindow, CourseItem selectedCourse) {
+        submitWindow.toggleAssignmentBox(false);
+        if (courses.containsKey(selectedCourse.id)) {
+
+        } else {
+
+        }
+    }
+
+    public void populateAssignments(CourseItem selectedCourse) {
+
+    }
+
+    /**
+     * Update target combobox for all SubmitWindows, without changing which item is selected
+     * (CourseItem, AssignmentItem, or ProblemItem)
+     *
+     * @param target the type of combobox to update
+     * @param model the model to set
+     */
+    private void updateComboBoxesWithoutChangingSelection(SubmitWindow.ComboBoxTarget target, ComboBoxModel<DropdownItem> model) {
+        for (SubmitWindow submitWindow : submitWindows) {
+            JComboBox<DropdownItem> comboBox = submitWindow.getTargetComboBox(target);
+            DropdownItem selectedItem = (DropdownItem) comboBox.getSelectedItem();
+            if (comboBox.getSelectedIndex() > 0 && selectedItem != null) {
+                submitWindow.isPopulating = true;
+                comboBox.setModel(model);
+                for (int i = 0; i < comboBox.getItemCount(); i++) {
+                    if (comboBox.getItemAt(i).id.equals(selectedItem.id)) {
+                        comboBox.setSelectedIndex(i);
+                        submitWindow.isPopulating = false;
+                        break;
+                    }
+                }
+            } else {
+                comboBox.setModel(model);
+            }
+            submitWindow.toggleCourseBox(true);
+        }
     }
 }

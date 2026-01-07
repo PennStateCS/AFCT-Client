@@ -1,13 +1,21 @@
 package submission;
 
+import gui.Globals;
+
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
 import java.awt.*;
+import java.awt.event.ActionEvent;
+import java.awt.event.ActionListener;
+import java.util.List;
+import java.util.prefs.Preferences;
 
 import static gui.Globals.*;
 import static submission.LoginWindow.createComboBoxPanel;
 import static submission.LoginWindow.createInputPanel;
+import static submission.SessionHandler.*;
+import static submission.SessionHandler.defaultPassword;
 
 public class SubmitWindow {
     private JPanel contentPane;
@@ -32,22 +40,28 @@ public class SubmitWindow {
 
     private JScrollPane scrollPane;
 
+    // Tracking for optimization
+    private int selectedCourse = 0;
+    private int selectedAssignment = 0;
+    private int selectedProblem = 0;
+
     // Placeholder for combo boxes
     public static final String PLACEHOLDER = "— Select —";
 
-    public SubmitWindow(JFrame parentFrame) {
+    // Event guarding
+    public volatile boolean isPopulating = false;
+
+    public SubmitWindow() {
         contentPane = new JPanel();
         courseBox = new JComboBox<>();
         courseRefreshButton = new JButton();
         assignmentBox = new JComboBox<>();
         assignmentRefreshButton = new JButton();
-        //assignmentDetailsPanel = new DetailsPanel(parentFrame, "Assignment Details");
         assignmentDetailsPanel = new DetailsPanel2();
         allAssignments = new JRadioButton("All Assignments");
         upcomingAssignments = new JRadioButton("Upcoming Assignments");
         problemBox = new JComboBox<>();
         problemRefreshButton = new JButton();
-        //problemDetailsPanel = new DetailsPanel(parentFrame, "Problem Details");
         problemDetailsPanel = new DetailsPanel2();
         allProblems = new JRadioButton("All Problems");
         uncompletedProblems = new JRadioButton("Uncompleted Problems");
@@ -58,11 +72,10 @@ public class SubmitWindow {
         result = new JTextArea();
 
         setupGui();
+        populateGui();
+        setupEventHandlers();
 
         scrollPane = new JScrollPane(contentPane);
-
-        //TODO: DELETE - just for testing
-        //problemDetailsPanel.setDetailsText("Create a Deterministic Finite State Automaton that accepts strings that contain any number of b's and at least one a, in any order.");
     }
 
     public JScrollPane getContentPane() {
@@ -95,6 +108,18 @@ public class SubmitWindow {
         problemDetailsPanel.setEnabled(enabled);
         allProblems.setEnabled(enabled);
         uncompletedProblems.setEnabled(enabled);
+    }
+
+    public enum ComboBoxTarget {
+        COURSE, ASSIGNMENT, PROBLEM
+    }
+
+    public <T> JComboBox<T> getTargetComboBox(ComboBoxTarget target) {
+        return switch (target) {
+            case COURSE -> (JComboBox<T>) courseBox;
+            case ASSIGNMENT -> (JComboBox<T>) assignmentBox;
+            case PROBLEM -> (JComboBox<T>) problemBox;
+        };
     }
 
     private void setupGui() {
@@ -230,5 +255,116 @@ public class SubmitWindow {
         inputPanel.add(buttonPanel, c);
 
         return inputPanel;
+    }
+
+    private void populateGui() {
+        // Visuals for combo boxes
+        courseBox.setBackground(Color.WHITE);
+        assignmentBox.setBackground(Color.WHITE);
+        problemBox.setBackground(Color.WHITE);
+
+        currentFileLabel.setBackground(Color.WHITE);
+
+        // Set default renderer for combo boxes
+        DefaultListCellRenderer renderer = new DefaultListCellRenderer();
+        renderer.setBackground(Color.WHITE);
+        renderer.setOpaque(true);
+        courseBox.setRenderer(renderer);
+        assignmentBox.setRenderer(renderer);
+        problemBox.setRenderer(renderer);
+
+        // Initialize clean models with a placeholder
+        setModel(courseBox, List.of(PLACEHOLDER), false);
+        setModel(assignmentBox, List.of(PLACEHOLDER), false);
+        setModel(problemBox, List.of(PLACEHOLDER), false);
+
+        // Appropriately enable/disable interactive elements
+        toggleCourseBox(false);
+        toggleAssignmentBox(false);
+        toggleProblemBox(false);
+    }
+
+    /** Function used to fill a drop-down menu with options
+     *   - params:
+     *       - box: drop-down menu being used to store options (must be courseBox, assignmentBox, or problemBox)
+     *       - items: a list of items used as values for the drop-down menu
+     *       - enable: should the drop-down menu be enabled or not
+     *   - return:
+     *       - void (none)
+     */
+    /**
+     * Function used to fill a drop-down menu with options.
+     *
+     * @param box drop-down menu being used to store options (must be courseBox, assignmentBox, or problemBox)
+     * @param items a list of items used as values for the drop-down menu
+     * @param enable should the drop-down menu be enabled or not
+     * @param <T> must be courseBox, assignmentBox, or problemBox
+     */
+    private <T> void setModel(JComboBox<T> box, List<String> items, boolean enable) {
+        isPopulating = true;
+        try {
+            DefaultComboBoxModel<T> model = new DefaultComboBoxModel<>();
+
+            for (String item : items) {
+                T value;
+
+                if (box == courseBox) {
+                    value = (T) new CourseItem("", item);
+                } else if (box == assignmentBox) {
+                    value = (T) new AssignmentItem("", item);
+                    allAssignments.setEnabled(enable);
+                    upcomingAssignments.setEnabled(enable);
+                } else if (box == problemBox) {
+                    value = (T) new ProblemItem("", item);
+                    allProblems.setEnabled(enable);
+                    uncompletedProblems.setEnabled(enable);
+                } else {
+                    value = (T) (Object) item;
+                }
+
+                model.addElement(value);
+            }
+
+            box.setModel(model);
+            box.setSelectedIndex(0);
+            box.setEnabled(enable);
+        } finally {
+            isPopulating = false;
+        }
+    }
+
+    /**
+     * Sets action listeners for user inputs.
+     */
+    private void setupEventHandlers() {
+        handlers_course();
+    }
+
+    private void handlers_course() {
+        SubmitWindow submitWindow = this;
+        courseBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (isPopulating) return;
+
+                // If the user's selection does not change, return
+                if (courseBox.getSelectedIndex() == selectedCourse) return;
+
+                // User selected initial box with no value
+                if (courseBox.getSelectedIndex() <= 0) {
+                    // Reset inputs appropriately
+                    setModel(assignmentBox, List.of(PLACEHOLDER), false);
+                    setModel(problemBox, List.of(PLACEHOLDER), false);
+                    return;
+                }
+
+                // User chose a valid course
+                CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
+                appendResult("Selected course: " + selectedCourse);
+                appendResult("");
+                appendResult("Loading assignments for selected course…");
+                Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse); // Load assignments for selected course
+            }
+        });
     }
 }
