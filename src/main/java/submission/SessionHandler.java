@@ -55,7 +55,7 @@ public class SessionHandler {
         this.frame = new JFrame();
         this.cards = new JPanel(new CardLayout());
         this.loginWindow = new LoginWindow();
-        this.submitWindow = new SubmitWindow();
+        this.submitWindow = new SubmitWindow(this.frame);
         this.setupGUI();
 
         // TODO: remove after testing

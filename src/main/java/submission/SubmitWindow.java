@@ -14,26 +14,32 @@ public class SubmitWindow {
     private JButton courseRefreshButton;
     private JComboBox<AssignmentItem> assignmentBox;
     private JButton assignmentRefreshButton;
+    private DetailsPanel assignmentDetailsPanel;
     private JRadioButton allAssignments;
     private JRadioButton upcomingAssignments;
     private JComboBox<ProblemItem> problemBox;
     private JButton problemRefreshButton;
+    private DetailsPanel problemDetailsPanel;
     private JRadioButton allProblems;
     private JRadioButton uncompletedProblems;
     private JLabel currentFileLabel;
     private JButton viewCurrentButton;
     private JButton submitButton;
+    // TODO: replace this with better, more modern user feedback methods
+    private JTextArea result;
 
-    public SubmitWindow() {
+    public SubmitWindow(JFrame parentFrame) {
         contentPane = new JPanel();
         courseBox = new JComboBox<>();
         courseRefreshButton = new JButton();
         assignmentBox = new JComboBox<>();
         assignmentRefreshButton = new JButton();
+        assignmentDetailsPanel = new DetailsPanel(parentFrame, "Assignment Details");
         allAssignments = new JRadioButton("All Assignments");
         upcomingAssignments = new JRadioButton("Upcoming Assignments");
         problemBox = new JComboBox<>();
         problemRefreshButton = new JButton();
+        problemDetailsPanel = new DetailsPanel(parentFrame, "Problem Details");
         allProblems = new JRadioButton("All Problems");
         uncompletedProblems = new JRadioButton("Uncompleted Problems");
         currentFileLabel = new JLabel("No File Selected");
@@ -71,10 +77,10 @@ public class SubmitWindow {
         c.gridy = y++;
         contentPane.add(createComboBoxWithRefreshPanel(courseBox, courseRefreshButton, "Course"), c);
         c.gridy = y++;
-        contentPane.add(createComboBoxWithButtonsPanel(assignmentBox, assignmentRefreshButton, allAssignments, upcomingAssignments, "Assignment"), c);
+        contentPane.add(createComboBoxWithButtonsPanel(assignmentBox, assignmentRefreshButton, assignmentDetailsPanel, allAssignments, upcomingAssignments, "Assignment"), c);
         c.insets = new Insets(vrtInset-5, hozInset, 0, hozInset);
         c.gridy = y++;
-        contentPane.add(createComboBoxWithButtonsPanel(problemBox, problemRefreshButton, allProblems, uncompletedProblems, "Problem"), c);
+        contentPane.add(createComboBoxWithButtonsPanel(problemBox, problemRefreshButton, problemDetailsPanel, allProblems, uncompletedProblems, "Problem"), c);
 
         // Add current file info
         c.gridy = y++;
@@ -133,9 +139,16 @@ public class SubmitWindow {
         return inputPanel;
     }
 
-    private JPanel createComboBoxWithButtonsPanel(JComboBox comboBox, JButton refreshButton, JRadioButton radioButton1, JRadioButton radioButton2, String headerText) {
+    private JPanel createComboBoxWithButtonsPanel(JComboBox comboBox, JButton refreshButton, DetailsPanel detailsPanel, JRadioButton radioButton1, JRadioButton radioButton2, String headerText) {
         JPanel inputPanel = createComboBoxWithRefreshPanel(comboBox, refreshButton, headerText);
         GridBagConstraints c;
+        int y = 2;
+
+        // Add detailsPanel
+        c = setConstraints(0, 0, 0, y++);
+        c.gridwidth = GridBagConstraints.REMAINDER;
+        changeSize(radioButton1, 14);
+        inputPanel.add(detailsPanel, c);
 
         // Add radio buttons to a group
         ButtonGroup buttonGroup = new ButtonGroup();
@@ -158,7 +171,6 @@ public class SubmitWindow {
         buttonPanel.add(radioButton2, c);
 
         // Add buttonPanel to inputPanel
-        int y = 2;
         c = setConstraints(0, 0, 0, y);
         c.insets = new Insets(5, 0, 0, 0);
         inputPanel.add(buttonPanel, c);
