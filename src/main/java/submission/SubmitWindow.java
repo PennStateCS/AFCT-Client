@@ -14,12 +14,12 @@ public class SubmitWindow {
     private JButton courseRefreshButton;
     private JComboBox<AssignmentItem> assignmentBox;
     private JButton assignmentRefreshButton;
-    private DetailsPanel assignmentDetailsPanel;
+    private DetailsPanel2 assignmentDetailsPanel;
     private JRadioButton allAssignments;
     private JRadioButton upcomingAssignments;
     private JComboBox<ProblemItem> problemBox;
     private JButton problemRefreshButton;
-    private DetailsPanel problemDetailsPanel;
+    private DetailsPanel2 problemDetailsPanel;
     private JRadioButton allProblems;
     private JRadioButton uncompletedProblems;
     private JLabel currentFileLabel;
@@ -28,18 +28,22 @@ public class SubmitWindow {
     // TODO: replace this with better, more modern user feedback methods
     private JTextArea result;
 
+    private JScrollPane scrollPane;
+
     public SubmitWindow(JFrame parentFrame) {
         contentPane = new JPanel();
         courseBox = new JComboBox<>();
         courseRefreshButton = new JButton();
         assignmentBox = new JComboBox<>();
         assignmentRefreshButton = new JButton();
-        assignmentDetailsPanel = new DetailsPanel(parentFrame, "Assignment Details");
+        //assignmentDetailsPanel = new DetailsPanel(parentFrame, "Assignment Details");
+        assignmentDetailsPanel = new DetailsPanel2();
         allAssignments = new JRadioButton("All Assignments");
         upcomingAssignments = new JRadioButton("Upcoming Assignments");
         problemBox = new JComboBox<>();
         problemRefreshButton = new JButton();
-        problemDetailsPanel = new DetailsPanel(parentFrame, "Problem Details");
+        //problemDetailsPanel = new DetailsPanel(parentFrame, "Problem Details");
+        problemDetailsPanel = new DetailsPanel2();
         allProblems = new JRadioButton("All Problems");
         uncompletedProblems = new JRadioButton("Uncompleted Problems");
         currentFileLabel = new JLabel("No File Selected");
@@ -48,12 +52,15 @@ public class SubmitWindow {
 
         setupGui();
 
+        scrollPane = new JScrollPane(contentPane);
+
         //TODO: DELETE - just for testing
-        problemDetailsPanel.setDetailsText("Create a Deterministic Finite State Automaton that accepts strings that contain any number of b's and at least one a, in any order.");
+        //problemDetailsPanel.setDetailsText("Create a Deterministic Finite State Automaton that accepts strings that contain any number of b's and at least one a, in any order.");
     }
 
-    public JPanel getContentPane() {
-        return contentPane;
+    public JScrollPane getContentPane() {
+        //return contentPane;
+        return scrollPane;
     }
 
     private void setupGui() {
@@ -142,15 +149,16 @@ public class SubmitWindow {
         return inputPanel;
     }
 
-    private JPanel createComboBoxWithButtonsPanel(JComboBox comboBox, JButton refreshButton, DetailsPanel detailsPanel, JRadioButton radioButton1, JRadioButton radioButton2, String headerText) {
+    private JPanel createComboBoxWithButtonsPanel(JComboBox comboBox, JButton refreshButton, DetailsPanel2 detailsPanel, JRadioButton radioButton1, JRadioButton radioButton2, String headerText) {
         JPanel inputPanel = createComboBoxWithRefreshPanel(comboBox, refreshButton, headerText);
         GridBagConstraints c;
         int y = 2;
 
         // Add detailsPanel
-        c = setConstraints(0, 0, 0, y++);
+        c = setConstraints(1, 0, 0, y++);
         c.gridwidth = GridBagConstraints.REMAINDER;
-        changeSize(radioButton1, 14);
+        //c.fill = GridBagConstraints.HORIZONTAL;
+        //changeSize(radioButton1, 14);
         inputPanel.add(detailsPanel, c);
 
         // Add radio buttons to a group

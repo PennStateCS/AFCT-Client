@@ -5,6 +5,8 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 
+import static gui.Globals.setConstraints;
+
 
 public class DetailsPanel extends JPanel {
     private JFrame parentFrame;
@@ -12,6 +14,9 @@ public class DetailsPanel extends JPanel {
     private String summaryText;
     private JTextPane detailsPane;
     private String detailsText = null;
+    private JScrollPane detailsScrollPane;
+    private boolean useScrollPane = false;
+    private boolean useBorderLayout = true;
 
     public DetailsPanel(JFrame parentFrame, String summaryText) {
         this.parentFrame = parentFrame;
@@ -20,6 +25,8 @@ public class DetailsPanel extends JPanel {
         detailsPane = new JTextPane();
         detailsPane.setContentType("text/html");
         summaryButton = new JToggleButton();
+
+        detailsScrollPane = new JScrollPane(detailsPane);
 
         initializeDetailsPanel();
 
@@ -30,6 +37,7 @@ public class DetailsPanel extends JPanel {
 
     public void setDetailsText(String detailsText) {
         this.detailsText = detailsText;
+        // padding: 10px horizontal, 5px vertical
         String html =
                 "<html>" +
                 "<body style='margin:5px 10px;'>" +
@@ -42,22 +50,57 @@ public class DetailsPanel extends JPanel {
     }
 
     private void initializeDetailsPanel() {
-        this.setLayout(new BorderLayout()); // Use a layout that manages space well
+        if (useBorderLayout) {
+            this.setLayout(new BorderLayout()); // Use a layout that manages space well
+        } else {
+            this.setLayout(new GridBagLayout());
+        }
 
         // The content panel starts hidden
         detailsPane.setEditable(false);
-        detailsPane.setMargin(new Insets(5, 10, 5, 10)); // padding: 10px horizontal, 5px vertical
+        //detailsPane.setMargin(new Insets(5, 10, 5, 10)); // padding: 10px horizontal, 5px vertical
         updateSummary(false);
 
-        // Add a border around detailsPane
-        detailsPane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+        if (useScrollPane) {
+            // Add a border around detailsScrollPane
+            detailsScrollPane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+        } else {
+            // Add a border around detailsPane
+            detailsPane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+        }
 
+        JPanel contentWrapper;
+        GridBagConstraints c;
+        if (useBorderLayout) {
+            // Wrap the JEditorPane in a JPanel to control visibility more cleanly with pack()
+            contentWrapper = new JPanel(new BorderLayout());
+            if (useScrollPane) {
+                contentWrapper.add(detailsScrollPane, BorderLayout.CENTER);
+            } else {
+                contentWrapper.add(detailsPane, BorderLayout.CENTER);
+            }
+        } else {
+            contentWrapper = new JPanel(new GridBagLayout());
+            c = setConstraints(1, 1, 0, 0, GridBagConstraints.CENTER);
+            if (useScrollPane) {
+                contentWrapper.add(detailsScrollPane, c);
+            } else {
+                contentWrapper.add(detailsPane, c);
+            }
+        }
 
-        // Wrap the JEditorPane in a JPanel to control visibility more cleanly with pack()
-        JPanel contentWrapper = new JPanel(new BorderLayout());
-        contentWrapper.add(detailsPane, BorderLayout.CENTER);
         contentWrapper.setVisible(false); // Initially hidden
 
+        if (useBorderLayout) {
+            this.add(summaryButton, BorderLayout.NORTH);
+            this.add(contentWrapper, BorderLayout.CENTER);
+        } else {
+            c = setConstraints(1, 0, 0, 0, GridBagConstraints.NORTH);
+            this.add(summaryButton, c);
+            c = setConstraints(1, 1, 0, 1, GridBagConstraints.NORTH);
+            c.gridheight = 2;
+            this.add(contentWrapper, c);
+        }
         // Add the listener
         summaryButton.addActionListener(new ActionListener() {
             @Override
@@ -88,9 +131,6 @@ public class DetailsPanel extends JPanel {
 
             }
         });
-
-        this.add(summaryButton, BorderLayout.NORTH);
-        this.add(contentWrapper, BorderLayout.CENTER);
     }
 
     private void updateSummary(boolean isOpen) {
