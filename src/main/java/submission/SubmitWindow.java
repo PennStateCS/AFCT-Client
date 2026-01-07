@@ -19,18 +19,22 @@ import static submission.SessionHandler.defaultPassword;
 
 public class SubmitWindow {
     private JPanel contentPane;
+    // Course
     public JComboBox<CourseItem> courseBox;
     private JButton courseRefreshButton;
-    private JComboBox<AssignmentItem> assignmentBox;
+    // Assignment
+    public JComboBox<AssignmentItem> assignmentBox;
     private JButton assignmentRefreshButton;
     private DetailsPanel2 assignmentDetailsPanel;
-    private JRadioButton allAssignments;
-    private JRadioButton upcomingAssignments;
-    private JComboBox<ProblemItem> problemBox;
+    public JRadioButton allAssignments;
+    public JRadioButton upcomingAssignments;
+    // Problem
+    public JComboBox<ProblemItem> problemBox;
     private JButton problemRefreshButton;
     private DetailsPanel2 problemDetailsPanel;
-    private JRadioButton allProblems;
-    private JRadioButton uncompletedProblems;
+    public JRadioButton allProblems;
+    public JRadioButton uncompletedProblems;
+    // Current FIle
     private JLabel currentFileLabel;
     private JButton viewCurrentButton;
     private JButton submitButton;
@@ -120,6 +124,22 @@ public class SubmitWindow {
             case ASSIGNMENT -> (JComboBox<T>) assignmentBox;
             case PROBLEM -> (JComboBox<T>) problemBox;
         };
+    }
+
+    public void toggleTargetComboBox(ComboBoxTarget target, boolean enabled) {
+        switch (target) {
+            case COURSE -> toggleCourseBox(enabled);
+            case ASSIGNMENT -> toggleAssignmentBox(enabled);
+            case PROBLEM -> toggleProblemBox(enabled);
+        }
+    }
+
+    public void resetTargetComboBox(ComboBoxTarget target) {
+        switch (target) {
+            case COURSE -> setModel(courseBox, List.of(PLACEHOLDER), false);
+            case ASSIGNMENT -> setModel(assignmentBox, List.of(PLACEHOLDER), false);
+            case PROBLEM -> setModel(problemBox, List.of(PLACEHOLDER), false);
+        }
     }
 
     private void setupGui() {

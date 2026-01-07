@@ -17,6 +17,8 @@ import java.util.prefs.Preferences;
 import static gui.Globals.sizeAndCenterWindow;
 import static submission.AFCTClient.fixUrl;
 import static submission.LoginResult.*;
+import static submission.SubmitWindow.ComboBoxTarget.ASSIGNMENT;
+import static submission.SubmitWindow.ComboBoxTarget.PROBLEM;
 
 
 public class SessionHandler {
@@ -27,8 +29,9 @@ public class SessionHandler {
     private AFCTClient client = null;
     private String token = null;
     private Map<String, Map<String, Object>> courses;
-    private List<Map<String, Map<String, Object>>> assignments;
-    private List<Map<String, Map<String, Object>>> problems;
+    /** true means all, false means upcoming */
+    private Map<String, Map<Boolean, DefaultComboBoxModel<AssignmentItem>>> assignmentModels;
+    private Map<String, Map<String, Object>> problems;
 
     private String server = null;
     private String port = null;
@@ -222,6 +225,7 @@ public class SessionHandler {
                             courses.put(course.get("id").toString(), course);
                         }
 
+                        //TODO: replace with generic method - updateComboBoxesWithoutChangingSelection()
                         // Update course combobox for all SubmitWindows, without changing which course is selected
                         for (SubmitWindow submitWindow : submitWindows) {
                             CourseItem selectedCourse = (CourseItem) submitWindow.courseBox.getSelectedItem();
@@ -274,20 +278,122 @@ public class SessionHandler {
         }.execute();
     }
 
-    private void loadAssignmentsAsync() {
+    private void loadAssignmentsAsync(CourseItem selectedCourse) {
+        new SwingWorker<Void, String>() {
+            @Override
+            protected Void doInBackground() {
+                try {
+                    String courseId;
+                    String dueDateStr;
+                    LocalDateTime currTime;
+                    boolean isUpcoming;
+                    int numTotalAssignments;
+                    int numDisplayAssignments;
 
+                    assert selectedCourse != null;
+                    courseId = selectedCourse.id;
+
+                    // Load assignments on worker thread
+                    List<Map<String, Object>> assignmentList = client.getAssignments(courseId);
+
+                    // Get current time for default boxes
+                    currTime = LocalDateTime.now();
+
+                    // Generate model for All Assignments
+                    DefaultComboBoxModel<AssignmentItem> modelAll = new DefaultComboBoxModel<>();
+                    modelAll.addElement(new AssignmentItem("",  SubmitWindow.PLACEHOLDER));
+
+                    // Generate model for Upcoming Assignments
+                    DefaultComboBoxModel<AssignmentItem> modelUpcoming = new DefaultComboBoxModel<>();
+                    modelUpcoming.addElement(new AssignmentItem("",  SubmitWindow.PLACEHOLDER));
+
+                    // Get assignments based on default parameters
+                    for (Map<String, Object> assignment : assignmentList) {
+                        // Add to modelAll
+                        modelAll.addElement((new AssignmentItem(assignment.get("id").toString(), assignment.get("title").toString())));
+
+                        // Get the date this assignment is due
+                        dueDateStr = assignment.get("dueDate").toString();
+                        assert dueDateStr != null;
+
+                        // Parse the date correctly
+                        dueDateStr = dueDateStr.charAt(dueDateStr.length() - 1) == 'Z' ? dueDateStr.substring(0, dueDateStr.length() - 1) : dueDateStr;
+
+                        // Find if the assignment is upcoming
+                        isUpcoming = LocalDateTime.parse(dueDateStr).isAfter(currTime);
+
+                        // Add to modelUpcoming if applicable
+                        if (isUpcoming) {
+                            modelUpcoming.addElement((new AssignmentItem(assignment.get("id").toString(), assignment.get("title").toString())));
+                        }
+                    }
+
+                    // Cache Assignments
+                    Map<Boolean, DefaultComboBoxModel<AssignmentItem>> modelMap = new HashMap<>();
+                    modelMap.put(true, modelAll);
+                    modelMap.put(false, modelUpcoming);
+                    // Save to assignmentModels
+                    assignmentModels.put(selectedCourse.id, modelMap);
+
+                    // Add model to drop-down menu
+                    updateComboBoxesWithoutChangingSelection(ASSIGNMENT, ComboBoxModel<DropdownItem> model)
+
+                    // Enable assignment inputs
+                    assignmentBox.setEnabled(true);
+                    allAssignments.setEnabled(true);
+                    upcomingAssignments.setEnabled(true);
+
+                    // Display number of assignments loaded
+                    numTotalAssignments = assignmentList.size();
+                    publish(String.format("Loaded %s %s", numTotalAssignments, numTotalAssignments == 1 ? "assignment" : "assignments"));
+                } catch (IOException ex) {
+                    publish("Failed to load assignments: " + ex.getMessage());
+                    setModel(assignmentBox, List.of(SubmitWindow.PLACEHOLDER), true);
+                }
+                publish("");
+                return null;
+            }
+
+            @Override
+            protected void process(List<String> chunks) {
+                for (String s : chunks) appendResult(s);
+            }
+
+            @Override
+            protected void done() {
+                updateSelectFileEnabled();
+                updateSubmitEnabled();
+            }
+        }.execute();
     }
 
     public void populateAssignments(SubmitWindow submitWindow, CourseItem selectedCourse) {
+        // Disable and reset AssignmentBox
         submitWindow.toggleAssignmentBox(false);
-        if (courses.containsKey(selectedCourse.id)) {
+        submitWindow.resetTargetComboBox(ASSIGNMENT);
+        // Disable and reset ProblemBox
+        submitWindow.toggleProblemBox(false);
+        submitWindow.resetTargetComboBox(PROBLEM);
 
+        if (courses.containsKey(selectedCourse.id)) {
+            if (submitWindow.upcomingAssignments.isSelected()) {
+                submitWindow.assignmentBox.setModel(assignmentModels.get(selectedCourse.id).get(false));
+            } else {
+                submitWindow.assignmentBox.setModel(assignmentModels.get(selectedCourse.id).get(true));
+            }
         } else {
 
         }
+
+        // Re-enable AssignmentBox
+        submitWindow.toggleAssignmentBox(true);
     }
 
     public void populateAssignments(CourseItem selectedCourse) {
+
+    }
+
+    private void updateComboBoxWithoutChangingSelection() {
 
     }
 
@@ -301,8 +407,12 @@ public class SessionHandler {
     private void updateComboBoxesWithoutChangingSelection(SubmitWindow.ComboBoxTarget target, ComboBoxModel<DropdownItem> model) {
         for (SubmitWindow submitWindow : submitWindows) {
             JComboBox<DropdownItem> comboBox = submitWindow.getTargetComboBox(target);
+            // Disable ComboBox
+            submitWindow.toggleTargetComboBox(target, false);
+
             DropdownItem selectedItem = (DropdownItem) comboBox.getSelectedItem();
             if (comboBox.getSelectedIndex() > 0 && selectedItem != null) {
+                // Item selected, try to update without changing selection
                 submitWindow.isPopulating = true;
                 comboBox.setModel(model);
                 for (int i = 0; i < comboBox.getItemCount(); i++) {
@@ -313,9 +423,11 @@ public class SessionHandler {
                     }
                 }
             } else {
+                // No item selected, just update model like normal
                 comboBox.setModel(model);
             }
-            submitWindow.toggleCourseBox(true);
+            // Re-enable ComboBox
+            submitWindow.toggleTargetComboBox(target, true);
         }
     }
 }
