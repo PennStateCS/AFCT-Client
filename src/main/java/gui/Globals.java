@@ -257,11 +257,16 @@ public class Globals {
     public static Icon styleRefreshButton(JButton refreshButton) {
         Icon icon = getRefreshIcon();
         refreshButton.setIcon(icon);
+        setPointerCursor(refreshButton);
 
         // Optional: remove borders for a cleaner look
         //refreshButton.setBorderPainted(false);
         //refreshButton.setContentAreaFilled(false);
         return icon;
+    }
+
+    public static void setPointerCursor(Component component) {
+        component.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
     public static void errorPrint(String output) {

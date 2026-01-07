@@ -98,6 +98,7 @@ public class SubmitWindow {
 
         // Add submitButton to contentPane
         changeSize(submitButton, 16);
+        setPointerCursor(submitButton);
         //submitButton.setPreferredSize(new Dimension(360, 36));
         //submitButton.setMargin(new Insets(6, 12, 6, 12));
         c = setConstraints(1, 0, 0, y++, GridBagConstraints.LINE_START);
@@ -127,6 +128,7 @@ public class SubmitWindow {
         JPanel filePanel = createInputPanel(fileLabelPanel, "File to Submit", false);
 
         // Add viewCurrentButton to filePanel
+        setPointerCursor(viewCurrentButton);
         c = setConstraints(0, 0, 1, 1);
         changeSize(viewCurrentButton, 16);
         filePanel.add(viewCurrentButton, c);
@@ -171,12 +173,14 @@ public class SubmitWindow {
 
         // Add radioButton1 to buttonPanel
         c = setConstraints(0.5, 0, 0, 0);
+        setPointerCursor(radioButton1);
         changeSize(radioButton1, 14);
         unBoldFont(radioButton1);
         buttonPanel.add(radioButton1, c);
 
         // Add radioButton2 to buttonPanel
         c = setConstraints(0.5, 0, 1, 0);
+        setPointerCursor(radioButton2);
         changeSize(radioButton2, 14);
         unBoldFont(radioButton2);
         buttonPanel.add(radioButton2, c);

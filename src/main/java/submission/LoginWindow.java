@@ -72,6 +72,7 @@ public class LoginWindow {
         // Add loginButton to contentPane
         changeSize(loginButton, 16);
         loginButton.setPreferredSize(new Dimension(360, 36));
+        loginButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         //loginButton.setMargin(new Insets(6, 12, 6, 12));
         c = setConstraints(1, 0, 0, y++, GridBagConstraints.LINE_START);
         //c.insets = new Insets(5, hozInset, vrtInset, hozInset);
@@ -110,6 +111,7 @@ public class LoginWindow {
     }
 
     public static JPanel createComboBoxPanel(JComboBox comboBox, String headerText) {
+        comboBox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return createInputPanel(comboBox, headerText, false);
     }
 }
