@@ -1,6 +1,7 @@
 package submission;
 
 import javax.swing.*;
+import javax.swing.border.BevelBorder;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import javax.swing.border.LineBorder;
@@ -23,10 +24,11 @@ public class DetailsPanel2 extends JPanel {
         setLayout(new GridBagLayout()); // to center the card
 
         JPanel card = new JPanel(new GridBagLayout());
-        card.setBorder(new CompoundBorder(
-                new LineBorder(new Color(210, 210, 210)),
-                new EmptyBorder(16, 16, 16, 16)
-        ));
+//        card.setBorder(new CompoundBorder(
+//                new LineBorder(new Color(210, 210, 210)),
+//                new EmptyBorder(16, 16, 16, 16)
+//        ));
+        card.setBorder(new LineBorder(new Color(210, 210, 210)));
         card.setBackground(Color.WHITE);
 
         GridBagConstraints c = new GridBagConstraints();
@@ -34,7 +36,6 @@ public class DetailsPanel2 extends JPanel {
         c.weightx = 1.0;
         c.fill = GridBagConstraints.HORIZONTAL;
         c.anchor = GridBagConstraints.CENTER;
-        c.insets = new Insets(0, 0, 10, 0);
 
         // View details toggle (link-like)
         detailsToggle.setBorderPainted(false);
@@ -44,13 +45,18 @@ public class DetailsPanel2 extends JPanel {
         detailsToggle.setHorizontalAlignment(SwingConstants.LEFT);
 
         c.gridy = 0;
-        c.insets = new Insets(0, 0, 12, 0);
+        //c.insets = new Insets(0, 0, 12, 0);
         card.add(detailsToggle, c);
 
         // Details panel (collapsible)
+//        detailsPanel.setBorder(new CompoundBorder(
+//                new LineBorder(new Color(230, 230, 230)),
+//                new EmptyBorder(10, 12, 10, 12)
+//        ));
+        //detailsPanel.setBorder(new EmptyBorder(6, 12, 6, 12));
         detailsPanel.setBorder(new CompoundBorder(
-                new LineBorder(new Color(230, 230, 230)),
-                new EmptyBorder(10, 12, 10, 12)
+                BorderFactory.createMatteBorder(1, 0, 0, 0, new Color(230, 230, 230)),
+                new EmptyBorder(6, 12, 6, 12)
         ));
         detailsPanel.setBackground(new Color(250, 250, 250));
 
