@@ -2,6 +2,7 @@ package submission;
 
 import javax.swing.*;
 import javax.swing.border.Border;
+import javax.swing.border.LineBorder;
 import java.awt.*;
 
 import static gui.Globals.*;
@@ -75,6 +76,27 @@ public class SubmitWindow {
         result.setCaretPosition(result.getDocument().getLength());
     }
 
+    public void toggleCourseBox(boolean enabled) {
+        courseBox.setEnabled(enabled);
+        courseRefreshButton.setEnabled(enabled);
+    }
+
+    public void toggleAssignmentBox(boolean enabled) {
+        assignmentBox.setEnabled(enabled);
+        assignmentRefreshButton.setEnabled(enabled);
+        assignmentDetailsPanel.setEnabled(enabled);
+        allAssignments.setEnabled(enabled);
+        upcomingAssignments.setEnabled(enabled);
+    }
+
+    public void toggleProblemBox(boolean enabled) {
+        problemBox.setEnabled(enabled);
+        problemRefreshButton.setEnabled(enabled);
+        problemDetailsPanel.setEnabled(enabled);
+        allProblems.setEnabled(enabled);
+        uncompletedProblems.setEnabled(enabled);
+    }
+
     private void setupGui() {
         contentPane.setLayout(new GridBagLayout());
         GridBagConstraints c;
@@ -117,6 +139,11 @@ public class SubmitWindow {
         //c.insets = new Insets(5, hozInset, vrtInset, hozInset);
         c.insets = new Insets(vrtInset + 5, hozInset, vrtInset, hozInset);
         contentPane.add(submitButton, c);
+
+        // Add result to contentPane
+        result.setBorder(new LineBorder(new Color(210, 210, 210)));
+        c.gridy = y++;
+        contentPane.add(result, c);
     }
 
     private JPanel createCurrentFilePanel() {

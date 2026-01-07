@@ -40,6 +40,8 @@ public class SessionHandler {
 
     // GUI elements
     private final JFrame frame;
+    private final JFrame loginFrame;
+    private final JFrame submitFrame;
     private final JPanel cards;
     private final LoginWindow loginWindow;
     private final SubmitWindow submitWindow;
@@ -70,6 +72,8 @@ public class SessionHandler {
 
         // GUI elements
         this.frame = new JFrame();
+        this.loginFrame = new JFrame();
+        this.submitFrame = new JFrame();
         this.cards = new JPanel(new CardLayout());
         this.loginWindow = new LoginWindow(frame, this);
         this.submitWindow = new SubmitWindow(this.frame);
@@ -78,16 +82,24 @@ public class SessionHandler {
         // TODO: remove after testing
         CardLayout cl = (CardLayout)(cards.getLayout());
         cl.show(cards, LOGIN);
-        frame.pack();
-        frame.setVisible(true);
+        //frame.pack();
+        //frame.setVisible(true);
     }
 
     private void setupGUI() {
         frame.getContentPane().add(cards);
 
-        cards.add(LOGIN, loginWindow.getContentPane());
+        //cards.add(LOGIN, loginWindow.getContentPane());
 
         //cards.add(SUBMIT, submitWindow.getContentPane());
+
+        loginFrame.getContentPane().add(loginWindow.getContentPane());
+        loginFrame.pack();
+        loginFrame.setVisible(true);
+
+        submitFrame.getContentPane().add(submitWindow.getContentPane());
+        submitFrame.pack();
+        submitFrame.setVisible(true);
     }
 
     private void show() {
@@ -121,6 +133,7 @@ public class SessionHandler {
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_MONTH, expireAfterDays);
                 preferences.put(PREF_SAVED_CREDS_EXPIRE_AFTER, dateFormat.format(calendar.getTime()));
+                loadCoursesAsync();
                 return getSuccessResult();
             } else {
                 return getFailureResult();
@@ -212,6 +225,7 @@ public class SessionHandler {
         new SwingWorker<Void, String>() {
             @Override
             protected Void doInBackground() {
+                submitWindow.toggleCourseBox(false);
                 client = getClient();
                 if (client != null) {
                     try {
@@ -226,7 +240,7 @@ public class SessionHandler {
                         }
 
                         submitWindow.courseBox.setModel(model);
-                        submitWindow.courseBox.setEnabled(true);
+                        submitWindow.toggleCourseBox(true);
 
                         // Display number of courses loaded
                         int numCourses = courses.size();
