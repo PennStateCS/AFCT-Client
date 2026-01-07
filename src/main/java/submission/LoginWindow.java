@@ -3,6 +3,7 @@ package submission;
 import gui.Globals;
 
 import javax.swing.*;
+import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -31,7 +32,7 @@ public class LoginWindow {
     private JTextArea result;
     private String resultText = "";
 
-    public LoginWindow(JFrame parentFrame) {
+    public LoginWindow(JFrame parentFrame, SessionHandler sessionHandler) {
         contentPane = new JPanel();
         serverTF = new JTextField();
         portTF = new JTextField();
@@ -44,8 +45,7 @@ public class LoginWindow {
 
         setupGui();
         setupEventHandlers();
-        // TODO: when the login window closes, save creds to perfs
-
+        populateGui(sessionHandler);
     }
 
     public JPanel getContentPane() {
@@ -100,6 +100,11 @@ public class LoginWindow {
         //c.insets = new Insets(5, hozInset, vrtInset, hozInset);
         c.insets = new Insets(10, hozInset, vrtInset, hozInset);
         contentPane.add(loginButton, c);
+
+        // Add result to contentPane
+        result.setBorder(new LineBorder(new Color(210, 210, 210)));
+        c.gridy = y++;
+        contentPane.add(result, c);
     }
 
     public static JPanel createInputPanel(Component component, String headerText, boolean setMargin) {
@@ -137,8 +142,8 @@ public class LoginWindow {
         return createInputPanel(comboBox, headerText, false);
     }
 
-    private void populateGui() {
-        Preferences prefs = Globals.sessionHandler.preferences;
+    private void populateGui(SessionHandler sessionHandler) {
+        Preferences prefs = sessionHandler.preferences;
         serverTF.setText(prefs.get(PREF_SERVER, defaultServer));
         portTF.setText(prefs.get(PREF_PORT, defaultPort));
         emailTF.setText(prefs.get(PREF_EMAIL, defaultEmail));
@@ -186,6 +191,10 @@ public class LoginWindow {
                 final String userEmail = emailTF.getText().trim();
                 final String userPassword = new String(passwordTF.getPassword());
 
+                serverTF.setEnabled(false);
+                portTF.setEnabled(false);
+                emailTF.setEnabled(false);
+                passwordTF.setEnabled(false);
                 loginButton.setEnabled(false);
 
                 appendResult("Authenticating…");
@@ -207,6 +216,10 @@ public class LoginWindow {
 
                     @Override
                     protected void done() {
+                        serverTF.setEnabled(true);
+                        portTF.setEnabled(true);
+                        emailTF.setEnabled(true);
+                        passwordTF.setEnabled(true);
                         loginButton.setEnabled(true);
                     }
                 }.execute();

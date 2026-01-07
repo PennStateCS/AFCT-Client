@@ -62,7 +62,7 @@ public class SessionHandler {
     public static final String defaultServer = "http://localhost";
     public static final String defaultPort = "3000";
     public static final String defaultEmail = "student@example.com";
-    public static final String defaultPassword = "password123";
+    public static final String defaultPassword = "";
 
     public SessionHandler() {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
@@ -71,7 +71,7 @@ public class SessionHandler {
         // GUI elements
         this.frame = new JFrame();
         this.cards = new JPanel(new CardLayout());
-        this.loginWindow = new LoginWindow(frame);
+        this.loginWindow = new LoginWindow(frame, this);
         this.submitWindow = new SubmitWindow(this.frame);
         this.setupGUI();
 
