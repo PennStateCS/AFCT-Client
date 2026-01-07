@@ -6,14 +6,19 @@ import gui.popups.UpdatePopup;
 
 import javax.swing.*;
 import java.awt.*;
+import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.util.Calendar;
 import java.util.Date;
+import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.prefs.Preferences;
 
 import static gui.Globals.sizeAndCenterWindow;
+import static submission.AFCTClient.fixUrl;
+import static submission.LoginResult.*;
 
 
 public class SessionHandler {
@@ -22,6 +27,12 @@ public class SessionHandler {
     private int expireAfterDays = 7;
 
     private AFCTClient client = null;
+    private String token = null;
+    private List<Map<String, Object>> courses;
+    private List<Map<String, Object>> assignments;
+    private List<Map<String, Object>> problems;
+
+
     private String server = null;
     private String port = null;
     private String email = null;
@@ -47,6 +58,12 @@ public class SessionHandler {
     public static final String PREF_HOMEWORK = "homework";
     public static final String PREF_PROBLEM = "problem";
 
+    // Default values
+    public static final String defaultServer = "http://localhost";
+    public static final String defaultPort = "3000";
+    public static final String defaultEmail = "student@example.com";
+    public static final String defaultPassword = "password123";
+
     public SessionHandler() {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
         this.dateFormat = DateFormat.getDateInstance(DateFormat.SHORT);
@@ -54,13 +71,13 @@ public class SessionHandler {
         // GUI elements
         this.frame = new JFrame();
         this.cards = new JPanel(new CardLayout());
-        this.loginWindow = new LoginWindow();
+        this.loginWindow = new LoginWindow(frame);
         this.submitWindow = new SubmitWindow(this.frame);
         this.setupGUI();
 
         // TODO: remove after testing
         CardLayout cl = (CardLayout)(cards.getLayout());
-        cl.show(cards, SUBMIT);
+        cl.show(cards, LOGIN);
         frame.pack();
         frame.setVisible(true);
     }
@@ -68,9 +85,9 @@ public class SessionHandler {
     private void setupGUI() {
         frame.getContentPane().add(cards);
 
-        //cards.add(LOGIN, loginWindow.getContentPane());
+        cards.add(LOGIN, loginWindow.getContentPane());
 
-        cards.add(SUBMIT, submitWindow.getContentPane());
+        //cards.add(SUBMIT, submitWindow.getContentPane());
     }
 
     private void show() {
@@ -87,16 +104,32 @@ public class SessionHandler {
 
         return this.client;
     }
+    
+    public LoginResult login(String serverUrl, String portText, String userEmail, String userPassword) {
+        serverUrl = fixUrl(serverUrl);
+        portText = portText.trim();
+        userEmail = userEmail.trim();
+        saveLoginInfo(serverUrl, portText, userEmail, userPassword);
 
-    private void setBaseUrl(String baseUrl) {
-        // Set this.baseUrl if this.baseUrl is null (has not been set before), or baseUrl != this.baseUrl
-        if (this.server == null || !Objects.equals(baseUrl, this.server)) {
-            this.server = baseUrl;
-            this.client = new AFCTClient(this.server);
-            this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
-            this.preferences.remove(PREF_SAVED_CREDS_EXPIRE_AFTER);
+        try {
+            client = new AFCTClient(serverUrl + ":" + portText);
+            token = client.login(userEmail, userPassword);
+            if (token != null && !token.isBlank()) {
+                // Login succeeded
+                this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "yes");
+                // Set creds to expire after 7 days
+                Calendar calendar = Calendar.getInstance();
+                calendar.add(Calendar.DAY_OF_MONTH, expireAfterDays);
+                preferences.put(PREF_SAVED_CREDS_EXPIRE_AFTER, dateFormat.format(calendar.getTime()));
+                return getSuccessResult();
+            } else {
+                return getFailureResult();
+            }
+        } catch (IOException ex) {
+            return getErrorResult(ex.getMessage());
         }
     }
+    
 
     /**
      *
@@ -132,9 +165,9 @@ public class SessionHandler {
     private void tryLogin(String email, String password) {
         //TODO boolean credCHanged = ;
 
-        if (!Objects.equals(this.email, email) || !Objects.equals(this.password, password)) {
-            this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
-        }
+//        if (!Objects.equals(this.email, email) || !Objects.equals(this.password, password)) {
+//            this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
+//        }
 
         // If login succeeds:
         this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "yes");
@@ -145,6 +178,80 @@ public class SessionHandler {
     }
 
     private void tryLogin() {
-        tryLogin(this.email, this.password);
+        //tryLogin(this.email, this.password);
+    }
+
+    public void saveLoginInfo(String serverUrl, String portText, String userEmail, String userPassword) {
+        serverUrl = fixUrl(serverUrl);
+        portText = portText.trim();
+        userEmail = userEmail.trim();
+        
+        String savedServer = preferences.get(PREF_SERVER, defaultServer);
+        String savedPort = preferences.get(PREF_PORT, defaultPort);
+        String savedEmail = preferences.get(PREF_EMAIL, defaultEmail);
+        String savedPassword = preferences.get(PREF_PASSWORD, defaultPassword);
+        
+        preferences.put(PREF_SERVER, serverUrl);
+        preferences.put(PREF_PORT, portText);
+        preferences.put(PREF_EMAIL, userEmail);
+        preferences.put(PREF_PASSWORD, userPassword);
+
+        this.email = userEmail;
+        
+        boolean serverChanged = !Objects.equals(savedServer, serverUrl);
+        boolean portChanged = !Objects.equals(savedPort, portText);
+        boolean emailChanged = !Objects.equals(savedEmail, userEmail);
+        boolean passwordChanged = !Objects.equals(savedPassword, userPassword);
+        if (serverChanged || portChanged || emailChanged || passwordChanged) {
+            this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
+            this.preferences.remove(PREF_SAVED_CREDS_EXPIRE_AFTER);
+        }
+    }
+
+    private void loadCoursesAsync() {
+        new SwingWorker<Void, String>() {
+            @Override
+            protected Void doInBackground() {
+                client = getClient();
+                if (client != null) {
+                    try {
+                        // Load courses on worker thread
+                        courses = client.getCourses(email);
+                        // Generate model
+                        DefaultComboBoxModel<CourseItem> model = new DefaultComboBoxModel<>();
+                        model.addElement(new CourseItem("", SubmitWindow.PLACEHOLDER));
+
+                        for (Map<String, Object> course : courses) {
+                            model.addElement(new CourseItem(course.get("id").toString(), course.get("name").toString()));
+                        }
+
+                        submitWindow.courseBox.setModel(model);
+                        submitWindow.courseBox.setEnabled(true);
+
+                        // Display number of courses loaded
+                        int numCourses = courses.size();
+                        publish(String.format("Loaded %s %s", numCourses, numCourses == 1 ? "course" : "courses"));
+
+                        // If there is only one course, select it and load the assignments for that course
+                        if (numCourses == 1) {
+                            submitWindow.courseBox.setSelectedIndex(1);
+                        }
+                    } catch (IOException ex) {
+                        publish("Error loading courses: " + ex.getMessage());
+                    }
+                }
+                return null;
+            }
+
+            @Override
+            protected void process(List<String> chunks) {
+                for (String s : chunks) submitWindow.appendResult(s);
+            }
+
+            @Override
+            protected void done() {
+                //signInButton.setEnabled(true);
+            }
+        }.execute();
     }
 }

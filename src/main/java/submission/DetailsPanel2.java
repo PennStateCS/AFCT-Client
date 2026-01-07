@@ -11,19 +11,27 @@ public class DetailsPanel2 extends JPanel {
     private final JToggleButton detailsToggle;
     private final JPanel detailsPanel;
     private final JTextArea detailsText;
+    private final JPanel card;
 
     public DetailsPanel2() {
         detailsToggle = new JToggleButton("View details ▸");
         detailsPanel = new JPanel(new BorderLayout());
         detailsText = new JTextArea();
+        card = new JPanel(new GridBagLayout());
 
         initializeDetailsPanel();
     }
 
+    public void setDetailsText(String text) {
+        this.detailsText.setText(text);
+        // Important for layout recalculation in Swing
+        card.revalidate();
+        card.repaint();
+    }
+
     private void initializeDetailsPanel() {
         setLayout(new GridBagLayout()); // to center the card
-
-        JPanel card = new JPanel(new GridBagLayout());
+        
 //        card.setBorder(new CompoundBorder(
 //                new LineBorder(new Color(210, 210, 210)),
 //                new EmptyBorder(16, 16, 16, 16)
@@ -65,7 +73,6 @@ public class DetailsPanel2 extends JPanel {
         detailsText.setLineWrap(true);
         detailsText.setWrapStyleWord(true);
         detailsText.setFont(UIManager.getFont("Label.font"));
-        detailsText.setText("Create a Deterministic Finite State Automaton that accepts strings that contain any number of b's and at least one a, in any order.");
 
         detailsPanel.add(detailsText, BorderLayout.CENTER);
         detailsPanel.setVisible(false);

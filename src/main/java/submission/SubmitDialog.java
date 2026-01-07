@@ -180,6 +180,7 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 final String userEmail = email.getText();
                 final String userPassword = new String(password.getPassword());
 
+                // TODO - add this to new login / submit logic
                 signInButton.setEnabled(false);
                 setModel(courseBox, List.of(PLACEHOLDER), false);
                 setModel(assignmentBox, List.of(PLACEHOLDER), false);

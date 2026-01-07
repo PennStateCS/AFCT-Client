@@ -1,13 +1,22 @@
 package submission;
 
+import gui.Globals;
+
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.awt.event.WindowAdapter;
+import java.io.IOException;
 import java.util.Calendar;
+import java.util.List;
+import java.util.Map;
+import java.util.prefs.Preferences;
 
 import static gui.Globals.*;
+import static submission.AFCTClient.fixUrl;
+import static submission.SessionHandler.*;
+import static submission.SessionHandler.PREF_PASSWORD;
 
 //TODO: should this be a Dialog that block other input?
 public class LoginWindow {
@@ -17,16 +26,24 @@ public class LoginWindow {
     private JTextField emailTF;
     private JPasswordField passwordTF;
     private JButton loginButton;
+    private JFrame parentFrame;
+    // TODO: replace this with better, more modern user feedback methods
+    private JTextArea result;
+    private String resultText = "";
 
-    public LoginWindow() {
+    public LoginWindow(JFrame parentFrame) {
         contentPane = new JPanel();
         serverTF = new JTextField();
         portTF = new JTextField();
         emailTF = new JTextField();
         passwordTF = new JPasswordField();
         loginButton = new JButton("Login");
+        this.parentFrame = parentFrame;
+
+        result = new JTextArea();
 
         setupGui();
+        setupEventHandlers();
         // TODO: when the login window closes, save creds to perfs
 
     }
@@ -35,6 +52,11 @@ public class LoginWindow {
         return contentPane;
     }
 
+    private void appendResult(String line) {
+        resultText += (line.endsWith("\n") ? line : (line + "\n"));
+        result.setText(resultText);
+        result.setCaretPosition(result.getDocument().getLength());
+    }
 
     private void setupGui() {
         contentPane.setLayout(new GridBagLayout());
@@ -110,8 +132,85 @@ public class LoginWindow {
         return createInputPanel(textField, headerText, true);
     }
 
-    public static JPanel createComboBoxPanel(JComboBox comboBox, String headerText) {
+    public static <T> JPanel createComboBoxPanel(JComboBox<T> comboBox, String headerText) {
         comboBox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         return createInputPanel(comboBox, headerText, false);
+    }
+
+    private void populateGui() {
+        Preferences prefs = Globals.sessionHandler.preferences;
+        serverTF.setText(prefs.get(PREF_SERVER, defaultServer));
+        portTF.setText(prefs.get(PREF_PORT, defaultPort));
+        emailTF.setText(prefs.get(PREF_EMAIL, defaultEmail));
+        passwordTF.setText(prefs.get(PREF_PASSWORD, defaultPassword));
+    }
+
+    /**
+     * Sets action listeners for user inputs.
+     */
+    private void setupEventHandlers() {
+        handlers_windowClose();
+        handlers_login();
+    }
+
+    private void handlers_windowClose() {
+        WindowAdapter windowListener = new WindowAdapter() {
+            @Override
+            public void windowClosing(java.awt.event.WindowEvent e) {
+                saveLoginInfo();
+                parentFrame.dispose();
+            }
+        };
+
+        // add windowListener
+        parentFrame.addWindowListener(windowListener);
+    }
+
+    private void saveLoginInfo() {
+        final String serverUrl = serverTF.getText();
+        final String portText = portTF.getText();
+        final String userEmail = emailTF.getText();
+        final String userPassword = new String(passwordTF.getPassword());
+        Globals.sessionHandler.saveLoginInfo(serverUrl, portText, userEmail, userPassword);
+    }
+
+    private void handlers_login() {
+        loginButton.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                // SwingWorker
+                final String serverUrl = fixUrl(serverTF.getText());
+                final String portText = portTF.getText().trim();
+                final String userEmail = emailTF.getText().trim();
+                final String userPassword = new String(passwordTF.getPassword());
+
+                loginButton.setEnabled(false);
+
+                appendResult("Authenticating…");
+
+                //savePreferences(serverUrl, portText, userEmail, userPassword);
+
+                new SwingWorker<Void, String>() {
+                    @Override
+                    protected Void doInBackground() {
+                        LoginResult loginResult = Globals.sessionHandler.login(serverUrl, portText, userEmail, userPassword);
+                        publish(loginResult.message);
+                        return null;
+                    }
+
+                    @Override
+                    protected void process(List<String> chunks) {
+                        for (String s : chunks) appendResult(s);
+                    }
+
+                    @Override
+                    protected void done() {
+                        loginButton.setEnabled(true);
+                    }
+                }.execute();
+            }
+        });
     }
 }

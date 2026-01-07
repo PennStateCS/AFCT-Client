@@ -10,7 +10,7 @@ import static submission.LoginWindow.createInputPanel;
 
 public class SubmitWindow {
     private JPanel contentPane;
-    private JComboBox<CourseItem> courseBox;
+    public JComboBox<CourseItem> courseBox;
     private JButton courseRefreshButton;
     private JComboBox<AssignmentItem> assignmentBox;
     private JButton assignmentRefreshButton;
@@ -27,8 +27,12 @@ public class SubmitWindow {
     private JButton submitButton;
     // TODO: replace this with better, more modern user feedback methods
     private JTextArea result;
+    private String resultText = "";
 
     private JScrollPane scrollPane;
+
+    // Placeholder for combo boxes
+    public static final String PLACEHOLDER = "— Select —";
 
     public SubmitWindow(JFrame parentFrame) {
         contentPane = new JPanel();
@@ -50,6 +54,8 @@ public class SubmitWindow {
         viewCurrentButton = new JButton("View");
         submitButton = new JButton("Submit");
 
+        result = new JTextArea();
+
         setupGui();
 
         scrollPane = new JScrollPane(contentPane);
@@ -61,6 +67,12 @@ public class SubmitWindow {
     public JScrollPane getContentPane() {
         //return contentPane;
         return scrollPane;
+    }
+
+    public void appendResult(String line) {
+        resultText += (line.endsWith("\n") ? line : (line + "\n"));
+        result.setText(resultText);
+        result.setCaretPosition(result.getDocument().getLength());
     }
 
     private void setupGui() {
@@ -136,7 +148,7 @@ public class SubmitWindow {
         return filePanel;
     }
 
-    private JPanel createComboBoxWithRefreshPanel(JComboBox comboBox, JButton refreshButton, String headerText) {
+    private <T> JPanel createComboBoxWithRefreshPanel(JComboBox<T> comboBox, JButton refreshButton, String headerText) {
         JPanel inputPanel = createComboBoxPanel(comboBox, headerText);
         GridBagConstraints c;
 
@@ -151,7 +163,7 @@ public class SubmitWindow {
         return inputPanel;
     }
 
-    private JPanel createComboBoxWithButtonsPanel(JComboBox comboBox, JButton refreshButton, DetailsPanel2 detailsPanel, JRadioButton radioButton1, JRadioButton radioButton2, String headerText) {
+    private <T> JPanel createComboBoxWithButtonsPanel(JComboBox<T> comboBox, JButton refreshButton, DetailsPanel2 detailsPanel, JRadioButton radioButton1, JRadioButton radioButton2, String headerText) {
         JPanel inputPanel = createComboBoxWithRefreshPanel(comboBox, refreshButton, headerText);
         GridBagConstraints c;
         int y = 2;
