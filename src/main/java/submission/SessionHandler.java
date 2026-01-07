@@ -268,7 +268,7 @@ public class SessionHandler {
                     for (SubmitWindow submitWindow : submitWindows) {
                         submitWindow.appendResult(s);
                     }
-                };
+                }
             }
 
             @Override
@@ -336,19 +336,26 @@ public class SessionHandler {
                     assignmentModels.put(selectedCourse.id, modelMap);
 
                     // Add model to drop-down menu
-                    updateComboBoxesWithoutChangingSelection(ASSIGNMENT, ComboBoxModel<DropdownItem> model)
-
-                    // Enable assignment inputs
-                    assignmentBox.setEnabled(true);
-                    allAssignments.setEnabled(true);
-                    upcomingAssignments.setEnabled(true);
+                    for (SubmitWindow submitWindow : submitWindows) {
+                        CourseItem selectedItem = (CourseItem) submitWindow.courseBox.getSelectedItem();
+                        if (selectedItem != null && Objects.equals(selectedItem.id, selectedCourse.id)) {
+                            if (submitWindow.upcomingAssignments.isSelected()) {
+                                updateComboBoxWithoutChangingSelection(submitWindow, ASSIGNMENT, modelUpcoming);
+                            } else {
+                                updateComboBoxWithoutChangingSelection(submitWindow, ASSIGNMENT, modelAll);
+                            }
+                            // Re-enable AssignmentBox
+                            submitWindow.toggleAssignmentBox(true);
+                        }
+                    }
 
                     // Display number of assignments loaded
                     numTotalAssignments = assignmentList.size();
                     publish(String.format("Loaded %s %s", numTotalAssignments, numTotalAssignments == 1 ? "assignment" : "assignments"));
                 } catch (IOException ex) {
                     publish("Failed to load assignments: " + ex.getMessage());
-                    setModel(assignmentBox, List.of(SubmitWindow.PLACEHOLDER), true);
+                    // TODO: handle this case - if necessary
+                    //setModel(assignmentBox, List.of(SubmitWindow.PLACEHOLDER), true);
                 }
                 publish("");
                 return null;
@@ -356,13 +363,17 @@ public class SessionHandler {
 
             @Override
             protected void process(List<String> chunks) {
-                for (String s : chunks) appendResult(s);
+                for (String s : chunks) {
+                    for (SubmitWindow submitWindow : submitWindows) {
+                        submitWindow.appendResult(s);
+                    }
+                }
             }
 
             @Override
             protected void done() {
-                updateSelectFileEnabled();
-                updateSubmitEnabled();
+//                updateSelectFileEnabled();
+//                updateSubmitEnabled();
             }
         }.execute();
     }
@@ -381,20 +392,40 @@ public class SessionHandler {
             } else {
                 submitWindow.assignmentBox.setModel(assignmentModels.get(selectedCourse.id).get(true));
             }
+            // Re-enable AssignmentBox
+            submitWindow.toggleAssignmentBox(true);
         } else {
-
+            loadAssignmentsAsync(selectedCourse);
         }
-
-        // Re-enable AssignmentBox
-        submitWindow.toggleAssignmentBox(true);
     }
 
     public void populateAssignments(CourseItem selectedCourse) {
 
     }
 
-    private void updateComboBoxWithoutChangingSelection() {
+    private <T> void updateComboBoxWithoutChangingSelection(SubmitWindow submitWindow, SubmitWindow.ComboBoxTarget target, ComboBoxModel<T> model) {
+        JComboBox<DropdownItem> comboBox = submitWindow.getTargetComboBox(target);
+        // Disable ComboBox
+        submitWindow.toggleTargetComboBox(target, false);
 
+        DropdownItem selectedItem = (DropdownItem) comboBox.getSelectedItem();
+        if (comboBox.getSelectedIndex() > 0 && selectedItem != null) {
+            // Item selected, try to update without changing selection
+            submitWindow.isPopulating = true;
+            comboBox.setModel((ComboBoxModel<DropdownItem>) model);
+            for (int i = 0; i < comboBox.getItemCount(); i++) {
+                if (comboBox.getItemAt(i).id.equals(selectedItem.id)) {
+                    comboBox.setSelectedIndex(i);
+                    submitWindow.isPopulating = false;
+                    break;
+                }
+            }
+        } else {
+            // No item selected, just update model like normal
+            comboBox.setModel((ComboBoxModel<DropdownItem>) model);
+        }
+        // Re-enable ComboBox
+        submitWindow.toggleTargetComboBox(target, true);
     }
 
     /**
@@ -406,28 +437,7 @@ public class SessionHandler {
      */
     private void updateComboBoxesWithoutChangingSelection(SubmitWindow.ComboBoxTarget target, ComboBoxModel<DropdownItem> model) {
         for (SubmitWindow submitWindow : submitWindows) {
-            JComboBox<DropdownItem> comboBox = submitWindow.getTargetComboBox(target);
-            // Disable ComboBox
-            submitWindow.toggleTargetComboBox(target, false);
-
-            DropdownItem selectedItem = (DropdownItem) comboBox.getSelectedItem();
-            if (comboBox.getSelectedIndex() > 0 && selectedItem != null) {
-                // Item selected, try to update without changing selection
-                submitWindow.isPopulating = true;
-                comboBox.setModel(model);
-                for (int i = 0; i < comboBox.getItemCount(); i++) {
-                    if (comboBox.getItemAt(i).id.equals(selectedItem.id)) {
-                        comboBox.setSelectedIndex(i);
-                        submitWindow.isPopulating = false;
-                        break;
-                    }
-                }
-            } else {
-                // No item selected, just update model like normal
-                comboBox.setModel(model);
-            }
-            // Re-enable ComboBox
-            submitWindow.toggleTargetComboBox(target, true);
+            updateComboBoxWithoutChangingSelection(submitWindow, target, model);
         }
     }
 }
