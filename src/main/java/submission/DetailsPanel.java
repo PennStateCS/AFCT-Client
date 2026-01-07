@@ -10,6 +10,7 @@ public class DetailsPanel extends JPanel {
     private JFrame parentFrame;
     private JToggleButton summaryButton;
     private String summaryText;
+    JScrollPane detailsScrollPane;
     private JTextPane detailsPane;
     private String detailsText = null;
 
@@ -18,11 +19,15 @@ public class DetailsPanel extends JPanel {
         this.summaryText = summaryText;
 
         detailsPane = new JTextPane();
-//        detailsPane.setContentType("text/html");
-        setDetailsText("<html>This is the detailed content.<br>It can span multiple lines and include <b>HTML formatting</b>.</html>");
+        detailsPane.setContentType("text/html");
+        detailsScrollPane = new JScrollPane(detailsPane);
         summaryButton = new JToggleButton();
 
         initializeDetailsPanel();
+
+        // JUST FOR TESTING
+        setDetailsText("<html>This is the detailed content.<br>It can span multiple lines and include <b>HTML formatting</b>.</html>");
+
     }
 
     public void setDetailsText(String detailsText) {
@@ -34,7 +39,14 @@ public class DetailsPanel extends JPanel {
                 "</body>" +
                 "</html>";
         this.detailsPane.setText(html);
-        this.detailsPane.setText(detailsText);
+
+
+        // Force layout so the View is created
+        detailsPane.setSize(detailsScrollPane.getViewport().getWidth(), Integer.MAX_VALUE);
+
+        int prefHeight = detailsPane.getPreferredSize().height;
+        detailsPane.setPreferredSize(new Dimension(detailsScrollPane.getViewport().getWidth(), prefHeight));
+        detailsPane.revalidate();
     }
 
     private void initializeDetailsPanel() {
@@ -42,13 +54,16 @@ public class DetailsPanel extends JPanel {
 
         // The content panel starts hidden
         detailsPane.setEditable(false);
-        detailsPane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
         detailsPane.setMargin(new Insets(5, 10, 5, 10)); // padding: 10px horizontal, 5px vertical
         updateSummary(false);
 
+        // Add a border around detailsScrollPane
+        detailsScrollPane.setBorder(BorderFactory.createLineBorder(Color.GRAY));
+
+
         // Wrap the JEditorPane in a JPanel to control visibility more cleanly with pack()
         JPanel contentWrapper = new JPanel(new BorderLayout());
-        contentWrapper.add(detailsPane, BorderLayout.CENTER);
+        contentWrapper.add(detailsScrollPane, BorderLayout.CENTER);
         contentWrapper.setVisible(false); // Initially hidden
 
         // Add the listener
