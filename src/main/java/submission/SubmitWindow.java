@@ -9,6 +9,7 @@ import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.util.List;
+import java.util.Objects;
 import java.util.prefs.Preferences;
 
 import static gui.Globals.*;
@@ -46,9 +47,9 @@ public class SubmitWindow {
     private JScrollPane scrollPane;
 
     // Tracking for optimization
-    private int selectedCourse = 0;
-    private int selectedAssignment = 0;
-    private int selectedProblem = 0;
+    private String selectedCourseID;
+    private String selectedAssignmentID;
+    private String selectedProblem;
 
     // Placeholder for combo boxes
     public static final String PLACEHOLDER = "— Select —";
@@ -92,6 +93,10 @@ public class SubmitWindow {
         resultText += (line.endsWith("\n") ? line : (line + "\n"));
         result.setText(resultText);
         result.setCaretPosition(result.getDocument().getLength());
+    }
+
+    public void toggleSubmitButton(boolean enabled) {
+        submitButton.setEnabled(enabled);
     }
 
     public void toggleCourseBox(boolean enabled) {
@@ -377,6 +382,7 @@ public class SubmitWindow {
      */
     private void setupEventHandlers() {
         handlers_course();
+        handlers_assignment();
     }
 
     private void handlers_course() {
@@ -387,22 +393,78 @@ public class SubmitWindow {
                 if (isPopulating) return;
 
                 // If the user's selection does not change, return
-                if (courseBox.getSelectedIndex() == selectedCourse) return;
+                CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
+                if (selectedCourse != null && Objects.equals(selectedCourse.id, selectedCourseID)) return;
+
 
                 // User selected initial box with no value
                 if (courseBox.getSelectedIndex() <= 0) {
                     // Reset inputs appropriately
                     setModel(assignmentBox, List.of(PLACEHOLDER), false);
                     setModel(problemBox, List.of(PLACEHOLDER), false);
+                    toggleSubmitButton(false);
                     return;
                 }
 
                 // User chose a valid course
-                CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
                 appendResult("Selected course: " + selectedCourse);
                 appendResult("");
                 appendResult("Loading assignments for selected course…");
-                Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse); // Load assignments for selected course
+                // Load assignments for selected course
+                Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse);
+            }
+        });
+    }
+
+    private void handlers_assignment() {
+        SubmitWindow submitWindow = this;
+        assignmentBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (isPopulating) return;
+
+                // If the user's selection does not change, return
+                AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
+                if (selectedAssignment != null && Objects.equals(selectedAssignment.id, selectedAssignmentID)) return;
+
+                // User selected initial box with no value
+                if (assignmentBox.getSelectedIndex() <= 0) {
+                    // Reset inputs appropriately
+                    setModel(problemBox, List.of(PLACEHOLDER), false);
+                    toggleSubmitButton(false);
+                    return;
+                }
+
+                // User chose a valid assignment
+                appendResult("Selected assignment: " + assignmentBox.getSelectedItem());
+                appendResult("");
+                appendResult("Loading problems for selected assignment…");
+                // Load problems for selected assignment
+                Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
+            }
+        });
+
+        // "All Assignments" button (radio button 1 of 2)
+        allAssignments.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                appendResult("Loading all assignments...");
+                AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
+                if (selectedAssignment != null) {
+                    Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
+                }
+            }
+        });
+
+        // "Upcoming Assignments" button (radio button 2 of 2)
+        upcomingAssignments.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                appendResult("Loading upcoming assignments...");
+                AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
+                if (selectedAssignment != null) {
+                    Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
+                }
             }
         });
     }
