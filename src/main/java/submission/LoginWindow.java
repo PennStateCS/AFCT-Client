@@ -43,6 +43,8 @@ public class LoginWindow {
 
         result = new JTextArea();
 
+        // TODO: maybe put this into a scrollpane?
+
         setupGui();
         populateGui(sessionHandler);
         setupEventHandlers();

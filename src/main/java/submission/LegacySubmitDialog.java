@@ -37,6 +37,8 @@ import java.awt.event.KeyEvent;
 import java.net.URL;
 import java.net.MalformedURLException;
 
+import gui.environment.EnvironmentFrame;
+import gui.environment.Universe;
 import org.apache.commons.io.IOUtils;
 import org.apache.commons.lang3.StringUtils;
 
@@ -56,7 +58,7 @@ import org.json.simple.parser.ParseException;
 import gui.environment.Environment;
 import file.XMLCodec;
 
-public class LegacySubmitDialog extends JDialog implements ActionListener {
+public class LegacySubmitDialog extends JDialog implements ActionListener, SubmissionGUI {
     private Environment env;
     private JPanel submissionCards;
     private JTextField serverTF;
@@ -202,6 +204,13 @@ public class LegacySubmitDialog extends JDialog implements ActionListener {
 
         this.pack();
         this.setInitialUIValues();
+    }
+
+    @Override
+    public void refreshDialog() {
+        // TODO: load current file here
+        EnvironmentFrame frame = Universe.frameForEnvironment(this.env);
+        this.setTitle(frame.getDescription() + " - Submit");
     }
 
     public void actionPerformed(ActionEvent e) {

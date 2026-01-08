@@ -77,14 +77,10 @@ public class SessionHandler {
         this.setupGUI();
     }
 
-    public void createNewSubmitWindow() {
-        // TODO: remove after testing
-//        JFrame submitFrame = new JFrame();
-//        SubmitWindow submitWindow = new SubmitWindow();
-//        submitWindows.add(submitWindow);
-//        submitFrame.getContentPane().add(submitWindow.getContentPane());
-//        submitFrame.pack();
-//        submitFrame.setVisible(true);
+    public SubmitWindow createNewSubmitWindow(Environment environment) {
+        SubmitWindow submitWindow = new SubmitWindow(environment);
+        submitWindows.add(submitWindow);
+        return submitWindow;
     }
 
     private void setupGUI() {

@@ -22,6 +22,7 @@ package gui.action;
 
 import java.io.Serializable;
 
+import gui.Globals;
 import gui.deterministic.ConversionPane;
 import gui.environment.Environment;
 import gui.environment.Universe;
@@ -29,10 +30,11 @@ import gui.environment.tag.CriticalTag;
 
 import java.awt.event.ActionEvent;
 
-import javax.swing.JOptionPane;
+import javax.swing.*;
 
 import submission.LegacySubmitDialog;
 import submission.SubmitDialog;
+import submission.SubmitWindow;
 
 /**
  * This is a simple action to submit a JFLAP file
@@ -71,6 +73,8 @@ public class SubmitAction extends RestrictedAction {
 	 *            the action event
 	 */
 	public void actionPerformed(ActionEvent e) {
+        boolean useLessModernSubmissionGui = false;
+
         if (Universe.curProfile.getUseLegacySubmissionGui()) {
             LegacySubmitDialog d = (LegacySubmitDialog) Universe.submitDialogForEnvironment(this.environment);
             if (d == null) {
@@ -82,20 +86,37 @@ public class SubmitAction extends RestrictedAction {
                 d.toFront();
             }
         } else {
-            SubmitDialog d = (SubmitDialog) Universe.submitDialogForEnvironment(this.environment);
-            if (d == null) {
-                d = new SubmitDialog(this.environment);
-                d.setContentPane(d.getMainPanel());
-                d.pack();
-                d.setLocationRelativeTo(null);
-                d.setResizable(false);
-                d.refreshDialog();
-                d.setVisible(true);
-                Universe.registerSubmitDialog(this.environment, d);
+            if (useLessModernSubmissionGui) {
+                SubmitDialog d = (SubmitDialog) Universe.submitDialogForEnvironment(this.environment);
+                if (d == null) {
+                    d = new SubmitDialog(this.environment);
+                    d.setContentPane(d.getMainPanel());
+                    d.pack();
+                    d.setLocationRelativeTo(null);
+                    d.setResizable(false);
+                    d.refreshDialog();
+                    d.setVisible(true);
+                    Universe.registerSubmitDialog(this.environment, d);
+                } else {
+                    d.refreshDialog();
+                    d.setVisible(true);
+                    d.toFront();
+                }
             } else {
-                d.refreshDialog();
-                d.setVisible(true);
-                d.toFront();
+                SubmitWindow d = (SubmitWindow) Universe.submitDialogForEnvironment(this.environment);
+                if (d == null) {
+                    d = Globals.sessionHandler.createNewSubmitWindow(environment);
+                    d.pack();
+                    d.setLocationRelativeTo(null);
+                    //d.setResizable(false);
+                    d.refreshDialog();
+                    d.setVisible(true);
+                    Universe.registerSubmitDialog(this.environment, d);
+                } else {
+                    d.refreshDialog();
+                    d.setVisible(true);
+                    d.toFront();
+                }
             }
         }
 	}

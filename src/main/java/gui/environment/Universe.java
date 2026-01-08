@@ -21,6 +21,7 @@
 package gui.environment;
 
 import file.*;
+import submission.SubmissionGUI;
 import submission.SubmitDialog;
 
 import java.io.File;
@@ -205,7 +206,7 @@ public class Universe {
 
 
     /** The mapping of environments to submit dialogs. */
-    private static Map<Environment, Object> environmentToSubmitDialog = new HashMap<>();
+    private static Map<Environment, SubmissionGUI> environmentToSubmitDialog = new HashMap<>();
 
     /**
      * Given an environment, this returns the submit dialog associated with that environment.
@@ -214,7 +215,7 @@ public class Universe {
      * @return the submit dialog associated with this environment, or <CODE>null</CODE>
      *         if there is no submit dialog associated with this environment
      */
-    public static Object submitDialogForEnvironment(Environment environment) {
+    public static SubmissionGUI submitDialogForEnvironment(Environment environment) {
         return environmentToSubmitDialog.get(environment);
     }
 
@@ -223,7 +224,7 @@ public class Universe {
      *
      * @param dialog the submit dialog to register
      */
-    public static void registerSubmitDialog(Environment environment, Object dialog) {
+    public static void registerSubmitDialog(Environment environment, SubmissionGUI dialog) {
         environmentToSubmitDialog.put(environment, dialog);
     }
 
@@ -234,13 +235,14 @@ public class Universe {
      */
     public static void unregisterSubmitDialog(Environment environment) {
         if (environmentToSubmitDialog.containsKey(environment)) {
-            Object d = submitDialogForEnvironment(environment);
+            SubmissionGUI d = submitDialogForEnvironment(environment);
             environmentToSubmitDialog.remove(environment);
-            try {
-                ((JFrame) d).dispose();
-            } catch (ClassCastException e) {
-                ((JDialog) d).dispose();
-            }
+            d.dispose();
+//            try {
+//                ((JFrame) d).dispose();
+//            } catch (ClassCastException e) {
+//                ((JDialog) d).dispose();
+//            }
         }
     }
 }

@@ -2,6 +2,7 @@ package submission;
 
 import gui.Globals;
 import gui.environment.Environment;
+import gui.environment.EnvironmentFrame;
 import gui.environment.Universe;
 
 import javax.swing.*;
@@ -21,7 +22,7 @@ import static submission.SessionHandler.*;
 import static submission.SessionHandler.defaultPassword;
 import static submission.SubmitWindow.ComboBoxTarget.*;
 
-public class SubmitWindow {
+public class SubmitWindow extends JFrame implements SubmissionGUI{
     private Environment environment;
     private JPanel contentPane;
     // Course
@@ -87,11 +88,15 @@ public class SubmitWindow {
         setupEventHandlers();
 
         scrollPane = new JScrollPane(contentPane);
+
+        this.getContentPane().add(scrollPane);
     }
 
-    public JScrollPane getContentPane() {
-        //return contentPane;
-        return scrollPane;
+    @Override
+    public void refreshDialog() {
+        EnvironmentFrame frame = Universe.frameForEnvironment(this.environment);
+        this.setTitle(frame.getDescription() + " - Submit");
+        currentFileLabel.setText(frame.getDescription());
     }
 
     public void appendResult(String line) {
@@ -331,6 +336,8 @@ public class SubmitWindow {
         toggleCourseBox(false);
         toggleAssignmentBox(false);
         toggleProblemBox(false);
+
+        refreshDialog();
     }
 
     /** Function used to fill a drop-down menu with options

@@ -29,6 +29,7 @@ import gui.editor.EditBlockPane;
 import gui.editor.EditorKeyBindings;
 import gui.editor.EditorPane;
 import gui.grammar.GrammarInputPane;
+import submission.SubmissionGUI;
 
 import java.awt.BorderLayout;
 import java.awt.dnd.DropTarget;
@@ -149,6 +150,11 @@ public class EnvironmentFrame extends JFrame {
 		//String title = DEFAULT_TITLE + " : " + getDescription();
 		String title = getDescription();
 		setTitle(title);
+
+        SubmissionGUI submissionGUI = Universe.submitDialogForEnvironment(this.environment);
+        if  (submissionGUI != null) {
+            submissionGUI.refreshDialog();
+        }
 	}
 
 	/**

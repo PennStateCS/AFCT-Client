@@ -24,7 +24,7 @@ import java.util.prefs.Preferences;
 
 import static submission.SessionHandler.*;
 
-public class SubmitDialog extends JFrame implements ActionListener {
+public class SubmitDialog extends JFrame implements ActionListener, SubmissionGUI {
     private Environment env;
     private JTextField email;
     private JPasswordField password;
@@ -524,6 +524,7 @@ public class SubmitDialog extends JFrame implements ActionListener {
         return mainForm;
     }
 
+    @Override
     public void refreshDialog() {
         // TODO: load current file here
         EnvironmentFrame frame = Universe.frameForEnvironment(this.env);
