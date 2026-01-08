@@ -10,6 +10,7 @@ import java.awt.*;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
+import java.time.Duration;
 import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
@@ -121,6 +122,14 @@ public class SessionHandler {
         //                    JOptionPane.showMessageDialog(mainForm, "No problem selected", "Please select a problem to submit.", JOptionPane.WARNING_MESSAGE);
         //                    return;
         //                }
+
+        // Check if 15 minutes have passed
+        Instant currentTime = Instant.now();
+        Duration duration = Duration.between(startTime, currentTime);
+        long minutesPassed = duration.toMinutes();
+        if (minutesPassed >= 14) {
+            // Re-login
+        }
 
         return this.client;
     }

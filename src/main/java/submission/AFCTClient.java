@@ -67,6 +67,8 @@ public class AFCTClient {
         if (status != 200) {
             Globals.sessionHandler.clearStartTime();
             throw httpError("POST /api/public/login", status, body);
+        } else {
+            Globals.sessionHandler.updateStartTime();
         }
 
         Map<String, Object> res = parseJson(body, Map.class);
@@ -181,7 +183,6 @@ public class AFCTClient {
     }
 
     private static String readBody(HttpURLConnection conn) throws IOException {
-        Globals.sessionHandler.updateStartTime();
         int code = conn.getResponseCode();
         InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
         if (is == null) return ""; // can be null in some network errors
@@ -189,7 +190,6 @@ public class AFCTClient {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = br.readLine()) != null) sb.append(line);
-            Globals.sessionHandler.updateStartTime();
             return sb.toString();
         }
     }
