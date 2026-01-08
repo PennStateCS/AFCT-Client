@@ -72,10 +72,17 @@ public class SubmitAction extends RestrictedAction {
 	 */
 	public void actionPerformed(ActionEvent e) {
         if (Universe.curProfile.getUseLegacySubmissionGui()) {
-            LegacySubmitDialog d = new LegacySubmitDialog(this.environment);
-            d.setVisible(true);
+            LegacySubmitDialog d = (LegacySubmitDialog) Universe.submitDialogForEnvironment(this.environment);
+            if (d == null) {
+                d = new LegacySubmitDialog(this.environment);
+                d.setVisible(true);
+                Universe.registerSubmitDialog(this.environment, d);
+            } else {
+                d.setVisible(true);
+                d.toFront();
+            }
         } else {
-            SubmitDialog d = Universe.submitDialogForEnvironment(this.environment);
+            SubmitDialog d = (SubmitDialog) Universe.submitDialogForEnvironment(this.environment);
             if (d == null) {
                 d = new SubmitDialog(this.environment);
                 d.setContentPane(d.getMainPanel());

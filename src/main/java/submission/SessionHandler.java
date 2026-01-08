@@ -75,21 +75,16 @@ public class SessionHandler {
 
         this.loginWindow = new LoginWindow(loginFrame, this);
         this.setupGUI();
-
-        // TODO: remove after testing
-        createNewSubmitWindow();
-        createNewSubmitWindow();
-        createNewSubmitWindow();
     }
 
     public void createNewSubmitWindow() {
         // TODO: remove after testing
-        JFrame submitFrame = new JFrame();
-        SubmitWindow submitWindow = new SubmitWindow();
-        submitWindows.add(submitWindow);
-        submitFrame.getContentPane().add(submitWindow.getContentPane());
-        submitFrame.pack();
-        submitFrame.setVisible(true);
+//        JFrame submitFrame = new JFrame();
+//        SubmitWindow submitWindow = new SubmitWindow();
+//        submitWindows.add(submitWindow);
+//        submitFrame.getContentPane().add(submitWindow.getContentPane());
+//        submitFrame.pack();
+//        submitFrame.setVisible(true);
     }
 
     private void setupGUI() {

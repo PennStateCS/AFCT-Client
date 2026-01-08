@@ -1,6 +1,8 @@
 package submission;
 
 import gui.Globals;
+import gui.environment.Environment;
+import gui.environment.Universe;
 
 import javax.swing.*;
 import javax.swing.border.Border;
@@ -20,6 +22,7 @@ import static submission.SessionHandler.defaultPassword;
 import static submission.SubmitWindow.ComboBoxTarget.*;
 
 public class SubmitWindow {
+    private Environment environment;
     private JPanel contentPane;
     // Course
     public JComboBox<CourseItem> courseBox;
@@ -57,7 +60,9 @@ public class SubmitWindow {
     // Event guarding
     public volatile boolean isPopulating = false;
 
-    public SubmitWindow() {
+    public SubmitWindow(Environment environment) {
+        this.environment = environment;
+
         contentPane = new JPanel();
         courseBox = new JComboBox<>();
         courseRefreshButton = new JButton();
@@ -384,6 +389,7 @@ public class SubmitWindow {
         handlers_course();
         handlers_assignment();
         handlers_problem();
+        handlers_file();
     }
 
     private void handlers_course() {
@@ -512,11 +518,9 @@ public class SubmitWindow {
         });
 
         // "Uncompleted Problems" button (radio button 2 of 2)
-        uncompletedProblems.addActionListener(new ActionListener()
-        {
+        uncompletedProblems.addActionListener(new ActionListener() {
             @Override
-            public void actionPerformed(ActionEvent e)
-            {
+            public void actionPerformed(ActionEvent e) {
                 appendResult("Loading uncompleted problems...");
                 AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
                 if (selectedAssignment != null) {
@@ -526,6 +530,14 @@ public class SubmitWindow {
         });
     }
 
+    private void handlers_file() {
+        viewCurrentButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                Universe.frameForEnvironment(environment).toFront();
+            }
+        });
+    }
 
     /**
      * Parser for the problem title, created due to the check mark
