@@ -49,7 +49,7 @@ public class SubmitWindow {
     // Tracking for optimization
     private String selectedCourseID;
     private String selectedAssignmentID;
-    private String selectedProblem;
+    private String selectedProblemID;
 
     // Placeholder for combo boxes
     public static final String PLACEHOLDER = "— Select —";
@@ -383,6 +383,7 @@ public class SubmitWindow {
     private void setupEventHandlers() {
         handlers_course();
         handlers_assignment();
+        handlers_problem();
     }
 
     private void handlers_course() {
@@ -394,8 +395,9 @@ public class SubmitWindow {
 
                 // If the user's selection does not change, return
                 CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
-                if (selectedCourse != null && Objects.equals(selectedCourse.id, selectedCourseID)) return;
-
+                if (selectedCourse == null) return;
+                if (Objects.equals(selectedCourse.id, selectedCourseID)) return;
+                selectedCourseID = selectedCourse.id;
 
                 // User selected initial box with no value
                 if (courseBox.getSelectedIndex() <= 0) {
@@ -425,7 +427,9 @@ public class SubmitWindow {
 
                 // If the user's selection does not change, return
                 AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
-                if (selectedAssignment != null && Objects.equals(selectedAssignment.id, selectedAssignmentID)) return;
+                if (selectedAssignment == null) return;
+                if (Objects.equals(selectedAssignment.id, selectedAssignmentID)) return;
+                selectedAssignmentID = selectedAssignment.id;
 
                 // User selected initial box with no value
                 if (assignmentBox.getSelectedIndex() <= 0) {
@@ -449,9 +453,9 @@ public class SubmitWindow {
             @Override
             public void actionPerformed(ActionEvent e) {
                 appendResult("Loading all assignments...");
-                AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
-                if (selectedAssignment != null) {
-                    Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
+                CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
+                if (selectedCourse != null) {
+                    Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse);
                 }
             }
         });
@@ -461,11 +465,77 @@ public class SubmitWindow {
             @Override
             public void actionPerformed(ActionEvent e) {
                 appendResult("Loading upcoming assignments...");
+                CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
+                if (selectedCourse != null) {
+                    Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse);
+                }
+            }
+        });
+    }
+
+    private void handlers_problem() {
+        SubmitWindow submitWindow = this;
+        problemBox.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                if (isPopulating) return;
+
+                // If the user's selection does not change, return
+                ProblemItem selectedProblem = (ProblemItem) problemBox.getSelectedItem();
+                if (selectedProblem == null) return;
+                if (Objects.equals(selectedProblem.id, selectedProblemID)) return;
+
+                // User selected initial box with no value
+                if (problemBox.getSelectedIndex() <= 0) {
+                    // Reset inputs appropriately
+                    toggleSubmitButton(false);
+                    return;
+                }
+                toggleSubmitButton(true);
+
+                // User chose a valid assignment
+                appendResult("Selected problem: " + parseProblemTitle(selectedProblem.toString()));
+                appendResult("");
+            }
+        });
+
+        // "All Problems" button (radio button 1 of 2)
+        allProblems.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                appendResult("Loading all problems...");
                 AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
                 if (selectedAssignment != null) {
                     Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
                 }
             }
         });
+
+        // "Uncompleted Problems" button (radio button 2 of 2)
+        uncompletedProblems.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                appendResult("Loading uncompleted problems...");
+                AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
+                if (selectedAssignment != null) {
+                    Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
+                }
+            }
+        });
+    }
+
+
+    /**
+     * Parser for the problem title, created due to the check mark
+     *
+     * @param title the title of the selected problem that is being parsed
+     * @return (String): the title with the check mark removed
+     */
+    private String parseProblemTitle(String title) {
+        String parsedTitle = title.stripTrailing();
+        parsedTitle = parsedTitle.endsWith(" \u2714") ? parsedTitle.substring(0, parsedTitle.length()-2) : parsedTitle;
+        return parsedTitle;
     }
 }
