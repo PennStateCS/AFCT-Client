@@ -31,8 +31,8 @@ public class SessionHandler {
     private String token = null;
     private Map<String, Map<String, Object>> courses;
     /** true means all, false means upcoming */
-    private Map<String, Map<Boolean, List<Map<String, Object>>>> assignmentMap;
-    private Map<String, Map<String, Object>> problems;
+    private Map<String, Map<Boolean, List<Map<String, Object>>>> courseToAssignmentMap;
+    private Map<String, Map<Boolean, List<Map<String, Object>>>> assignmentToProblemMap;
 
     private String server = null;
     private String port = null;
@@ -67,7 +67,8 @@ public class SessionHandler {
         this.dateFormat = DateFormat.getDateInstance(DateFormat.SHORT);
         this.submitWindows = new ArrayList<>();
         this.courses = new HashMap<>();
-        this.assignmentMap = new HashMap<>();
+        this.courseToAssignmentMap = new HashMap<>();
+        this.assignmentToProblemMap = new HashMap<>();
 
         // GUI elements
         this.loginFrame = new JFrame();
@@ -212,6 +213,12 @@ public class SessionHandler {
         }
     }
 
+    public void disableAndResetAllSubmitWindows() {
+        for (SubmitWindow submitWindow : submitWindows) {
+            submitWindow.disableAndResetAllComboBoxes();
+        }
+    }
+
     private void loadCoursesAsync() {
         new SwingWorker<Void, String>() {
             @Override
@@ -258,6 +265,9 @@ public class SessionHandler {
                             // TODO: figure this out
                             //courseBox.setSelectedIndex(1);
                             //loadAssignmentsAsync();
+//                            for (SubmitWindow submitWindow : submitWindows) {
+//                                submitWindow.appendResult(s);
+//                            }
                         }
                     } catch (IOException ex) {
                         publish("Error loading courses: " + ex.getMessage());
@@ -291,8 +301,6 @@ public class SessionHandler {
                     String dueDateStr;
                     LocalDateTime currTime;
                     boolean isUpcoming;
-                    int numTotalAssignments;
-                    int numDisplayAssignments;
 
                     assert selectedCourse != null;
                     courseId = selectedCourse.id;
@@ -306,6 +314,7 @@ public class SessionHandler {
                     // Generate list of Upcoming Assignments
                     List<Map<String, Object>> upcomingAssignments = new ArrayList<>();
 
+                    // Get assignments based on default parameters
                     for (Map<String, Object> assignment : assignmentList) {
                         // Get the date this assignment is due
                         dueDateStr = assignment.get("dueDate").toString();
@@ -328,7 +337,7 @@ public class SessionHandler {
                     modelMap.put(true, assignmentList);
                     modelMap.put(false, upcomingAssignments);
                     // Save to assignmentMap
-                    assignmentMap.put(selectedCourse.id, modelMap);
+                    courseToAssignmentMap.put(selectedCourse.id, modelMap);
 
                     // Add model to drop-down menu
                     for (SubmitWindow submitWindow : submitWindows) {
@@ -345,7 +354,7 @@ public class SessionHandler {
                     }
 
                     // Display number of assignments loaded
-                    numTotalAssignments = assignmentList.size();
+                    int numTotalAssignments = assignmentList.size();
                     publish(String.format("Loaded %s %s", numTotalAssignments, numTotalAssignments == 1 ? "assignment" : "assignments"));
                 } catch (IOException ex) {
                     publish("Failed to load assignments: " + ex.getMessage());
@@ -375,17 +384,15 @@ public class SessionHandler {
 
     public void populateAssignments(SubmitWindow submitWindow, CourseItem selectedCourse) {
         // Disable and reset AssignmentBox
-        submitWindow.toggleAssignmentBox(false);
-        submitWindow.resetTargetComboBox(ASSIGNMENT);
+        submitWindow.disableAndResetTargetComboBox(ASSIGNMENT);
         // Disable and reset ProblemBox
-        submitWindow.toggleProblemBox(false);
-        submitWindow.resetTargetComboBox(PROBLEM);
+        submitWindow.disableAndResetTargetComboBox(PROBLEM);
 
-        if (assignmentMap.containsKey(selectedCourse.id)) {
+        if (courseToAssignmentMap.containsKey(selectedCourse.id)) {
             if (submitWindow.upcomingAssignments.isSelected()) {
-                submitWindow.assignmentBox.setModel(createAssignmentModelFromList(assignmentMap.get(selectedCourse.id).get(false)));
+                submitWindow.assignmentBox.setModel(createAssignmentModelFromList(courseToAssignmentMap.get(selectedCourse.id).get(false)));
             } else {
-                submitWindow.assignmentBox.setModel(createAssignmentModelFromList(assignmentMap.get(selectedCourse.id).get(true)));
+                submitWindow.assignmentBox.setModel(createAssignmentModelFromList(courseToAssignmentMap.get(selectedCourse.id).get(true)));
             }
             // Re-enable AssignmentBox
             submitWindow.toggleAssignmentBox(true);
@@ -396,6 +403,96 @@ public class SessionHandler {
 
     public void populateAssignments(CourseItem selectedCourse) {
 
+    }
+
+    private void loadProblemsAsync(AssignmentItem selectedAssignment) {
+        new SwingWorker<Void, String>() {
+            @Override
+            protected Void doInBackground() {
+                try {
+                    assert selectedAssignment != null;
+
+                    // Load problems on worker thread
+                    List<Map<String, Object>> problemsList = client.getProblems(selectedAssignment.id);
+
+                    // Generate list of Uncompleted Problems
+                    List<Map<String, Object>> uncompletedProblems = new ArrayList<>();
+
+                    // Get problems based on default parameters
+                    for (Map<String, Object> problem : problemsList) {
+                        Boolean isSolved = (Boolean) problem.get("solved");
+
+                        // Add to uncompletedProblems if applicable
+                        if (!isSolved) {
+                            uncompletedProblems.add(problem);
+                        }
+                    }
+
+                    // Cache Problems
+                    Map<Boolean, List<Map<String, Object>>> modelMap = new HashMap<>();
+                    modelMap.put(true, problemsList);
+                    modelMap.put(false, uncompletedProblems);
+                    // Save to assignmentMap
+                    assignmentToProblemMap.put(selectedAssignment.id, modelMap);
+
+                    // Add model to drop-down menu
+                    for (SubmitWindow submitWindow : submitWindows) {
+                        AssignmentItem selectedItem = (AssignmentItem) submitWindow.assignmentBox.getSelectedItem();
+                        if (selectedItem != null && Objects.equals(selectedItem.id, selectedAssignment.id)) {
+                            if (submitWindow.uncompletedProblems.isSelected()) {
+                                updateComboBoxWithoutChangingSelection(submitWindow, PROBLEM, createProblemModelFromList(problemsList));
+                            } else {
+                                updateComboBoxWithoutChangingSelection(submitWindow, PROBLEM, createProblemModelFromList(uncompletedProblems));
+                            }
+                            // Re-enable ProblemBox
+                            submitWindow.toggleProblemBox(true);
+                        }
+                    }
+
+                    // Display number of problems loaded
+                    int numTotalProblems = problemsList.size();
+                    publish(String.format("Loaded %s %s", numTotalProblems, numTotalProblems == 1 ? "problem" : "problems"));
+                } catch (IOException ex) {
+                    publish("Failed to load problems: " + ex.getMessage());
+                    // TODO: handle this case - if necessary
+                    //setModel(problemBox, List.of(PLACEHOLDER), true);
+                }
+                publish("");
+                return null;
+            }
+
+            @Override
+            protected void process(List<String> chunks) {
+                for (String s : chunks) {
+                    for (SubmitWindow submitWindow : submitWindows) {
+                        submitWindow.appendResult(s);
+                    }
+                }
+            }
+
+            @Override
+            protected void done() {
+//                updateSelectFileEnabled();
+//                updateSubmitEnabled();
+            }
+        }.execute();
+    }
+
+    public void populateProblems(SubmitWindow submitWindow, AssignmentItem selectedAssignment) {
+        // Disable and reset ProblemBox
+        submitWindow.disableAndResetTargetComboBox(PROBLEM);
+
+        if (assignmentToProblemMap.containsKey(selectedAssignment.id)) {
+            if (submitWindow.uncompletedProblems.isSelected()) {
+                submitWindow.problemBox.setModel(createProblemModelFromList(assignmentToProblemMap.get(selectedAssignment.id).get(false)));
+            } else {
+                submitWindow.problemBox.setModel(createProblemModelFromList(assignmentToProblemMap.get(selectedAssignment.id).get(true)));
+            }
+            // Re-enable ProblemBox
+            submitWindow.toggleProblemBox(true);
+        } else {
+            loadProblemsAsync(selectedAssignment);
+        }
     }
 
     private <T> void updateComboBoxWithoutChangingSelection(SubmitWindow submitWindow, SubmitWindow.ComboBoxTarget target, ComboBoxModel<T> model) {
@@ -454,6 +551,18 @@ public class SessionHandler {
         model.addElement(new AssignmentItem("",  SubmitWindow.PLACEHOLDER));
         for (Map<String, Object> assignment : assignmentList) {
             model.addElement((new AssignmentItem(assignment.get("id").toString(), assignment.get("title").toString())));
+        }
+        return model;
+    }
+
+    private DefaultComboBoxModel<ProblemItem> createProblemModelFromList(List<Map<String, Object>> problemList) {
+        // Generate model
+        DefaultComboBoxModel<ProblemItem> model = new DefaultComboBoxModel<>();
+        model.addElement(new ProblemItem("",  SubmitWindow.PLACEHOLDER));
+        for (Map<String, Object> problem : problemList) {
+            Boolean isSolved = (Boolean) problem.get("solved");
+            String instTitle = String.format("%s %s", problem.get("title"), isSolved ? "\u2714" : "");
+            model.addElement(new ProblemItem(problem.get("id").toString(), instTitle));
         }
         return model;
     }

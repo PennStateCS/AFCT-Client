@@ -16,6 +16,7 @@ import static submission.LoginWindow.createComboBoxPanel;
 import static submission.LoginWindow.createInputPanel;
 import static submission.SessionHandler.*;
 import static submission.SessionHandler.defaultPassword;
+import static submission.SubmitWindow.ComboBoxTarget.*;
 
 public class SubmitWindow {
     private JPanel contentPane;
@@ -144,6 +145,20 @@ public class SubmitWindow {
             case ASSIGNMENT -> setModel(assignmentBox, List.of(PLACEHOLDER), false);
             case PROBLEM -> setModel(problemBox, List.of(PLACEHOLDER), false);
         }
+    }
+
+    public void disableAndResetTargetComboBox(ComboBoxTarget target) {
+        toggleTargetComboBox(target, false);
+        resetTargetComboBox(target);
+    }
+
+    public void disableAndResetAllComboBoxes() {
+        // Disable and reset CourseBox
+        disableAndResetTargetComboBox(COURSE);
+        // Disable and reset AssignmentBox
+        disableAndResetTargetComboBox(ASSIGNMENT);
+        // Disable and reset ProblemBox
+        disableAndResetTargetComboBox(PROBLEM);
     }
 
     private void setupGui() {

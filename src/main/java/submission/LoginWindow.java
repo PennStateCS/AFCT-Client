@@ -197,6 +197,8 @@ public class LoginWindow {
                 passwordTF.setEnabled(false);
                 loginButton.setEnabled(false);
 
+                Globals.sessionHandler.disableAndResetAllSubmitWindows();
+
                 appendResult("Authenticating…");
 
                 //savePreferences(serverUrl, portText, userEmail, userPassword);
