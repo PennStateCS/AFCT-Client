@@ -1,11 +1,13 @@
 package submission;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gui.Globals;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.prefs.Preferences;
@@ -63,6 +65,7 @@ public class AFCTClient {
         int status = conn.getResponseCode();
         String body = readBody(conn);
         if (status != 200) {
+            Globals.sessionHandler.clearStartTime();
             throw httpError("POST /api/public/login", status, body);
         }
 
@@ -131,6 +134,8 @@ public class AFCTClient {
     // ================================================================
     @SuppressWarnings("unchecked")
     public Map<String, Object> createSubmission(String assignmentId, String problemId, String content, File file) throws IOException {
+        // TODO: this looks like it does not actually submit the courseID as part of the submission.
+        //      Is this true? and if so - why? is it a mistake?
         ensureAuth();
 
         String boundary = "----JavaBoundary" + System.currentTimeMillis();
@@ -176,6 +181,7 @@ public class AFCTClient {
     }
 
     private static String readBody(HttpURLConnection conn) throws IOException {
+        Globals.sessionHandler.updateStartTime();
         int code = conn.getResponseCode();
         InputStream is = (code >= 200 && code < 300) ? conn.getInputStream() : conn.getErrorStream();
         if (is == null) return ""; // can be null in some network errors
@@ -183,6 +189,7 @@ public class AFCTClient {
             StringBuilder sb = new StringBuilder();
             String line;
             while ((line = br.readLine()) != null) sb.append(line);
+            Globals.sessionHandler.updateStartTime();
             return sb.toString();
         }
     }

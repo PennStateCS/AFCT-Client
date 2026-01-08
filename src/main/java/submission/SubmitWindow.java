@@ -1,5 +1,7 @@
 package submission;
 
+import file.EncodeException;
+import file.XMLCodec;
 import gui.Globals;
 import gui.environment.Environment;
 import gui.environment.EnvironmentFrame;
@@ -11,7 +13,10 @@ import javax.swing.border.LineBorder;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.io.File;
+import java.io.IOException;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.prefs.Preferences;
 
@@ -497,6 +502,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
                 ProblemItem selectedProblem = (ProblemItem) problemBox.getSelectedItem();
                 if (selectedProblem == null) return;
                 if (Objects.equals(selectedProblem.id, selectedProblemID)) return;
+                selectedProblemID = selectedProblem.id;
 
                 // User selected initial box with no value
                 if (problemBox.getSelectedIndex() <= 0) {
@@ -544,6 +550,82 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
                 Universe.frameForEnvironment(environment).toFront();
             }
         });
+    }
+
+    private void handlers_submit() {
+        submitButton.addActionListener(new ActionListener()
+        {
+            @Override
+            public void actionPerformed(ActionEvent e)
+            {
+                AFCTClient client = Globals.sessionHandler.getClient();
+
+
+                // Automatically select the current file
+                File selectedFile = createTempFile();
+
+
+                appendResult("Submitting…");
+                submitButton.setEnabled(false);
+
+                new SwingWorker<Void, String>() {
+                    @Override
+                    protected Void doInBackground() {
+                        try {
+                            AssignmentItem assignment = (AssignmentItem) assignmentBox.getSelectedItem();
+                            ProblemItem problem = (ProblemItem) problemBox.getSelectedItem();
+
+                            assert assignment != null;
+                            assert problem != null;
+
+                            Map<String, Object> submission = client.createSubmission(
+                                    assignment.id,
+                                    problem.id,
+                                    "Submission from GUI",
+                                    selectedFile
+                            );
+
+                            publish("Submission successful!");
+                            publish("Data: " + submission);
+                            publish("ID: " + submission.get("id"));
+                            publish("Submitted At: " + submission.get("submittedAt"));
+                            publish("Grade: " + submission.get("grade"));
+                            publish("Feedback: " + submission.get("feedback"));
+                        } catch (IOException ex) {
+                            publish("Submission failed: " + ex.getMessage());
+                        }
+                        publish("");
+                        return null;
+                    }
+
+                    @Override
+                    protected void process(List<String> chunks) {
+                        for (String s : chunks) appendResult(s);
+                    }
+
+                    @Override
+                    protected void done() {
+                        submitButton.setEnabled(true);
+                    }
+                }.execute();
+            }
+        });
+    }
+
+    private File createTempFile() {
+        // Try to create a temp file for the file that the user was working with
+        try{
+            // Create a temp file and encode the user's JFLAP program as the file
+            File f = File.createTempFile("jflap", ".jff");
+            XMLCodec x = new XMLCodec();
+            x.encode(this.environment.getObject(), f, null);
+            return f;
+        } catch (IOException e) {
+            JOptionPane.showMessageDialog(null, "Error creating temp file: " + e.getMessage());
+        } catch (EncodeException e) {
+            JOptionPane.showMessageDialog(null, "Error saving temp file: " + e.getMessage());
+        }
+        return null;
     }
 
     /**

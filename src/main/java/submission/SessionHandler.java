@@ -10,6 +10,7 @@ import java.awt.*;
 import java.io.IOException;
 import java.text.DateFormat;
 import java.text.ParseException;
+import java.time.Instant;
 import java.time.LocalDateTime;
 import java.util.*;
 import java.util.List;
@@ -26,6 +27,8 @@ public class SessionHandler {
     public final Preferences preferences;
     private final DateFormat dateFormat;
     private int expireAfterDays = 7;
+
+    private Instant startTime = Instant.MIN;
 
     private AFCTClient client = null;
     private String token = null;
@@ -90,6 +93,14 @@ public class SessionHandler {
         loginFrame.setVisible(true);
     }
 
+    public void updateStartTime() {
+        startTime = Instant.now();
+    }
+
+    public void clearStartTime() {
+        startTime = Instant.MIN;
+    }
+
     public AFCTClient getClient() {
         // TODO: check if authenticated:
         //      if not: open login window
@@ -97,6 +108,19 @@ public class SessionHandler {
         //              if so: return client
         //              if not: try to reauth with saved creds
         //                      if this fails: open login window
+
+        //if (client == null || !client.isAuthenticated()) {
+        //                    JOptionPane.showMessageDialog(mainForm, "You must be authenticated to submit.", "Authentication Required", JOptionPane.WARNING_MESSAGE);
+        //                    return;
+        //                }
+        //                if (assignmentBox.getSelectedIndex() <= 0) {
+        //                    JOptionPane.showMessageDialog(mainForm, "No assignment selected", "Please select an assignment to submit.", JOptionPane.WARNING_MESSAGE);
+        //                    return;
+        //                }
+        //                if (problemBox.getSelectedIndex() <= 0) {
+        //                    JOptionPane.showMessageDialog(mainForm, "No problem selected", "Please select a problem to submit.", JOptionPane.WARNING_MESSAGE);
+        //                    return;
+        //                }
 
         return this.client;
     }
