@@ -101,7 +101,9 @@ public class SubmitWindow {
     public void toggleAssignmentBox(boolean enabled) {
         assignmentBox.setEnabled(enabled);
         assignmentRefreshButton.setEnabled(enabled);
-        assignmentDetailsPanel.setEnabled(enabled);
+        if (!enabled) {
+            assignmentDetailsPanel.setEnabled(false);
+        }
         allAssignments.setEnabled(enabled);
         upcomingAssignments.setEnabled(enabled);
     }
@@ -109,7 +111,9 @@ public class SubmitWindow {
     public void toggleProblemBox(boolean enabled) {
         problemBox.setEnabled(enabled);
         problemRefreshButton.setEnabled(enabled);
-        problemDetailsPanel.setEnabled(enabled);
+        if (!enabled) {
+            problemDetailsPanel.setEnabled(false);
+        }
         allProblems.setEnabled(enabled);
         uncompletedProblems.setEnabled(enabled);
     }

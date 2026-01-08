@@ -2,6 +2,7 @@ package submission;
 
 
 import gui.Globals;
+import gui.environment.Environment;
 import gui.popups.UpdatePopup;
 
 import javax.swing.*;
@@ -30,7 +31,7 @@ public class SessionHandler {
     private String token = null;
     private Map<String, Map<String, Object>> courses;
     /** true means all, false means upcoming */
-    private Map<String, Map<Boolean, DefaultComboBoxModel<AssignmentItem>>> assignmentModels;
+    private Map<String, Map<Boolean, List<Map<String, Object>>>> assignmentMap;
     private Map<String, Map<String, Object>> problems;
 
     private String server = null;
@@ -66,6 +67,7 @@ public class SessionHandler {
         this.dateFormat = DateFormat.getDateInstance(DateFormat.SHORT);
         this.submitWindows = new ArrayList<>();
         this.courses = new HashMap<>();
+        this.assignmentMap = new HashMap<>();
 
         // GUI elements
         this.loginFrame = new JFrame();
@@ -73,6 +75,13 @@ public class SessionHandler {
         this.loginWindow = new LoginWindow(loginFrame, this);
         this.setupGUI();
 
+        // TODO: remove after testing
+        createNewSubmitWindow();
+        createNewSubmitWindow();
+        createNewSubmitWindow();
+    }
+
+    public void createNewSubmitWindow() {
         // TODO: remove after testing
         JFrame submitFrame = new JFrame();
         SubmitWindow submitWindow = new SubmitWindow();
@@ -216,12 +225,7 @@ public class SessionHandler {
                         // Load courses on worker thread
                         List<Map<String, Object>> courseList = client.getCourses(email);
 
-                        // Generate model
-                        DefaultComboBoxModel<CourseItem> model = new DefaultComboBoxModel<>();
-                        model.addElement(new CourseItem("", SubmitWindow.PLACEHOLDER));
-
                         for (Map<String, Object> course : courseList) {
-                            model.addElement(new CourseItem(course.get("id").toString(), course.get("name").toString()));
                             courses.put(course.get("id").toString(), course);
                         }
 
@@ -231,7 +235,7 @@ public class SessionHandler {
                             CourseItem selectedCourse = (CourseItem) submitWindow.courseBox.getSelectedItem();
                             if (submitWindow.courseBox.getSelectedIndex() > 0 && selectedCourse != null) {
                                 submitWindow.isPopulating = true;
-                                submitWindow.courseBox.setModel(model);
+                                submitWindow.courseBox.setModel(createCourseModelFromList(courseList));
                                 for (int i = 0; i < submitWindow.courseBox.getItemCount(); i++) {
                                     if (submitWindow.courseBox.getItemAt(i).id.equals(selectedCourse.id)) {
                                         submitWindow.courseBox.setSelectedIndex(i);
@@ -240,7 +244,7 @@ public class SessionHandler {
                                     }
                                 }
                             } else {
-                                submitWindow.courseBox.setModel(model);
+                                submitWindow.courseBox.setModel(createCourseModelFromList(courseList));
                             }
                             submitWindow.toggleCourseBox(true);
                         }
@@ -299,19 +303,10 @@ public class SessionHandler {
                     // Get current time for default boxes
                     currTime = LocalDateTime.now();
 
-                    // Generate model for All Assignments
-                    DefaultComboBoxModel<AssignmentItem> modelAll = new DefaultComboBoxModel<>();
-                    modelAll.addElement(new AssignmentItem("",  SubmitWindow.PLACEHOLDER));
+                    // Generate list of Upcoming Assignments
+                    List<Map<String, Object>> upcomingAssignments = new ArrayList<>();
 
-                    // Generate model for Upcoming Assignments
-                    DefaultComboBoxModel<AssignmentItem> modelUpcoming = new DefaultComboBoxModel<>();
-                    modelUpcoming.addElement(new AssignmentItem("",  SubmitWindow.PLACEHOLDER));
-
-                    // Get assignments based on default parameters
                     for (Map<String, Object> assignment : assignmentList) {
-                        // Add to modelAll
-                        modelAll.addElement((new AssignmentItem(assignment.get("id").toString(), assignment.get("title").toString())));
-
                         // Get the date this assignment is due
                         dueDateStr = assignment.get("dueDate").toString();
                         assert dueDateStr != null;
@@ -322,27 +317,27 @@ public class SessionHandler {
                         // Find if the assignment is upcoming
                         isUpcoming = LocalDateTime.parse(dueDateStr).isAfter(currTime);
 
-                        // Add to modelUpcoming if applicable
+                        // Add to upcomingAssignments if applicable
                         if (isUpcoming) {
-                            modelUpcoming.addElement((new AssignmentItem(assignment.get("id").toString(), assignment.get("title").toString())));
+                            upcomingAssignments.add(assignment);
                         }
                     }
 
                     // Cache Assignments
-                    Map<Boolean, DefaultComboBoxModel<AssignmentItem>> modelMap = new HashMap<>();
-                    modelMap.put(true, modelAll);
-                    modelMap.put(false, modelUpcoming);
-                    // Save to assignmentModels
-                    assignmentModels.put(selectedCourse.id, modelMap);
+                    Map<Boolean, List<Map<String, Object>>> modelMap = new HashMap<>();
+                    modelMap.put(true, assignmentList);
+                    modelMap.put(false, upcomingAssignments);
+                    // Save to assignmentMap
+                    assignmentMap.put(selectedCourse.id, modelMap);
 
                     // Add model to drop-down menu
                     for (SubmitWindow submitWindow : submitWindows) {
                         CourseItem selectedItem = (CourseItem) submitWindow.courseBox.getSelectedItem();
                         if (selectedItem != null && Objects.equals(selectedItem.id, selectedCourse.id)) {
                             if (submitWindow.upcomingAssignments.isSelected()) {
-                                updateComboBoxWithoutChangingSelection(submitWindow, ASSIGNMENT, modelUpcoming);
+                                updateComboBoxWithoutChangingSelection(submitWindow, ASSIGNMENT, createAssignmentModelFromList(assignmentList));
                             } else {
-                                updateComboBoxWithoutChangingSelection(submitWindow, ASSIGNMENT, modelAll);
+                                updateComboBoxWithoutChangingSelection(submitWindow, ASSIGNMENT, createAssignmentModelFromList(upcomingAssignments));
                             }
                             // Re-enable AssignmentBox
                             submitWindow.toggleAssignmentBox(true);
@@ -386,11 +381,11 @@ public class SessionHandler {
         submitWindow.toggleProblemBox(false);
         submitWindow.resetTargetComboBox(PROBLEM);
 
-        if (courses.containsKey(selectedCourse.id)) {
+        if (assignmentMap.containsKey(selectedCourse.id)) {
             if (submitWindow.upcomingAssignments.isSelected()) {
-                submitWindow.assignmentBox.setModel(assignmentModels.get(selectedCourse.id).get(false));
+                submitWindow.assignmentBox.setModel(createAssignmentModelFromList(assignmentMap.get(selectedCourse.id).get(false)));
             } else {
-                submitWindow.assignmentBox.setModel(assignmentModels.get(selectedCourse.id).get(true));
+                submitWindow.assignmentBox.setModel(createAssignmentModelFromList(assignmentMap.get(selectedCourse.id).get(true)));
             }
             // Re-enable AssignmentBox
             submitWindow.toggleAssignmentBox(true);
@@ -439,5 +434,27 @@ public class SessionHandler {
         for (SubmitWindow submitWindow : submitWindows) {
             updateComboBoxWithoutChangingSelection(submitWindow, target, model);
         }
+    }
+
+    private DefaultComboBoxModel<CourseItem> createCourseModelFromList(List<Map<String, Object>> courseList) {
+        // Generate model
+        DefaultComboBoxModel<CourseItem> model = new DefaultComboBoxModel<>();
+        model.addElement(new CourseItem("", SubmitWindow.PLACEHOLDER));
+
+        for (Map<String, Object> course : courseList) {
+            model.addElement(new CourseItem(course.get("id").toString(), course.get("name").toString()));
+        }
+
+        return model;
+    }
+
+    private DefaultComboBoxModel<AssignmentItem> createAssignmentModelFromList(List<Map<String, Object>> assignmentList) {
+        // Generate model
+        DefaultComboBoxModel<AssignmentItem> model = new DefaultComboBoxModel<>();
+        model.addElement(new AssignmentItem("",  SubmitWindow.PLACEHOLDER));
+        for (Map<String, Object> assignment : assignmentList) {
+            model.addElement((new AssignmentItem(assignment.get("id").toString(), assignment.get("title").toString())));
+        }
+        return model;
     }
 }
