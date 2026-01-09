@@ -98,6 +98,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         scrollPane = new JScrollPane(contentPane);
 
         this.getContentPane().add(scrollPane);
+        this.setVisible(false);
     }
 
     public void displaySubmitWindow() {

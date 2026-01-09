@@ -88,15 +88,30 @@ public class SessionHandler {
     }
 
     public void displayLoginThenSubmission(SubmitWindow submitWindowToShow) {
-        // Try to automatically log in (to avoid showing login GUI)
-        boolean successful = autoReAuthenticate();
+        // Try to auto login asynchronously
+        new SwingWorker<Void, String>() {
+            @Override
+            protected Void doInBackground() {
+                // Try to automatically log in (to avoid showing login GUI)
+                boolean successful = autoReAuthenticate();
 
-        // If unsuccessful, display login window to user
-        if (!successful) {
-            this.loginWindow.displayLoginThenSubmission(this, submitWindowToShow);
-        } else {
-            submitWindowToShow.displaySubmitWindow();
-        }
+                // If unsuccessful, display login window to user
+                if (!successful) {
+                    loginWindow.displayLoginThenSubmission(sessionHandler, submitWindowToShow);
+                } else {
+                    submitWindowToShow.displaySubmitWindow();
+                }
+                return null;
+            }
+
+            @Override
+            protected void process(List<String> chunks) {
+            }
+
+            @Override
+            protected void done() {
+            }
+        }.execute();
     }
 
     public void updateStartTime() {
@@ -149,10 +164,6 @@ public class SessionHandler {
                 this.loggedIn = true;
                 this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "yes");
 
-                //TODO - add an option to prefs - ask login every time AFCT is opened
-                //  like could add this if option selected: this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
-
-
                 // Set creds to expire after 7 days
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_MONTH, expireAfterDays);
@@ -175,9 +186,15 @@ public class SessionHandler {
      *
      * @return
      */
-    private boolean autoReAuthenticate() {
+    private boolean autoReAuthenticate(boolean forceManualReLogin) {
+        //TODO - add an option to prefs - ask login every time AFCT is opened
+
         boolean usedCreds = !this.preferences.get(PREF_HAS_USED_SAVED_CREDS, "no").equals("no");
         if (!usedCreds) {
+            return false;
+        }
+
+        if (forceManualReLogin) {
             return false;
         }
 
@@ -203,6 +220,10 @@ public class SessionHandler {
         }
 
         return false;
+    }
+
+    private boolean autoReAuthenticate() {
+        return autoReAuthenticate(false);
     }
 
     private void tryLogin(String email, String password) {

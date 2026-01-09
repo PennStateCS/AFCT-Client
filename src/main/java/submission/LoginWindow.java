@@ -59,7 +59,9 @@ public class LoginWindow extends JFrame {
 
     public void displayLoginWindow(SessionHandler sessionHandler) {
         this.toggleAllInputs(true);
-        this.populateGui(sessionHandler);
+        if (!this.isVisible()) {
+            this.populateGui(sessionHandler);
+        }
         this.pack();
         this.setVisible(true);
         this.toFront();
@@ -180,7 +182,7 @@ public class LoginWindow extends JFrame {
     }
 
     private void openQueuedSubmitWindow() {
-        if (submitWindowToShow != null) {
+        if (submitWindowToShow != null && sessionHandler.loggedIn) {
             submitWindowToShow.displaySubmitWindow();
             submitWindowToShow = null;
         }
