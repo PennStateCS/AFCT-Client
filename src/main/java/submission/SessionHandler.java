@@ -110,6 +110,7 @@ public class SessionHandler {
 
             @Override
             protected void done() {
+                //System.out.println("Done");
             }
         }.execute();
     }
@@ -168,7 +169,7 @@ public class SessionHandler {
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_MONTH, expireAfterDays);
                 preferences.put(PREF_SAVED_CREDS_EXPIRE_AFTER, dateFormat.format(calendar.getTime()));
-                loadCoursesAsync();
+                //loadCoursesAsync();
                 return getSuccessResult();
             } else {
                 this.loggedIn = false;
