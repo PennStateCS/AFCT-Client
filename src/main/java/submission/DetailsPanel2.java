@@ -41,6 +41,7 @@ public class DetailsPanel2 extends JPanel {
     private void toggleDetailsPanel(boolean enable) {
         detailsPanel.setVisible(enable);
         detailsToggle.setText(enable ? "Hide details ▾" : "View details ▸");
+        detailsToggle.setSelected(enable);
 
         // Important for layout recalculation in Swing
         card.revalidate();

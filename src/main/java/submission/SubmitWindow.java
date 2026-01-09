@@ -150,7 +150,12 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     public void toggleAssignmentBox(boolean enabled) {
         assignmentBox.setEnabled(enabled);
         assignmentRefreshButton.setEnabled(enabled);
-        assignmentDetailsPanel.toggle(enabled);
+        if (enabled && assignmentBox.getSelectedIndex() > 0) {
+            assignmentDetailsPanel.toggle(true);
+        }
+        if (!enabled) {
+            assignmentDetailsPanel.toggle(false);
+        }
         allAssignments.setEnabled(enabled);
         upcomingAssignments.setEnabled(enabled);
     }
@@ -158,7 +163,12 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     public void toggleProblemBox(boolean enabled) {
         problemBox.setEnabled(enabled);
         problemRefreshButton.setEnabled(enabled);
-        problemDetailsPanel.toggle(enabled);
+        if (enabled && problemBox.getSelectedIndex() > 0) {
+            problemDetailsPanel.toggle(true);
+        }
+        if (!enabled) {
+            problemDetailsPanel.toggle(false);
+        }
         allProblems.setEnabled(enabled);
         uncompletedProblems.setEnabled(enabled);
     }
@@ -473,6 +483,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         courseRefreshButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                selectedCourseID = null;
+                selectedAssignmentID = null;
+                selectedProblemID = null;
                 //appendResult("Re-loading all courses...");
                 Globals.sessionHandler.populateCourses(submitWindow, true);
             }
@@ -519,6 +532,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         assignmentRefreshButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                selectedAssignmentID = null;
+                selectedProblemID = null;
                 //appendResult("Re-loading all assignments...");
                 CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
                 if (selectedCourse != null) {
@@ -531,6 +546,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         allAssignments.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                selectedAssignmentID = null;
+                selectedProblemID = null;
                 //appendResult("Loading all assignments...");
                 CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
                 if (selectedCourse != null) {
@@ -543,6 +560,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         upcomingAssignments.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                selectedAssignmentID = null;
+                selectedProblemID = null;
                 //appendResult("Loading upcoming assignments...");
                 CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
                 if (selectedCourse != null) {
@@ -587,6 +606,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         problemRefreshButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                selectedProblemID = null;
                 //appendResult("Re-loading all problems...");
                 AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
                 if (selectedAssignment != null) {
@@ -599,6 +619,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         allProblems.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                selectedProblemID = null;
                 //appendResult("Loading all problems...");
                 AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
                 if (selectedAssignment != null) {
@@ -611,6 +632,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         uncompletedProblems.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                selectedProblemID = null;
                 //appendResult("Loading uncompleted problems...");
                 AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
                 if (selectedAssignment != null) {
