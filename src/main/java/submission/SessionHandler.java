@@ -542,6 +542,12 @@ public class SessionHandler {
                             }
                             // Re-enable ProblemBox
                             submitWindow.toggleProblemBox(true);
+
+                            // Disable submit button if the submission succeeded and the problem is no longer in the
+                            // combobox due to the "Uncompleted Problems" option being selected
+                            if (submitWindow.problemBox.getSelectedIndex() <= 0) {
+                                submitWindow.toggleSubmitButton(false);
+                            }
                         }
                     }
 

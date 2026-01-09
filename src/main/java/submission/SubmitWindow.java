@@ -630,6 +630,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     }
 
     private void handlers_submit() {
+        SubmitWindow submitWindow = this;
         submitButton.addActionListener(new ActionListener()
         {
             @Override
@@ -687,6 +688,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             String feedback = (String) submission.get("feedback");
                             boolean correct = (boolean) submission.get("correct");
                             publish("Feedback: " + colorMessage(feedback, correct));
+                            if (correct) {
+                                Globals.sessionHandler.populateProblems(submitWindow, assignment, true);
+                            }
                         } catch (IOException ex) {
                             publish(colorHTMLErrorMessage("Submission failed: " + ex.getMessage()));
                         }
