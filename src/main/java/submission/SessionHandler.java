@@ -168,7 +168,6 @@ public class SessionHandler {
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_MONTH, expireAfterDays);
                 preferences.put(PREF_SAVED_CREDS_EXPIRE_AFTER, dateFormat.format(calendar.getTime()));
-                //loadCoursesAsync();
                 return getSuccessResult();
             } else {
                 this.loggedIn = false;
@@ -285,7 +284,7 @@ public class SessionHandler {
                 for (SubmitWindow submitWindow : submitWindows) {
                     submitWindow.toggleCourseBox(false);
                 }
-                client = getClient();
+                AFCTClient client = getClient();
                 if (client != null) {
                     try {
                         // Load courses on worker thread
@@ -382,12 +381,18 @@ public class SessionHandler {
             @Override
             protected Void doInBackground() {
                 try {
+                    assert selectedCourse != null;
+
+                    AFCTClient client = getClient();
+                    if (client == null) {
+                        return null;
+                    }
+
                     String courseId;
                     String dueDateStr;
                     LocalDateTime currTime;
                     boolean isUpcoming;
 
-                    assert selectedCourse != null;
                     courseId = selectedCourse.id;
 
                     // Load assignments on worker thread
@@ -496,6 +501,11 @@ public class SessionHandler {
             protected Void doInBackground() {
                 try {
                     assert selectedAssignment != null;
+
+                    AFCTClient client = getClient();
+                    if (client == null) {
+                        return null;
+                    }
 
                     // Load problems on worker thread
                     List<Map<String, Object>> problemsList = client.getProblems(selectedAssignment.id);

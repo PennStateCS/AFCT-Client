@@ -111,6 +111,7 @@ public class LoginWindow extends JFrame {
         c.gridy = y++;
         contentPane.add(createTextInputPanel(passwordTF, "Password"), c);
         //TODO: maybe add button to allow showing the password instead of just the dots.
+        //  - but this should only work/be available if the user typed their password during this session.
         //passwordTF.setMargin(new Insets(0, 12, 0, 40));
 
         // Add loginButton to contentPane

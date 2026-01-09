@@ -107,6 +107,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         if (sessionHandler.loggedIn) {
             this.refreshDialog();
+            sessionHandler.populateCourses(this);
             this.setVisible(true);
             this.toFront();
         } else {
@@ -242,7 +243,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         result.setBorder(new LineBorder(new Color(210, 210, 210)));
         c.gridy = y++;
         // TODO: probably remove this before pushing to students?
-        contentPane.add(resultScrollPane, c);
+        contentPane.add(createInputPanel(resultScrollPane, "Result", false), c);
     }
 
     private JPanel createCurrentFilePanel() {
