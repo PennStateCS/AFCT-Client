@@ -28,7 +28,7 @@ public class LoginWindow extends JFrame {
     private JPasswordField passwordTF;
     private JButton loginButton;
     // TODO: replace this with better, more modern user feedback methods
-    private JTextArea result;
+    private JTextPane result;
     private String resultText = "";
     private JScrollPane resultScrollPane;
 
@@ -45,7 +45,7 @@ public class LoginWindow extends JFrame {
         passwordTF = new JPasswordField();
         loginButton = new JButton("Login");
 
-        result = new JTextArea();
+        result = new JTextPane();
         resultScrollPane = new JScrollPane(result);
 
         setupGui();
@@ -193,7 +193,6 @@ public class LoginWindow extends JFrame {
         WindowAdapter windowListener = new WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
-                System.out.println("login closing");
                 saveLoginInfo();
                 frame.dispose();
                 openQueuedSubmitWindow();
@@ -244,7 +243,11 @@ public class LoginWindow extends JFrame {
                     @Override
                     protected Void doInBackground() {
                         LoginResult loginResult = Globals.sessionHandler.login(serverUrl, portText, userEmail, userPassword);
-                        publish(loginResult.message);
+                        if (loginResult.status == LoginResult.LoginStatus.SUCCESS) {
+                            publish(colorHTMLSuccessMessage(loginResult.message));
+                        } else {
+                            publish(colorHTMLErrorMessage(loginResult.message));
+                        }
 
                         if (loginResult.status == LoginResult.LoginStatus.SUCCESS) {
                             // Define the time delay in milliseconds (5000ms = 5 seconds)

@@ -17,8 +17,7 @@ import java.util.*;
 import java.util.List;
 import java.util.prefs.Preferences;
 
-import static gui.Globals.sessionHandler;
-import static gui.Globals.sizeAndCenterWindow;
+import static gui.Globals.*;
 import static submission.AFCTClient.fixUrl;
 import static submission.LoginResult.*;
 import static submission.SubmitWindow.ComboBoxTarget.*;
@@ -322,7 +321,7 @@ public class SessionHandler {
 
                         // Display number of courses loaded
                         int numCourses = courseList.size();
-                        publish(String.format("Loaded %s %s", numCourses, numCourses == 1 ? "course" : "courses"));
+                        //publish(String.format("Loaded %s %s", numCourses, numCourses == 1 ? "course" : "courses"));
 
                         // If there is only one course, select it and load the assignments for that course
                         if (numCourses == 1) {
@@ -334,7 +333,7 @@ public class SessionHandler {
 //                            }
                         }
                     } catch (IOException ex) {
-                        publish("Error loading courses: " + ex.getMessage());
+                        publish(colorHTMLErrorMessage("Error loading courses: " + ex.getMessage()));
                     }
                 }
                 return null;
@@ -441,13 +440,13 @@ public class SessionHandler {
 
                     // Display number of assignments loaded
                     int numTotalAssignments = assignmentList.size();
-                    publish(String.format("Loaded %s %s", numTotalAssignments, numTotalAssignments == 1 ? "assignment" : "assignments"));
+                    //publish(String.format("Loaded %s %s", numTotalAssignments, numTotalAssignments == 1 ? "assignment" : "assignments"));
                 } catch (IOException ex) {
                     publish("Failed to load assignments: " + ex.getMessage());
                     // TODO: handle this case - if necessary
                     //setModel(assignmentBox, List.of(SubmitWindow.PLACEHOLDER), true);
                 }
-                publish("");
+                //publish("");
                 return null;
             }
 
@@ -537,13 +536,13 @@ public class SessionHandler {
 
                     // Display number of problems loaded
                     int numTotalProblems = problemsList.size();
-                    publish(String.format("Loaded %s %s", numTotalProblems, numTotalProblems == 1 ? "problem" : "problems"));
+                    //publish(String.format("Loaded %s %s", numTotalProblems, numTotalProblems == 1 ? "problem" : "problems"));
                 } catch (IOException ex) {
-                    publish("Failed to load problems: " + ex.getMessage());
+                    publish(colorHTMLErrorMessage("Failed to load problems: " + ex.getMessage()));
                     // TODO: handle this case - if necessary
                     //setModel(problemBox, List.of(PLACEHOLDER), true);
                 }
-                publish("");
+                //publish("");
                 return null;
             }
 

@@ -20,8 +20,7 @@ import java.util.List;
 import java.util.prefs.Preferences;
 
 import static gui.Globals.*;
-import static submission.LoginWindow.createComboBoxPanel;
-import static submission.LoginWindow.createInputPanel;
+import static submission.LoginWindow.*;
 import static submission.SessionHandler.*;
 import static submission.SessionHandler.defaultPassword;
 import static submission.SubmitWindow.ComboBoxTarget.*;
@@ -49,7 +48,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private JButton viewCurrentButton;
     private JButton submitButton;
     // TODO: replace this with better, more modern user feedback methods
-    private JTextArea result;
+    private JTextPane result;
     private String resultText = "";
     private JScrollPane resultScrollPane;
 
@@ -86,7 +85,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         viewCurrentButton = new JButton("View");
         submitButton = new JButton("Submit");
 
-        result = new JTextArea();
+        result = new JTextPane();
+        result.setContentType("text/html");
         resultScrollPane = new JScrollPane(result);
 
         setupGui();
@@ -122,7 +122,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     }
 
     public void appendResult(String line) {
-        resultText += (line.endsWith("\n") ? line : (line + "\n"));
+        //resultText += (line.endsWith("\n") ? line : (line + "\n"));
+        resultText += (line.endsWith("<br>") ? line : (line + "<br>"));
         result.setText(resultText);
         result.setCaretPosition(result.getDocument().getLength());
     }
@@ -449,9 +450,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 }
 
                 // User chose a valid course
-                appendResult("Selected course: " + selectedCourse);
-                appendResult("");
-                appendResult("Loading assignments for selected course…");
+                //appendResult("Selected course: " + selectedCourse);
+                //appendResult("");
+                //appendResult("Loading assignments for selected course…");
                 // Load assignments for selected course
                 Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse);
             }
@@ -460,7 +461,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         courseRefreshButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                appendResult("Re-loading all courses...");
+                //appendResult("Re-loading all courses...");
                 Globals.sessionHandler.populateCourses(submitWindow, true);
             }
         });
@@ -493,9 +494,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 // User chose a valid assignment
                 assignmentDetailsPanel.setDetailsText(selectedAssignment.description);
                 assignmentDetailsPanel.toggle(true);
-                appendResult("Selected assignment: " + assignmentBox.getSelectedItem());
-                appendResult("");
-                appendResult("Loading problems for selected assignment…");
+                //appendResult("Selected assignment: " + assignmentBox.getSelectedItem());
+                //appendResult("");
+                //appendResult("Loading problems for selected assignment…");
                 // Load problems for selected assignment
                 Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
             }
@@ -505,7 +506,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         assignmentRefreshButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                appendResult("Re-loading all assignments...");
+                //appendResult("Re-loading all assignments...");
                 CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
                 if (selectedCourse != null) {
                     Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse, true);
@@ -517,7 +518,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         allAssignments.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                appendResult("Loading all assignments...");
+                //appendResult("Loading all assignments...");
                 CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
                 if (selectedCourse != null) {
                     Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse);
@@ -529,7 +530,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         upcomingAssignments.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                appendResult("Loading upcoming assignments...");
+                //appendResult("Loading upcoming assignments...");
                 CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
                 if (selectedCourse != null) {
                     Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse);
@@ -564,8 +565,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 problemDetailsPanel.setDetailsText(selectedProblem.description);
                 problemDetailsPanel.toggle(true);
                 toggleSubmitButton(true);
-                appendResult("Selected problem: " + parseProblemTitle(selectedProblem.toString()));
-                appendResult("");
+                //appendResult("Selected problem: " + parseProblemTitle(selectedProblem.toString()));
+                //appendResult("");
             }
         });
 
@@ -573,7 +574,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         problemRefreshButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                appendResult("Re-loading all problems...");
+                //appendResult("Re-loading all problems...");
                 AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
                 if (selectedAssignment != null) {
                     Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment, true);
@@ -585,7 +586,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         allProblems.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                appendResult("Loading all problems...");
+                //appendResult("Loading all problems...");
                 AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
                 if (selectedAssignment != null) {
                     Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
@@ -597,7 +598,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         uncompletedProblems.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
-                appendResult("Loading uncompleted problems...");
+                //appendResult("Loading uncompleted problems...");
                 AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
                 if (selectedAssignment != null) {
                     Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
@@ -665,14 +666,16 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                                     selectedFile
                             );
 
-                            publish("Submission successful!");
+                            //publish("Submission successful!");
                             //publish("Data: " + submission);
                             //publish("ID: " + submission.get("id"));
                             publish("Submitted At: " + submission.get("submittedAt"));
                             //publish("Grade: " + submission.get("grade"));
-                            publish("Feedback: " + submission.get("feedback"));
+                            String feedback = (String) submission.get("feedback");
+                            boolean correct = (boolean) submission.get("correct");
+                            publish("Feedback: " + colorMessage(feedback, correct));
                         } catch (IOException ex) {
-                            publish("Submission failed: " + ex.getMessage());
+                            publish(colorHTMLErrorMessage("Submission failed: " + ex.getMessage()));
                         }
                         publish("");
                         return null;

@@ -269,6 +269,24 @@ public class Globals {
         component.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
+    public static String colorMessage(String message, boolean success) {
+        String result;
+        if (success) {
+            result = "<span style=\"color: #00b050;\">" + message + "</span>";
+        } else {
+            result = "<span style=\"color: red;\">" + message + "</span>";
+        }
+        return result;
+    }
+
+    public static String colorHTMLSuccessMessage(String message) {
+        return colorMessage(message, false);
+    }
+
+    public static String colorHTMLErrorMessage(String message) {
+        return colorMessage(message, false);
+    }
+
     public static void errorPrint(String output) {
         System.err.println(output);
     }
