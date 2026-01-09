@@ -79,8 +79,8 @@ public class SubmitAction extends RestrictedAction {
             LegacySubmitDialog d = (LegacySubmitDialog) Universe.submitDialogForEnvironment(this.environment);
             if (d == null) {
                 d = new LegacySubmitDialog(this.environment);
-                d.setVisible(true);
                 Universe.registerSubmitDialog(this.environment, d);
+                d.setVisible(true);
             } else {
                 d.setVisible(true);
                 d.toFront();
@@ -90,13 +90,13 @@ public class SubmitAction extends RestrictedAction {
                 SubmitDialog d = (SubmitDialog) Universe.submitDialogForEnvironment(this.environment);
                 if (d == null) {
                     d = new SubmitDialog(this.environment);
+                    Universe.registerSubmitDialog(this.environment, d);
                     d.setContentPane(d.getMainPanel());
                     d.pack();
                     d.setLocationRelativeTo(null);
                     d.setResizable(false);
                     d.refreshDialog();
                     d.setVisible(true);
-                    Universe.registerSubmitDialog(this.environment, d);
                 } else {
                     d.refreshDialog();
                     d.setVisible(true);
@@ -106,16 +106,18 @@ public class SubmitAction extends RestrictedAction {
                 SubmitWindow d = (SubmitWindow) Universe.submitDialogForEnvironment(this.environment);
                 if (d == null) {
                     d = Globals.sessionHandler.createNewSubmitWindow(environment);
+                    Universe.registerSubmitDialog(this.environment, d);
                     d.pack();
                     d.setLocationRelativeTo(null);
                     //d.setResizable(false);
-                    d.refreshDialog();
-                    d.setVisible(true);
-                    Universe.registerSubmitDialog(this.environment, d);
+                    d.displaySubmitWindow();
+//                    d.refreshDialog();
+//                    d.setVisible(true);
                 } else {
-                    d.refreshDialog();
-                    d.setVisible(true);
-                    d.toFront();
+                    d.displaySubmitWindow();
+//                    d.refreshDialog();
+//                    d.setVisible(true);
+//                    d.toFront();
                 }
             }
         }

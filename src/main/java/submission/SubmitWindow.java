@@ -15,9 +15,8 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.util.*;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 import java.util.prefs.Preferences;
 
 import static gui.Globals.*;
@@ -27,7 +26,7 @@ import static submission.SessionHandler.*;
 import static submission.SessionHandler.defaultPassword;
 import static submission.SubmitWindow.ComboBoxTarget.*;
 
-public class SubmitWindow extends JFrame implements SubmissionGUI{
+public class SubmitWindow extends JFrame implements SubmissionGUI {
     private Environment environment;
     private JPanel contentPane;
     // Course
@@ -52,6 +51,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
     // TODO: replace this with better, more modern user feedback methods
     private JTextArea result;
     private String resultText = "";
+    private JScrollPane resultScrollPane;
 
     private JScrollPane scrollPane;
 
@@ -87,14 +87,30 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
         submitButton = new JButton("Submit");
 
         result = new JTextArea();
+        resultScrollPane = new JScrollPane(result);
 
         setupGui();
         populateGui();
         setupEventHandlers();
 
+        sessionHandler.populateCourses(this);
+
         scrollPane = new JScrollPane(contentPane);
 
         this.getContentPane().add(scrollPane);
+    }
+
+    public void displaySubmitWindow() {
+        // Safety measure so that GUI doesn't stop working if courseBox is disabled when it shouldn't be
+        toggleCourseBox(true);
+
+        if (sessionHandler.loggedIn) {
+            this.refreshDialog();
+            this.setVisible(true);
+            this.toFront();
+        } else {
+            sessionHandler.displayLoginThenSubmission(this);
+        }
     }
 
     @Override
@@ -122,9 +138,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
     public void toggleAssignmentBox(boolean enabled) {
         assignmentBox.setEnabled(enabled);
         assignmentRefreshButton.setEnabled(enabled);
-        if (!enabled) {
-            assignmentDetailsPanel.setEnabled(false);
-        }
+        assignmentDetailsPanel.toggle(enabled);
         allAssignments.setEnabled(enabled);
         upcomingAssignments.setEnabled(enabled);
     }
@@ -132,9 +146,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
     public void toggleProblemBox(boolean enabled) {
         problemBox.setEnabled(enabled);
         problemRefreshButton.setEnabled(enabled);
-        if (!enabled) {
-            problemDetailsPanel.setEnabled(false);
-        }
+        problemDetailsPanel.toggle(enabled);
         allProblems.setEnabled(enabled);
         uncompletedProblems.setEnabled(enabled);
     }
@@ -227,7 +239,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
         // Add result to contentPane
         result.setBorder(new LineBorder(new Color(210, 210, 210)));
         c.gridy = y++;
-        contentPane.add(result, c);
+        // TODO: probably remove this before pushing to students?
+        contentPane.add(resultScrollPane, c);
     }
 
     private JPanel createCurrentFilePanel() {
@@ -338,9 +351,13 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
         setModel(problemBox, List.of(PLACEHOLDER), false);
 
         // Appropriately enable/disable interactive elements
-        toggleCourseBox(false);
+        toggleCourseBox(true);
         toggleAssignmentBox(false);
         toggleProblemBox(false);
+        toggleSubmitButton(false);
+
+        upcomingAssignments.setSelected(true);
+        uncompletedProblems.setSelected(true);
 
         refreshDialog();
     }
@@ -402,6 +419,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
         handlers_assignment();
         handlers_problem();
         handlers_file();
+        handlers_submit();
     }
 
     private void handlers_course() {
@@ -415,7 +433,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
                 CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
                 if (selectedCourse == null) return;
                 if (Objects.equals(selectedCourse.id, selectedCourseID)) return;
+
                 selectedCourseID = selectedCourse.id;
+                assignmentDetailsPanel.disableDetailsPanel();
+                problemDetailsPanel.disableDetailsPanel();
 
                 // User selected initial box with no value
                 if (courseBox.getSelectedIndex() <= 0) {
@@ -434,6 +455,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
                 Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse);
             }
         });
+
+        courseRefreshButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                appendResult("Re-loading all courses...");
+                Globals.sessionHandler.populateCourses(submitWindow, true);
+            }
+        });
     }
 
     private void handlers_assignment() {
@@ -447,22 +476,39 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
                 AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
                 if (selectedAssignment == null) return;
                 if (Objects.equals(selectedAssignment.id, selectedAssignmentID)) return;
+
                 selectedAssignmentID = selectedAssignment.id;
+                problemDetailsPanel.disableDetailsPanel();
 
                 // User selected initial box with no value
                 if (assignmentBox.getSelectedIndex() <= 0) {
                     // Reset inputs appropriately
                     setModel(problemBox, List.of(PLACEHOLDER), false);
                     toggleSubmitButton(false);
+                    assignmentDetailsPanel.disableDetailsPanel();
                     return;
                 }
 
                 // User chose a valid assignment
+                assignmentDetailsPanel.setDetailsText(selectedAssignment.description);
+                assignmentDetailsPanel.toggle(true);
                 appendResult("Selected assignment: " + assignmentBox.getSelectedItem());
                 appendResult("");
                 appendResult("Loading problems for selected assignment…");
                 // Load problems for selected assignment
                 Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
+            }
+        });
+
+        // Assignment refresh button
+        assignmentRefreshButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                appendResult("Re-loading all assignments...");
+                CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
+                if (selectedCourse != null) {
+                    Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse, true);
+                }
             }
         });
 
@@ -508,13 +554,29 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
                 if (problemBox.getSelectedIndex() <= 0) {
                     // Reset inputs appropriately
                     toggleSubmitButton(false);
+                    problemDetailsPanel.disableDetailsPanel();
                     return;
                 }
-                toggleSubmitButton(true);
+
 
                 // User chose a valid assignment
+                problemDetailsPanel.setDetailsText(selectedProblem.description);
+                problemDetailsPanel.toggle(true);
+                toggleSubmitButton(true);
                 appendResult("Selected problem: " + parseProblemTitle(selectedProblem.toString()));
                 appendResult("");
+            }
+        });
+
+        // Problem refresh button
+        problemRefreshButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                appendResult("Re-loading all problems...");
+                AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
+                if (selectedAssignment != null) {
+                    Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment, true);
+                }
             }
         });
 
@@ -558,15 +620,32 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
             @Override
             public void actionPerformed(ActionEvent e)
             {
+                submitButton.setEnabled(false);
                 AFCTClient client = Globals.sessionHandler.getClient();
 
+                if (client == null) {
+                    // TODO - maybe put the fact that the user was trying to submit into a queue, then once logged in again, auto submit
+                    return;
+                }
+                if (assignmentBox.getSelectedIndex() <= 0) {
+                    JOptionPane.showMessageDialog(contentPane, "No assignment selected", "Please select an assignment to submit.", JOptionPane.WARNING_MESSAGE);
+                    submitButton.setEnabled(true);
+                    return;
+                }
+                if (problemBox.getSelectedIndex() <= 0) {
+                    JOptionPane.showMessageDialog(contentPane, "No problem selected", "Please select a problem to submit.", JOptionPane.WARNING_MESSAGE);
+                    submitButton.setEnabled(true);
+                    return;
+                }
 
                 // Automatically select the current file
                 File selectedFile = createTempFile();
-
+                if (selectedFile == null) {
+                    submitButton.setEnabled(true);
+                    return;
+                }
 
                 appendResult("Submitting…");
-                submitButton.setEnabled(false);
 
                 new SwingWorker<Void, String>() {
                     @Override
@@ -586,10 +665,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI{
                             );
 
                             publish("Submission successful!");
-                            publish("Data: " + submission);
-                            publish("ID: " + submission.get("id"));
+                            //publish("Data: " + submission);
+                            //publish("ID: " + submission.get("id"));
                             publish("Submitted At: " + submission.get("submittedAt"));
-                            publish("Grade: " + submission.get("grade"));
+                            //publish("Grade: " + submission.get("grade"));
                             publish("Feedback: " + submission.get("feedback"));
                         } catch (IOException ex) {
                             publish("Submission failed: " + ex.getMessage());

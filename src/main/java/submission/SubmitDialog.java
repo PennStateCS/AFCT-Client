@@ -590,7 +590,8 @@ public class SubmitDialog extends JFrame implements ActionListener, SubmissionGU
                         if (allAssignments.isSelected() || upcomingAssignments.isSelected() && isUpcoming) {
                             model.addElement((new AssignmentItem(
                                     assignment.get("id").toString(),
-                                    assignment.get("title").toString()
+                                    assignment.get("title").toString(),
+                                    assignment.get("description").toString()
                             )));
                         }
                     }
@@ -661,7 +662,8 @@ public class SubmitDialog extends JFrame implements ActionListener, SubmissionGU
                         if (allProblems.isSelected() || uncompletedProblems.isSelected() && !isSolved) {
                             model.addElement(new ProblemItem(
                                     problem.get("id").toString(),
-                                    instTitle
+                                    instTitle,
+                                    problem.get("description").toString()
                             ));
                         }
                     }

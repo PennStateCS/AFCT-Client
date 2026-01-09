@@ -22,6 +22,15 @@ public class DetailsPanel2 extends JPanel {
         initializeDetailsPanel();
     }
 
+    public void toggle(boolean enable) {
+        detailsToggle.setEnabled(enable);
+    }
+
+    public void disableDetailsPanel() {
+        detailsToggle.setEnabled(false);
+        toggleDetailsPanel(false);
+    }
+
     public void setDetailsText(String text) {
         this.detailsText.setText(text);
         // Important for layout recalculation in Swing
@@ -29,9 +38,18 @@ public class DetailsPanel2 extends JPanel {
         card.repaint();
     }
 
+    private void toggleDetailsPanel(boolean enable) {
+        detailsPanel.setVisible(enable);
+        detailsToggle.setText(enable ? "Hide details ▾" : "View details ▸");
+
+        // Important for layout recalculation in Swing
+        card.revalidate();
+        card.repaint();
+    }
+
     private void initializeDetailsPanel() {
         setLayout(new GridBagLayout()); // to center the card
-        
+
 //        card.setBorder(new CompoundBorder(
 //                new LineBorder(new Color(210, 210, 210)),
 //                new EmptyBorder(16, 16, 16, 16)
@@ -90,12 +108,9 @@ public class DetailsPanel2 extends JPanel {
         // Behavior: toggle show/hide
         detailsToggle.addActionListener(e -> {
             boolean show = detailsToggle.isSelected();
-            detailsPanel.setVisible(show);
-            detailsToggle.setText(show ? "Hide details ▾" : "View details ▸");
-
-            // Important for layout recalculation in Swing
-            card.revalidate();
-            card.repaint();
+            toggleDetailsPanel(show);
         });
     }
+
+
 }

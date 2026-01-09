@@ -17,11 +17,11 @@ import java.util.*;
 import java.util.List;
 import java.util.prefs.Preferences;
 
+import static gui.Globals.sessionHandler;
 import static gui.Globals.sizeAndCenterWindow;
 import static submission.AFCTClient.fixUrl;
 import static submission.LoginResult.*;
-import static submission.SubmitWindow.ComboBoxTarget.ASSIGNMENT;
-import static submission.SubmitWindow.ComboBoxTarget.PROBLEM;
+import static submission.SubmitWindow.ComboBoxTarget.*;
 
 
 public class SessionHandler {
@@ -34,8 +34,10 @@ public class SessionHandler {
     private AFCTClient client = null;
     private String token = null;
     private Map<String, Map<String, Object>> courses;
+    private List<Map<String, Object>> courseListCache = null;
     /** true means all, false means upcoming */
     private Map<String, Map<Boolean, List<Map<String, Object>>>> courseToAssignmentMap;
+    /** true means all, false means uncompleted */
     private Map<String, Map<Boolean, List<Map<String, Object>>>> assignmentToProblemMap;
 
     private String server = null;
@@ -43,11 +45,12 @@ public class SessionHandler {
     private String email = null;
     private String password = null;
 
+    public boolean loggedIn = false;
+
     // Submit windows
     private ArrayList<SubmitWindow> submitWindows;
 
     // Login GUI elements
-    private final JFrame loginFrame;
     private final LoginWindow loginWindow;
 
     // Preferences
@@ -74,11 +77,8 @@ public class SessionHandler {
         this.courseToAssignmentMap = new HashMap<>();
         this.assignmentToProblemMap = new HashMap<>();
 
-        // GUI elements
-        this.loginFrame = new JFrame();
-
-        this.loginWindow = new LoginWindow(loginFrame, this);
-        this.setupGUI();
+        // Login GUI elements
+        this.loginWindow = new LoginWindow(this);
     }
 
     public SubmitWindow createNewSubmitWindow(Environment environment) {
@@ -87,11 +87,16 @@ public class SessionHandler {
         return submitWindow;
     }
 
-    private void setupGUI() {
-        loginFrame.getContentPane().add(loginWindow.getContentPane());
-        loginFrame.setTitle("Login - " + Globals.APP_NAME);
-        loginFrame.pack();
-        loginFrame.setVisible(true);
+    public void displayLoginThenSubmission(SubmitWindow submitWindowToShow) {
+        // Try to automatically log in (to avoid showing login GUI)
+        boolean successful = autoReAuthenticate();
+
+        // If unsuccessful, display login window to user
+        if (!successful) {
+            this.loginWindow.displayLoginThenSubmission(this, submitWindowToShow);
+        } else {
+            submitWindowToShow.displaySubmitWindow();
+        }
     }
 
     public void updateStartTime() {
@@ -110,25 +115,21 @@ public class SessionHandler {
         //              if not: try to reauth with saved creds
         //                      if this fails: open login window
 
-        //if (client == null || !client.isAuthenticated()) {
-        //                    JOptionPane.showMessageDialog(mainForm, "You must be authenticated to submit.", "Authentication Required", JOptionPane.WARNING_MESSAGE);
-        //                    return;
-        //                }
-        //                if (assignmentBox.getSelectedIndex() <= 0) {
-        //                    JOptionPane.showMessageDialog(mainForm, "No assignment selected", "Please select an assignment to submit.", JOptionPane.WARNING_MESSAGE);
-        //                    return;
-        //                }
-        //                if (problemBox.getSelectedIndex() <= 0) {
-        //                    JOptionPane.showMessageDialog(mainForm, "No problem selected", "Please select a problem to submit.", JOptionPane.WARNING_MESSAGE);
-        //                    return;
-        //                }
-
         // Check if 15 minutes have passed
         Instant currentTime = Instant.now();
         Duration duration = Duration.between(startTime, currentTime);
         long minutesPassed = duration.toMinutes();
-        if (minutesPassed >= 14) {
-            // Re-login
+
+        boolean needToReAuth = this.client == null || !this.client.isAuthenticated() || minutesPassed >= 14;
+
+        if (needToReAuth) {
+            // Re-login - try to do automatically
+            boolean successful = autoReAuthenticate();
+
+            // If unsuccessful, display login window to user
+            if (!successful) {
+                loginWindow.displayLoginWindow(this);
+            }
         }
 
         return this.client;
@@ -145,7 +146,13 @@ public class SessionHandler {
             token = client.login(userEmail, userPassword);
             if (token != null && !token.isBlank()) {
                 // Login succeeded
+                this.loggedIn = true;
                 this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "yes");
+
+                //TODO - add an option to prefs - ask login every time AFCT is opened
+                //  like could add this if option selected: this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
+
+
                 // Set creds to expire after 7 days
                 Calendar calendar = Calendar.getInstance();
                 calendar.add(Calendar.DAY_OF_MONTH, expireAfterDays);
@@ -153,9 +160,11 @@ public class SessionHandler {
                 loadCoursesAsync();
                 return getSuccessResult();
             } else {
+                this.loggedIn = false;
                 return getFailureResult();
             }
         } catch (IOException ex) {
+            this.loggedIn = false;
             return getErrorResult(ex.getMessage());
         }
     }
@@ -173,17 +182,22 @@ public class SessionHandler {
         }
 
         String expireAfter = preferences.get(PREF_SAVED_CREDS_EXPIRE_AFTER, null);
-        if (expireAfter == null) {
-            return false;
-        } else {
+        if (expireAfter != null) {
             String strCurrent = dateFormat.format(new Date());
             // if the current date is before the saved date, return true
             try {
                 Date current = dateFormat.parse(strCurrent);
                 Date saved = dateFormat.parse(expireAfter);
                 if (current.before(saved)) {
-                    // TODO: re-login here
-                    //TODO return show(UpdatePopup.UpdateStatus.REMIND_LATER);
+                    // Try to Re-login here
+                    String serverUrl = preferences.get(PREF_SERVER, defaultServer);
+                    String portText = preferences.get(PREF_PORT, defaultPort);
+                    String userEmail = preferences.get(PREF_EMAIL, defaultEmail);
+                    String userPassword = preferences.get(PREF_PASSWORD, defaultPassword);
+                    LoginResult loginResult = login(serverUrl, portText, userEmail, userPassword);
+                    if (loginResult.status == LoginResult.LoginStatus.SUCCESS) {
+                        return true;
+                    }
                 }
             } catch (ParseException ignored) { }
         }
@@ -255,6 +269,7 @@ public class SessionHandler {
                     try {
                         // Load courses on worker thread
                         List<Map<String, Object>> courseList = client.getCourses(email);
+                        courseListCache = courseList;
 
                         for (Map<String, Object> course : courseList) {
                             courses.put(course.get("id").toString(), course);
@@ -276,6 +291,9 @@ public class SessionHandler {
                                 }
                             } else {
                                 submitWindow.courseBox.setModel(createCourseModelFromList(courseList));
+                                if (courseList.size() == 1) {
+                                    submitWindow.courseBox.setSelectedIndex(1);
+                                }
                             }
                             submitWindow.toggleCourseBox(true);
                         }
@@ -314,6 +332,28 @@ public class SessionHandler {
                 //signInButton.setEnabled(true);
             }
         }.execute();
+    }
+
+    public void populateCourses(SubmitWindow submitWindow, boolean forceReload) {
+        // Disable and reset CourseBox
+        submitWindow.disableAndResetTargetComboBox(COURSE);
+        // Disable and reset AssignmentBox
+        submitWindow.disableAndResetTargetComboBox(ASSIGNMENT);
+        // Disable and reset ProblemBox
+        submitWindow.disableAndResetTargetComboBox(PROBLEM);
+
+
+        if (courseListCache != null && !forceReload) {
+            submitWindow.courseBox.setModel(createCourseModelFromList(courseListCache));
+            // Re-enable CourseBox
+            submitWindow.toggleCourseBox(true);
+        } else {
+            loadCoursesAsync();
+        }
+    }
+
+    public void populateCourses(SubmitWindow submitWindow) {
+        populateCourses(submitWindow, false);
     }
 
     private void loadAssignmentsAsync(CourseItem selectedCourse) {
@@ -367,7 +407,7 @@ public class SessionHandler {
                     for (SubmitWindow submitWindow : submitWindows) {
                         CourseItem selectedItem = (CourseItem) submitWindow.courseBox.getSelectedItem();
                         if (selectedItem != null && Objects.equals(selectedItem.id, selectedCourse.id)) {
-                            if (submitWindow.upcomingAssignments.isSelected()) {
+                            if (submitWindow.allAssignments.isSelected()) {
                                 updateComboBoxWithoutChangingSelection(submitWindow, ASSIGNMENT, createAssignmentModelFromList(assignmentList));
                             } else {
                                 updateComboBoxWithoutChangingSelection(submitWindow, ASSIGNMENT, createAssignmentModelFromList(upcomingAssignments));
@@ -406,17 +446,17 @@ public class SessionHandler {
         }.execute();
     }
 
-    public void populateAssignments(SubmitWindow submitWindow, CourseItem selectedCourse) {
+    public void populateAssignments(SubmitWindow submitWindow, CourseItem selectedCourse, boolean forceReload) {
         // Disable and reset AssignmentBox
         submitWindow.disableAndResetTargetComboBox(ASSIGNMENT);
         // Disable and reset ProblemBox
         submitWindow.disableAndResetTargetComboBox(PROBLEM);
 
-        if (courseToAssignmentMap.containsKey(selectedCourse.id)) {
-            if (submitWindow.upcomingAssignments.isSelected()) {
-                submitWindow.assignmentBox.setModel(createAssignmentModelFromList(courseToAssignmentMap.get(selectedCourse.id).get(false)));
-            } else {
+        if (courseToAssignmentMap.containsKey(selectedCourse.id) && !forceReload) {
+            if (submitWindow.allAssignments.isSelected()) {
                 submitWindow.assignmentBox.setModel(createAssignmentModelFromList(courseToAssignmentMap.get(selectedCourse.id).get(true)));
+            } else {
+                submitWindow.assignmentBox.setModel(createAssignmentModelFromList(courseToAssignmentMap.get(selectedCourse.id).get(false)));
             }
             // Re-enable AssignmentBox
             submitWindow.toggleAssignmentBox(true);
@@ -425,8 +465,8 @@ public class SessionHandler {
         }
     }
 
-    public void populateAssignments(CourseItem selectedCourse) {
-
+    public void populateAssignments(SubmitWindow submitWindow, CourseItem selectedCourse) {
+        populateAssignments(submitWindow, selectedCourse, false);
     }
 
     private void loadProblemsAsync(AssignmentItem selectedAssignment) {
@@ -463,7 +503,7 @@ public class SessionHandler {
                     for (SubmitWindow submitWindow : submitWindows) {
                         AssignmentItem selectedItem = (AssignmentItem) submitWindow.assignmentBox.getSelectedItem();
                         if (selectedItem != null && Objects.equals(selectedItem.id, selectedAssignment.id)) {
-                            if (submitWindow.uncompletedProblems.isSelected()) {
+                            if (submitWindow.allProblems.isSelected()) {
                                 updateComboBoxWithoutChangingSelection(submitWindow, PROBLEM, createProblemModelFromList(problemsList));
                             } else {
                                 updateComboBoxWithoutChangingSelection(submitWindow, PROBLEM, createProblemModelFromList(uncompletedProblems));
@@ -502,21 +542,25 @@ public class SessionHandler {
         }.execute();
     }
 
-    public void populateProblems(SubmitWindow submitWindow, AssignmentItem selectedAssignment) {
+    public void populateProblems(SubmitWindow submitWindow, AssignmentItem selectedAssignment, boolean forceReload) {
         // Disable and reset ProblemBox
         submitWindow.disableAndResetTargetComboBox(PROBLEM);
 
-        if (assignmentToProblemMap.containsKey(selectedAssignment.id)) {
-            if (submitWindow.uncompletedProblems.isSelected()) {
-                submitWindow.problemBox.setModel(createProblemModelFromList(assignmentToProblemMap.get(selectedAssignment.id).get(false)));
-            } else {
+        if (assignmentToProblemMap.containsKey(selectedAssignment.id) && !forceReload) {
+            if (submitWindow.allProblems.isSelected()) {
                 submitWindow.problemBox.setModel(createProblemModelFromList(assignmentToProblemMap.get(selectedAssignment.id).get(true)));
+            } else {
+                submitWindow.problemBox.setModel(createProblemModelFromList(assignmentToProblemMap.get(selectedAssignment.id).get(false)));
             }
             // Re-enable ProblemBox
             submitWindow.toggleProblemBox(true);
         } else {
             loadProblemsAsync(selectedAssignment);
         }
+    }
+
+    public void populateProblems(SubmitWindow submitWindow, AssignmentItem selectedAssignment) {
+        populateProblems(submitWindow, selectedAssignment, false);
     }
 
     private <T> void updateComboBoxWithoutChangingSelection(SubmitWindow submitWindow, SubmitWindow.ComboBoxTarget target, ComboBoxModel<T> model) {
@@ -574,7 +618,7 @@ public class SessionHandler {
         DefaultComboBoxModel<AssignmentItem> model = new DefaultComboBoxModel<>();
         model.addElement(new AssignmentItem("",  SubmitWindow.PLACEHOLDER));
         for (Map<String, Object> assignment : assignmentList) {
-            model.addElement((new AssignmentItem(assignment.get("id").toString(), assignment.get("title").toString())));
+            model.addElement((new AssignmentItem(assignment.get("id").toString(), assignment.get("title").toString(), assignment.get("description").toString())));
         }
         return model;
     }
@@ -586,7 +630,7 @@ public class SessionHandler {
         for (Map<String, Object> problem : problemList) {
             Boolean isSolved = (Boolean) problem.get("solved");
             String instTitle = String.format("%s %s", problem.get("title"), isSolved ? "\u2714" : "");
-            model.addElement(new ProblemItem(problem.get("id").toString(), instTitle));
+            model.addElement(new ProblemItem(problem.get("id").toString(), instTitle, problem.get("description").toString()));
         }
         return model;
     }

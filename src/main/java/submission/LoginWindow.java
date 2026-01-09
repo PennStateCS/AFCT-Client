@@ -20,38 +20,54 @@ import static submission.SessionHandler.*;
 import static submission.SessionHandler.PREF_PASSWORD;
 
 //TODO: should this be a Dialog that block other input?
-public class LoginWindow {
+public class LoginWindow extends JFrame {
     private JPanel contentPane;
     private JTextField serverTF;
     private JTextField portTF;
     private JTextField emailTF;
     private JPasswordField passwordTF;
     private JButton loginButton;
-    private JFrame parentFrame;
     // TODO: replace this with better, more modern user feedback methods
     private JTextArea result;
     private String resultText = "";
+    private JScrollPane resultScrollPane;
 
-    public LoginWindow(JFrame parentFrame, SessionHandler sessionHandler) {
+
+    private JScrollPane scrollPane;
+
+    private SubmitWindow submitWindowToShow = null;
+
+    public LoginWindow(SessionHandler sessionHandler) {
         contentPane = new JPanel();
         serverTF = new JTextField();
         portTF = new JTextField();
         emailTF = new JTextField();
         passwordTF = new JPasswordField();
         loginButton = new JButton("Login");
-        this.parentFrame = parentFrame;
 
         result = new JTextArea();
-
-        // TODO: maybe put this into a scrollpane?
+        resultScrollPane = new JScrollPane(result);
 
         setupGui();
         populateGui(sessionHandler);
         setupEventHandlers();
+
+        scrollPane = new JScrollPane(contentPane);
+
+        this.getContentPane().add(scrollPane);
     }
 
-    public JPanel getContentPane() {
-        return contentPane;
+    public void displayLoginWindow(SessionHandler sessionHandler) {
+        this.toggleAllInputs(true);
+        this.populateGui(sessionHandler);
+        this.pack();
+        this.setVisible(true);
+        this.toFront();
+    }
+
+    public void displayLoginThenSubmission(SessionHandler sessionHandler, SubmitWindow submitWindowToShow) {
+        displayLoginWindow(sessionHandler);
+        this.submitWindowToShow = submitWindowToShow;
     }
 
     private void appendResult(String line) {
@@ -61,6 +77,8 @@ public class LoginWindow {
     }
 
     private void setupGui() {
+        this.setTitle("Login - " + Globals.APP_NAME);
+
         contentPane.setLayout(new GridBagLayout());
         GridBagConstraints c;
         int y = 0;
@@ -106,7 +124,8 @@ public class LoginWindow {
         // Add result to contentPane
         result.setBorder(new LineBorder(new Color(210, 210, 210)));
         c.gridy = y++;
-        contentPane.add(result, c);
+        // TODO: probably remove this before pushing to students?
+        contentPane.add(resultScrollPane, c);
     }
 
     public static JPanel createInputPanel(Component component, String headerText, boolean setMargin) {
@@ -160,17 +179,27 @@ public class LoginWindow {
         handlers_login();
     }
 
+    private void openQueuedSubmitWindow() {
+        if (submitWindowToShow != null) {
+            submitWindowToShow.displaySubmitWindow();
+            submitWindowToShow = null;
+        }
+    }
+
     private void handlers_windowClose() {
+        LoginWindow frame = this;
         WindowAdapter windowListener = new WindowAdapter() {
             @Override
             public void windowClosing(java.awt.event.WindowEvent e) {
+                System.out.println("login closing");
                 saveLoginInfo();
-                parentFrame.dispose();
+                frame.dispose();
+                openQueuedSubmitWindow();
             }
         };
 
         // add windowListener
-        parentFrame.addWindowListener(windowListener);
+        frame.addWindowListener(windowListener);
     }
 
     private void saveLoginInfo() {
@@ -179,6 +208,14 @@ public class LoginWindow {
         final String userEmail = emailTF.getText();
         final String userPassword = new String(passwordTF.getPassword());
         Globals.sessionHandler.saveLoginInfo(serverUrl, portText, userEmail, userPassword);
+    }
+
+    private void toggleAllInputs(boolean enable) {
+        serverTF.setEnabled(enable);
+        portTF.setEnabled(enable);
+        emailTF.setEnabled(enable);
+        passwordTF.setEnabled(enable);
+        loginButton.setEnabled(enable);
     }
 
     private void handlers_login() {
@@ -193,11 +230,7 @@ public class LoginWindow {
                 final String userEmail = emailTF.getText().trim();
                 final String userPassword = new String(passwordTF.getPassword());
 
-                serverTF.setEnabled(false);
-                portTF.setEnabled(false);
-                emailTF.setEnabled(false);
-                passwordTF.setEnabled(false);
-                loginButton.setEnabled(false);
+                toggleAllInputs(false);
 
                 Globals.sessionHandler.disableAndResetAllSubmitWindows();
 
@@ -210,6 +243,26 @@ public class LoginWindow {
                     protected Void doInBackground() {
                         LoginResult loginResult = Globals.sessionHandler.login(serverUrl, portText, userEmail, userPassword);
                         publish(loginResult.message);
+
+                        if (loginResult.status == LoginResult.LoginStatus.SUCCESS) {
+                            // Define the time delay in milliseconds (5000ms = 5 seconds)
+                            int delay = 2000;
+
+                            // TODO - should delay be kept?
+                            delay = 500;
+                            // Create and start the Swing Timer
+                            Timer timer = new Timer(delay, new ActionListener() {
+                                @Override
+                                public void actionPerformed(ActionEvent e) {
+                                    // This code runs after the delay
+                                    dispose();
+                                    openQueuedSubmitWindow();
+                                }
+                            });
+                            timer.setRepeats(false); // Ensure the timer only runs once
+                            timer.start();
+                        }
+
                         return null;
                     }
 
@@ -220,11 +273,7 @@ public class LoginWindow {
 
                     @Override
                     protected void done() {
-                        serverTF.setEnabled(true);
-                        portTF.setEnabled(true);
-                        emailTF.setEnabled(true);
-                        passwordTF.setEnabled(true);
-                        loginButton.setEnabled(true);
+                        toggleAllInputs(true);
                     }
                 }.execute();
             }
