@@ -55,15 +55,17 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private JScrollPane scrollPane;
 
     // Tracking for optimization
-    private String selectedCourseID;
-    private String selectedAssignmentID;
-    private String selectedProblemID;
+    private String selectedCourseID = null;
+    private String selectedAssignmentID = null;
+    private String selectedProblemID = null;
 
     // Placeholder for combo boxes
     public static final String PLACEHOLDER = "— Select —";
 
     // Event guarding
     public volatile boolean isPopulating = false;
+
+    private boolean populateCoursesOnceLoggedIn = false;
 
     public SubmitWindow(Environment environment) {
         this.environment = environment;
@@ -93,7 +95,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         populateGui();
         setupEventHandlers();
 
-        sessionHandler.populateCourses(this);
+        if (sessionHandler.loggedIn) {
+            sessionHandler.populateCourses(this);
+        } else {
+            populateCoursesOnceLoggedIn = true;
+        }
 
         scrollPane = new JScrollPane(contentPane);
 
@@ -107,7 +113,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         if (sessionHandler.loggedIn) {
             this.refreshDialog();
-            sessionHandler.populateCourses(this);
+            if (populateCoursesOnceLoggedIn || courseBox.getItemCount() <= 1) {
+                populateCoursesOnceLoggedIn = false;
+                sessionHandler.populateCourses(this);
+            }
             this.setVisible(true);
             this.toFront();
         } else {
@@ -438,15 +447,17 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 if (Objects.equals(selectedCourse.id, selectedCourseID)) return;
 
                 selectedCourseID = selectedCourse.id;
+                selectedAssignmentID = null;
+                selectedProblemID = null;
                 assignmentDetailsPanel.disableDetailsPanel();
                 problemDetailsPanel.disableDetailsPanel();
+                toggleSubmitButton(false);
 
                 // User selected initial box with no value
                 if (courseBox.getSelectedIndex() <= 0) {
                     // Reset inputs appropriately
                     setModel(assignmentBox, List.of(PLACEHOLDER), false);
                     setModel(problemBox, List.of(PLACEHOLDER), false);
-                    toggleSubmitButton(false);
                     return;
                 }
 
@@ -481,13 +492,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 if (Objects.equals(selectedAssignment.id, selectedAssignmentID)) return;
 
                 selectedAssignmentID = selectedAssignment.id;
+                selectedProblemID = null;
                 problemDetailsPanel.disableDetailsPanel();
+                toggleSubmitButton(false);
 
                 // User selected initial box with no value
                 if (assignmentBox.getSelectedIndex() <= 0) {
                     // Reset inputs appropriately
                     setModel(problemBox, List.of(PLACEHOLDER), false);
-                    toggleSubmitButton(false);
                     assignmentDetailsPanel.disableDetailsPanel();
                     return;
                 }
