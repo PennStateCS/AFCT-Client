@@ -257,10 +257,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         c.gridy = y++;
         contentPane.add(createComboBoxWithRefreshPanel(courseBox, courseRefreshButton, "Course"), c);
         c.gridy = y++;
-        contentPane.add(createComboBoxWithButtonsPanel(assignmentBox, assignmentRefreshButton, assignmentDetailsPanel, allAssignments, upcomingAssignments, "Assignment"), c);
+        contentPane.add(createComboBoxWithTopRadioButtons(assignmentBox, assignmentRefreshButton, assignmentDetailsPanel, allAssignments, upcomingAssignments, "Assignment"), c);
         c.insets = new Insets(vrtInset-5, hozInset, 0, hozInset);
         c.gridy = y++;
-        contentPane.add(createComboBoxWithButtonsPanel(problemBox, problemRefreshButton, problemDetailsPanel, allProblems, uncompletedProblems, "Problem"), c);
+        contentPane.add(createComboBoxWithTopRadioButtons(problemBox, problemRefreshButton, problemDetailsPanel, allProblems, uncompletedProblems, "Problem"), c);
 
         // Add current file info
         c.gridy = y++;
@@ -344,22 +344,28 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         contentPane.add(createInputPanel(feedbackLabelPanel, "Feedback", false), c);
     }
 
+    private void addRefreshButton(JPanel inputPanel, JButton refreshButton, int y) {
+        // Add refreshButton to inputPanel
+        GridBagConstraints c;
+        c = setConstraints(0, 0, 1, y);
+        setAllInsets(c, 0);
+        Icon icon = styleRefreshButton(refreshButton);
+        //refreshButton.setPreferredSize(new Dimension(icon.getIconWidth(), icon.getIconHeight()));
+        inputPanel.add(refreshButton, c);
+    }
+
     private <T> JPanel createComboBoxWithRefreshPanel(JComboBox<T> comboBox, JButton refreshButton, String headerText) {
         JPanel inputPanel = createComboBoxPanel(comboBox, headerText);
         GridBagConstraints c;
 
         // Add refreshButton to inputPanel
         int y = 1;
-        c = setConstraints(0, 0, 1, y);
-        setAllInsets(c, 0);
-        Icon icon = styleRefreshButton(refreshButton);
-        //refreshButton.setPreferredSize(new Dimension(icon.getIconWidth(), icon.getIconHeight()));
-        inputPanel.add(refreshButton, c);
+        addRefreshButton(inputPanel, refreshButton, y);
 
         return inputPanel;
     }
 
-    private <T> JPanel createComboBoxWithButtonsPanel(JComboBox<T> comboBox, JButton refreshButton, DetailsPanel2 detailsPanel, JRadioButton radioButton1, JRadioButton radioButton2, String headerText) {
+    private <T> JPanel createComboBoxWithBottomRadioButtons(JComboBox<T> comboBox, JButton refreshButton, DetailsPanel2 detailsPanel, JRadioButton radioButton1, JRadioButton radioButton2, String headerText) {
         JPanel inputPanel = createComboBoxWithRefreshPanel(comboBox, refreshButton, headerText);
         GridBagConstraints c;
         int y = 2;
@@ -401,6 +407,67 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         return inputPanel;
     }
 
+
+    private <T> JPanel createComboBoxWithTopRadioButtons(JComboBox<T> comboBox, JButton refreshButton, DetailsPanel2 detailsPanel, JRadioButton radioButton1, JRadioButton radioButton2, String headerText) {
+        JPanel inputPanel = new JPanel(new GridBagLayout());
+        GridBagConstraints c;
+        int y = 0;
+
+        // Create headerLabel
+        JLabel headerLabel = new JLabel(headerText);
+        changeSize(headerLabel, 16);
+        // Add headerLabel to inputPanel
+        c = setConstraints(0, 0, 0, y++, GridBagConstraints.LINE_START);
+        c.insets = new Insets(0, 0, 0, 0);
+        inputPanel.add(headerLabel, c);
+
+        // Add radio buttons to a group
+        ButtonGroup buttonGroup = new ButtonGroup();
+        buttonGroup.add(radioButton1);
+        buttonGroup.add(radioButton2);
+
+        // Create buttonPanel
+        JPanel buttonPanel = new JPanel(new GridBagLayout());
+
+        // Add radioButton1 to buttonPanel
+        c = setConstraints(0.5, 0, 0, 0);
+        setPointerCursor(radioButton1);
+        changeSize(radioButton1, 14);
+        unBoldFont(radioButton1);
+        buttonPanel.add(radioButton1, c);
+
+        // Add radioButton2 to buttonPanel
+        c = setConstraints(0.5, 0, 1, 0);
+        setPointerCursor(radioButton2);
+        changeSize(radioButton2, 14);
+        unBoldFont(radioButton2);
+        buttonPanel.add(radioButton2, c);
+
+        // Add buttonPanel to inputPanel
+        c = setConstraints(0, 0, 0, y++);
+        //c.insets = new Insets(5, 0, 0, 0);
+        // TODO: maybe have this span two columns cause of refresh button?
+        //  - like the detailsPanel? i.e.:
+        //  c.gridwidth = GridBagConstraints.REMAINDER;
+        inputPanel.add(buttonPanel, c);
+
+        // Add comboBox to inputPanel
+        c = setConstraints(1, 1, 0, y++, GridBagConstraints.LINE_START);
+        changeSize(comboBox, 16);
+        inputPanel.add(comboBox, c);
+
+        // Add refreshButton to inputPanel
+        addRefreshButton(inputPanel, refreshButton, y-1);
+
+        // Add detailsPanel
+        c = setConstraints(1, 0, 0, y++);
+        c.gridwidth = GridBagConstraints.REMAINDER;
+        //c.fill = GridBagConstraints.HORIZONTAL;
+        //changeSize(radioButton1, 14);
+        inputPanel.add(detailsPanel, c);
+
+        return inputPanel;
+    }
     private void populateGui() {
         // Visuals for combo boxes
         courseBox.setBackground(Color.WHITE);
