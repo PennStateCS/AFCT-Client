@@ -7,16 +7,24 @@ import java.awt.event.ActionListener;
 import java.awt.Color;
 
 import file.XMLCodec;
+import gui.Globals;
 import gui.environment.Environment;
+import gui.environment.EnvironmentFrame;
+import gui.environment.Universe;
 
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
 import java.util.List;
 import java.util.Map;
 import java.time.LocalDateTime;
+import java.util.Objects;
 import java.util.prefs.Preferences;
 
-public class SubmitDialog extends JFrame implements ActionListener {
+import static submission.SessionHandler.*;
+
+public class SubmitDialog extends JFrame implements ActionListener, SubmissionGUI {
     private Environment env;
     private JTextField email;
     private JPasswordField password;
@@ -51,14 +59,6 @@ public class SubmitDialog extends JFrame implements ActionListener {
     private final String defaultEmail = "student@example.com";
     private final String defaultPassword = "password123";
 
-    // Preferences
-    private final String PREF_SERVER = "server";
-    private final String PREF_PORT = "port";
-    private final String PREF_EMAIL = "email";
-    private final String PREF_PASSWORD = "password";
-    private final String PREF_HOMEWORK = "homework";
-    private final String PREF_PROBLEM = "problem";
-
     // Event guarding
     private volatile boolean isPopulating = false;
 
@@ -69,11 +69,12 @@ public class SubmitDialog extends JFrame implements ActionListener {
     {
         initializeComponents(env);
         setupEventHandlers();
+
     }
 
     private void initializeComponents(Environment env)
     {
-        Preferences prefs = Preferences.userNodeForPackage(submission.LegacySubmitDialog.class);
+        Preferences prefs = Globals.sessionHandler.preferences;
 
         // Initialize
         this.setEnv(env);
@@ -114,7 +115,7 @@ public class SubmitDialog extends JFrame implements ActionListener {
     }
 
     private void savePreferences(String serverUrl, String portText, String userEmail, String userPassword) {
-        Preferences prefs = Preferences.userNodeForPackage(submission.SubmitDialog.class);
+        Preferences prefs = Globals.sessionHandler.preferences;
         prefs.put(PREF_SERVER, serverUrl);
         prefs.put(PREF_PORT, portText);
         prefs.put(PREF_EMAIL, userEmail);
@@ -150,8 +151,24 @@ public class SubmitDialog extends JFrame implements ActionListener {
         appendResult("");
     }
 
-    // Set action listeners for user inputs
+    /**
+     * Sets action listeners for user inputs.
+     */
     private void setupEventHandlers() {
+        handlers_signIn();
+
+        handlers_course();
+
+        handlers_assignment();
+
+        handlers_problem();
+
+        handlers_file();
+
+        handlers_submit();
+    }
+
+    private void handlers_signIn() {
         signInButton.addActionListener(new ActionListener()
         {
             @Override
@@ -163,6 +180,7 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 final String userEmail = email.getText();
                 final String userPassword = new String(password.getPassword());
 
+                // TODO - add this to new login / submit logic
                 signInButton.setEnabled(false);
                 setModel(courseBox, List.of(PLACEHOLDER), false);
                 setModel(assignmentBox, List.of(PLACEHOLDER), false);
@@ -206,6 +224,11 @@ public class SubmitDialog extends JFrame implements ActionListener {
                                 // Display number of courses loaded
                                 int numCourses = courses.size();
                                 publish(String.format("Loaded %s %s", numCourses, numCourses == 1 ? "course" : "courses"));
+
+                                // If there is only one course, select it and load the assignments for that course
+                                if (numCourses == 1) {
+                                    courseBox.setSelectedIndex(1);
+                                }
                             } else {
                                 publish("Authentication failed.");
                             }
@@ -228,7 +251,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 }.execute();
             }
         });
+    }
 
+    private void handlers_course() {
         courseBox.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -252,7 +277,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 loadAssignmentsAsync(); // Load assignments for selected course
             }
         });
+    }
 
+    private void handlers_assignment() {
         assignmentBox.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -297,7 +324,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 loadAssignmentsAsync();
             }
         });
+    }
 
+    private void handlers_problem() {
         problemBox.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -346,7 +375,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 loadProblemsAsync();
             }
         });
+    }
 
+    private void handlers_file() {
         browseButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
@@ -396,7 +427,9 @@ public class SubmitDialog extends JFrame implements ActionListener {
                 setCurrJFLAP(email.getText(), parseProblemTitle(problemBox.getSelectedItem().toString()));
             }
         });
+    }
 
+    private void handlers_submit() {
         submitButton.addActionListener(new ActionListener()
         {
             @Override
@@ -414,6 +447,10 @@ public class SubmitDialog extends JFrame implements ActionListener {
                     JOptionPane.showMessageDialog(mainForm, "No problem selected", "Please select a problem to submit.", JOptionPane.WARNING_MESSAGE);
                     return;
                 }
+
+                // Automatically select the current file
+                setCurrJFLAP(email.getText(), parseProblemTitle(problemBox.getSelectedItem().toString()));
+
                 if (selectedFile == null) {
                     JOptionPane.showMessageDialog(mainForm, "No File Selected", "Please select a file to submit.", JOptionPane.WARNING_MESSAGE);
                     return;
@@ -466,11 +503,32 @@ public class SubmitDialog extends JFrame implements ActionListener {
         });
     }
 
+    /**
+     * Unused: only reload when student hits the submit button - that will reduce the amount of temps files and writes to disk, which should improve performance.
+     */
+    private void handlers_window_FileRefresh() {
+        // Actually, maybe only reload when student hits the submit button
+        // Add the WindowListener that will auto reload the working file when the submit GUI is selected
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowActivated(WindowEvent e) {
+                // Runs when the window is selected/activated
+                System.out.println("Window Activated! Running custom code.");
+                // Should check if the file has actually changed before reloading it...
+                setCurrJFLAP(email.getText(), parseProblemTitle(problemBox.getSelectedItem().toString()));
+            }
+        });
+    }
+
     public JPanel getMainPanel() {
         return mainForm;
     }
 
+    @Override
     public void refreshDialog() {
+        // TODO: load current file here
+        EnvironmentFrame frame = Universe.frameForEnvironment(this.env);
+        this.setTitle(frame.getDescription() + " - Submit");
         updateSelectFileEnabled();
         updateSubmitEnabled();
     }
@@ -532,7 +590,8 @@ public class SubmitDialog extends JFrame implements ActionListener {
                         if (allAssignments.isSelected() || upcomingAssignments.isSelected() && isUpcoming) {
                             model.addElement((new AssignmentItem(
                                     assignment.get("id").toString(),
-                                    assignment.get("title").toString()
+                                    assignment.get("title").toString(),
+                                    assignment.get("description").toString()
                             )));
                         }
                     }
@@ -603,7 +662,8 @@ public class SubmitDialog extends JFrame implements ActionListener {
                         if (allProblems.isSelected() || uncompletedProblems.isSelected() && !isSolved) {
                             model.addElement(new ProblemItem(
                                     problem.get("id").toString(),
-                                    instTitle
+                                    instTitle,
+                                    problem.get("description").toString()
                             ));
                         }
                     }
@@ -759,6 +819,12 @@ public class SubmitDialog extends JFrame implements ActionListener {
         workingButton.setEnabled(false);
         path.setText("No File Selected");
         selectedFile = null;
+    }
+
+    public boolean credentialsChanged(String server, String port, String email, String password) {
+        boolean serverChanged = Objects.equals(server, this.server.getText());
+        boolean portChanged = Objects.equals(port, this.port.getText());
+        return false;
     }
 
     @Override

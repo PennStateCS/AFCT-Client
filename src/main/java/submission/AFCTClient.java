@@ -1,16 +1,18 @@
 package submission;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import gui.Globals;
 
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
 import java.nio.charset.StandardCharsets;
+import java.time.Instant;
 import java.util.List;
 import java.util.Map;
+import java.util.prefs.Preferences;
 
-public class AFCTClient
-{
+public class AFCTClient {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private final String baseUrl;
     private String token;
@@ -18,7 +20,23 @@ public class AFCTClient
     private int readTimeoutMs = 30000;
 
     public AFCTClient(String baseUrl) {
-        this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        //this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
+        this.baseUrl = fixUrl(baseUrl);
+    }
+
+    public static String fixUrl(String baseUrl) {
+        String fixedUrl = baseUrl.trim();
+        // Strip ending "/" if present
+        if (baseUrl.endsWith("/")) {
+            fixedUrl = baseUrl.substring(0, baseUrl.length() - 1).trim();
+        }
+
+        // TODO: test *https* on AFCT server
+        // Add "http://" to the beginning if it is missing
+        if (!fixedUrl.startsWith("http://") && !fixedUrl.startsWith("https://")) {
+            fixedUrl = "http://" + fixedUrl;
+        }
+        return fixedUrl;
     }
 
     public AFCTClient timeouts(int connectMs, int readMs) {
@@ -47,7 +65,10 @@ public class AFCTClient
         int status = conn.getResponseCode();
         String body = readBody(conn);
         if (status != 200) {
+            Globals.sessionHandler.clearStartTime();
             throw httpError("POST /api/public/login", status, body);
+        } else {
+            Globals.sessionHandler.updateStartTime();
         }
 
         Map<String, Object> res = parseJson(body, Map.class);
@@ -115,6 +136,8 @@ public class AFCTClient
     // ================================================================
     @SuppressWarnings("unchecked")
     public Map<String, Object> createSubmission(String assignmentId, String problemId, String content, File file) throws IOException {
+        // TODO: this looks like it does not actually submit the courseID as part of the submission.
+        //      Is this true? and if so - why? is it a mistake?
         ensureAuth();
 
         String boundary = "----JavaBoundary" + System.currentTimeMillis();

@@ -21,12 +21,13 @@
 package gui.environment;
 
 import file.*;
+import submission.SubmissionGUI;
 import submission.SubmitDialog;
 
 import java.io.File;
 import java.io.IOException;
 import java.util.*;
-import javax.swing.JFileChooser;
+import javax.swing.*;
 
 /**
  * The <CODE>Universe</CODE> class serves as a large global "registry" for the
@@ -205,7 +206,7 @@ public class Universe {
 
 
     /** The mapping of environments to submit dialogs. */
-    private static Map<Environment, SubmitDialog> environmentToSubmitDialog = new HashMap<>();
+    private static Map<Environment, SubmissionGUI> environmentToSubmitDialog = new HashMap<>();
 
     /**
      * Given an environment, this returns the submit dialog associated with that environment.
@@ -214,8 +215,8 @@ public class Universe {
      * @return the submit dialog associated with this environment, or <CODE>null</CODE>
      *         if there is no submit dialog associated with this environment
      */
-    public static SubmitDialog submitDialogForEnvironment(Environment environment) {
-        return (SubmitDialog) environmentToSubmitDialog.get(environment);
+    public static SubmissionGUI submitDialogForEnvironment(Environment environment) {
+        return environmentToSubmitDialog.get(environment);
     }
 
     /**
@@ -223,7 +224,7 @@ public class Universe {
      *
      * @param dialog the submit dialog to register
      */
-    public static void registerSubmitDialog(Environment environment, SubmitDialog dialog) {
+    public static void registerSubmitDialog(Environment environment, SubmissionGUI dialog) {
         environmentToSubmitDialog.put(environment, dialog);
     }
 
@@ -234,9 +235,14 @@ public class Universe {
      */
     public static void unregisterSubmitDialog(Environment environment) {
         if (environmentToSubmitDialog.containsKey(environment)) {
-            SubmitDialog d = submitDialogForEnvironment(environment);
+            SubmissionGUI d = submitDialogForEnvironment(environment);
             environmentToSubmitDialog.remove(environment);
             d.dispose();
+//            try {
+//                ((JFrame) d).dispose();
+//            } catch (ClassCastException e) {
+//                ((JDialog) d).dispose();
+//            }
         }
     }
 }

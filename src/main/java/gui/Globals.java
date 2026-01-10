@@ -6,6 +6,8 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.sun.tools.javac.Main;
 import gui.popups.ExtensionPopup;
+import submission.AFCTClient;
+import submission.SessionHandler;
 
 import javax.swing.*;
 import java.awt.*;
@@ -13,9 +15,12 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.prefs.Preferences;
 
+import static gui.editor.IconKeeper.getRefreshIcon;
+import static java.lang.Math.abs;
 import static java.lang.Math.floor;
 
 /**
@@ -25,7 +30,7 @@ import static java.lang.Math.floor;
  */
 public class Globals {
     public static String testingPath = "src\\main\\resources";
-    public final static String currentVersion = "v" + gui.Globals.class.getPackage().getImplementationVersion();
+    public final static String currentVersion = "v" + Globals.class.getPackage().getImplementationVersion();
     public static final String JUST_NAME = "AFCT ";
     public final static String APP_NAME = JUST_NAME + currentVersion;
     public static final String APP_URL = "https://www.cs.rit.edu/~afct";
@@ -38,6 +43,8 @@ public class Globals {
     private static final String htmlProperty = "html.disable";
     public final static String UPDATE = "UPDATE";
 
+    private static int positioningFudgeFactor = 20;
+
     public final static Preferences preferences = Preferences.userNodeForPackage(Globals.class);
     public static ArrayList<ExtensionPopup> popups = new ArrayList<>();
 
@@ -45,6 +52,8 @@ public class Globals {
 
     public static String lastCopiedString = null;
     public static Automaton lastCopiedAutomaton = null;
+
+    public static SessionHandler sessionHandler = new SessionHandler();
 
     public enum Status {
         ERROR, WARNING, GOOD
@@ -106,6 +115,10 @@ public class Globals {
         c.gridy = gridy;
         c.anchor = anchor;
         return c;
+    }
+
+    public static void setAllInsets(GridBagConstraints constraints, int insetAmount) {
+        constraints.insets = new Insets(insetAmount, insetAmount, insetAmount, insetAmount);
     }
 
     public static void allowHTMLInComponent(JTextArea textComponent) {
@@ -224,8 +237,276 @@ public class Globals {
         }
     }
 
+    public enum Position {
+        TOP_LEFT, TOP, TOP_RIGHT,
+        LEFT, CENTER, RIGHT,
+        BOT_LEFT, BOT, BOT_RIGHT,
+    }
+
+    private static int positionNewX(int newX, Position targetPosition, Rectangle frameBounds, Rectangle screenBounds) {
+        Position tPos = targetPosition;
+        if (tPos == Position.TOP_LEFT || tPos == Position.LEFT || tPos == Position.BOT_LEFT) {
+            newX -= frameBounds.width;
+        } else if (tPos == Position.TOP_RIGHT || tPos == Position.RIGHT || tPos == Position.BOT_RIGHT) {
+            newX += frameBounds.width;
+        }
+
+        int xMod;
+        if (newX > screenBounds.width) {
+            xMod = newX % screenBounds.width;
+        } else if (newX < -screenBounds.width) {
+            xMod = -((-newX) % screenBounds.width);
+        } else {
+            xMod = newX;
+        }
+
+        if (xMod + frameBounds.width > screenBounds.width) {
+            // Check if frame runs partly off the right side of the screen
+
+            int temp = newX - xMod;
+            // newX = xMod = 3
+            // screenBounds.width = 5
+            // xMod + frameBounds.width = 6
+            // frameBounds.width = 3
+            // newX = newX + (screenBounds.width - (xMod + frameBounds.width))
+            // newX = 3 + (5 - (3 + 3))
+            // newX = 3 + (5 - 6)
+            // newX = 3 -1
+            // newX = 2
+
+            newX = newX + (screenBounds.width - (xMod + frameBounds.width));
+        } else if (xMod < screenBounds.width) {
+            // Check if frame runs partly off the left side of the screen
+
+            int temp = newX - xMod;
+            // newX = xMod = -1
+            // screenBounds.width = 5
+            // xMod + frameBounds.width = 6
+            // frameBounds.width = 3
+            // newX = newX + (screenBounds.width - (xMod + frameBounds.width))
+            // newX = 3 + (5 - (3 + 3))
+            // newX = 3 + (5 - 6)
+            // newX = 3 -1
+            // newX = 2
+
+            newX = newX + (screenBounds.width - (xMod + frameBounds.width));
+        }
+
+        return newX;
+    }
+
+    public static Position getOppositePosition(Position position) {
+        return switch (position) {
+            case TOP_LEFT -> Position.BOT_RIGHT;
+            case TOP -> Position.BOT;
+            case TOP_RIGHT -> Position.BOT_LEFT;
+            case LEFT -> Position.RIGHT;
+            case CENTER -> Position.CENTER;
+            case RIGHT -> Position.LEFT;
+            case BOT_LEFT -> Position.TOP_RIGHT;
+            case BOT -> Position.TOP;
+            case BOT_RIGHT -> Position.TOP_LEFT;
+            default -> Position.CENTER;
+        };
+    }
+
+    private static class WindowFit {
+        public int x;
+        public int y;
+
+        public int xDiff;
+        public int yDiff;
+
+        public boolean forceToTarget = false;
+
+        public WindowFit(int x, int y) {
+            this.x = x;
+            this.y = y;
+        }
+
+        public WindowFit(int x, int y, int dx, int dy) {
+            this.x = dx;
+            this.y = dy;
+            this.xDiff = dx - x;
+            this.yDiff = dy - y;
+        }
+
+        public WindowFit(WindowFit oldFit, int x, int y) {
+            this.x = x;
+            this.y = y;
+            this.xDiff = x - oldFit.x;
+            this.yDiff = y - oldFit.y;
+        }
+
+        public boolean isSmallXChange() {
+            return abs(xDiff) <= positioningFudgeFactor;
+        }
+
+        public boolean isSmallYChange() {
+            return abs(yDiff) <= positioningFudgeFactor;
+        }
+
+        public boolean isGoodFit() {
+            return isSmallXChange() && isSmallYChange();
+        }
+    }
+
+    private static WindowFit getBestFit(List<WindowFit> fits) {
+        WindowFit bestFit = null;
+        double minDiag = Double.MAX_VALUE;
+
+        double diag;
+        for (WindowFit fit : fits) {
+            diag = Math.sqrt((fit.xDiff * fit.xDiff) + (fit.yDiff * fit.yDiff));
+            if (diag < minDiag) {
+                minDiag = diag;
+                bestFit = fit;
+            }
+        }
+        return bestFit;
+    }
+
+    private static WindowFit fitToScreen(int dx, int dy, Rectangle frameBounds, Rectangle screenBounds) {
+        // Avoid being placed off the edge of the screen:
+        int x = dx;
+        int y = dy;
+
+        // bottom
+        if (dy + frameBounds.height > screenBounds.y + screenBounds.height) {
+            dy = screenBounds.y + screenBounds.height - frameBounds.height;
+        }
+        // top
+        if (dy < screenBounds.y) {
+            dy = screenBounds.y;
+        }
+        // right
+        if (dx + frameBounds.width > screenBounds.x + screenBounds.width) {
+            dx = screenBounds.x + screenBounds.width - frameBounds.width;
+        }
+        // left
+        if (dx < screenBounds.x) {
+            dx = screenBounds.x;
+        }
+        return new WindowFit(x, y, dx, dy);
+    }
+
+    private static WindowFit fitToScreen(WindowFit windowFit, Rectangle frameBounds, Rectangle screenBounds) {
+        return fitToScreen(windowFit.x, windowFit.y, frameBounds, screenBounds);
+    }
+
+    private static WindowFit positionFrame(JFrame window, JFrame frame, Position targetPosition) {
+        Rectangle windowBounds = window.getBounds();
+        Rectangle frameBounds = frame.getBounds();
+
+        int dx = window.getX();
+        int dy = window.getY();
+
+        Position tPos = targetPosition;
+        if (tPos == Position.TOP_LEFT || tPos == Position.TOP || tPos == Position.TOP_RIGHT) {
+            dy -= frameBounds.height;
+        } else if (tPos == Position.BOT_LEFT || tPos == Position.BOT || tPos == Position.BOT_RIGHT) {
+            dy += windowBounds.height;
+        }
+
+        if (tPos == Position.TOP_LEFT || tPos == Position.LEFT || tPos == Position.BOT_LEFT) {
+            dx -= frameBounds.width;
+        } else if (tPos == Position.TOP_RIGHT || tPos == Position.RIGHT || tPos == Position.BOT_RIGHT) {
+            dx += windowBounds.width;
+        }
+
+        return new WindowFit(dx, dy);
+    }
+
+    private static WindowFit tryFitPosition(JFrame frame, Position targetPosition, JFrame window, Rectangle screenBounds, boolean forceToTarget) {
+        Rectangle frameBounds = frame.getBounds();
+
+        // Try to position frame at targetPosition
+        WindowFit dPoint = positionFrame(window, frame, targetPosition);
+
+        // Avoid being placed off the edge of the screen:
+        dPoint = fitToScreen(dPoint, frameBounds, screenBounds);
+        if (forceToTarget || dPoint.isGoodFit()) {
+            dPoint.forceToTarget = true;
+            //frame.setLocation(dPoint.x, dPoint.y);
+            return dPoint;
+        }
+        return dPoint;
+    }
+
+    private static WindowFit tryFitPosition(JFrame frame, Position targetPosition, JFrame window, Rectangle screenBounds) {
+        return tryFitPosition(frame, targetPosition, window, screenBounds, false);
+    }
+
+
+    public static void positionFrameNearWindow(JFrame frame, Position targetPosition, JFrame window, boolean forceToTarget) {
+        if (targetPosition == Position.CENTER) {
+            frame.setLocationRelativeTo(window);
+        }
+
+        // determine which screen the frame should appear on
+        boolean validX = false;
+        boolean validY = false;
+        Rectangle screenBounds = null;
+        Rectangle windowBounds = window.getBounds();
+
+        // get the bounds of each screen the device has
+        // Determine which screen the window is on
+        for (GraphicsDevice device : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
+            screenBounds = device.getDefaultConfiguration().getBounds();
+
+            // LEFT EDGE: check if the left edge of the window is on this screen
+            if ((windowBounds.x >= screenBounds.x) && (windowBounds.x <= screenBounds.x + screenBounds.width)) {
+                validX = true;
+            }
+
+            // TOP EDGE: check if the top edge of the  window is on this screen
+            if ((windowBounds.y >= screenBounds.y) && (windowBounds.y <= screenBounds.y + screenBounds.height)) {
+                validY = true;
+            }
+
+            if (validX && validY) {
+                break;
+            }
+        }
+        if (screenBounds == null) {
+            frame.setLocationRelativeTo(window);
+            return;
+        }
+
+        // Try to position frame at targetPosition
+        WindowFit targetFit = tryFitPosition(frame, targetPosition, window, screenBounds, forceToTarget);
+        WindowFit backupFit;
+        WindowFit bestFit = targetFit;
+
+        if (forceToTarget || targetFit.isGoodFit()) {
+            frame.setLocation(targetFit.x, targetFit.y);
+            return;
+        } else {
+            // TODO: include more backup fits, especially ones that are more intelligently chosen
+            backupFit = tryFitPosition(frame, getOppositePosition(targetPosition), window, screenBounds);
+            if (backupFit.isGoodFit()) {
+                bestFit = backupFit;
+            } else {
+                ArrayList<WindowFit> bestFits = new ArrayList<>();
+                bestFits.add(targetFit);
+                bestFits.add(backupFit);
+                bestFit = getBestFit(bestFits);
+            }
+        }
+
+        frame.setLocation(bestFit.x, bestFit.y);
+    }
+
+    public static void positionFrameNearWindow(JFrame frame, Position targetPosition, JFrame window) {
+        positionFrameNearWindow(frame, targetPosition, window, false);
+    }
+
     public static void changeSize(Component component, int fontSize) {
         component.setFont(component.getFont().deriveFont((float) fontSize));
+    }
+
+    public static void unBoldFont(Component component) {
+        component.setFont(component.getFont().deriveFont(Font.PLAIN));
     }
 
     public static void boldFont(Component component) {
@@ -235,6 +516,43 @@ public class Globals {
     public static void boldFontAndChangeSize(Component component, int fontSize) {
         boldFont(component);
         changeSize(component, fontSize);
+    }
+
+    public static void italicFont(Component component) {
+        component.setFont(component.getFont().deriveFont(Font.ITALIC));
+    }
+
+    public static Icon styleRefreshButton(JButton refreshButton) {
+        Icon icon = getRefreshIcon();
+        refreshButton.setIcon(icon);
+        setPointerCursor(refreshButton);
+
+        // Optional: remove borders for a cleaner look
+        //refreshButton.setBorderPainted(false);
+        //refreshButton.setContentAreaFilled(false);
+        return icon;
+    }
+
+    public static void setPointerCursor(Component component) {
+        component.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+    }
+
+    public static String colorMessage(String message, boolean success) {
+        String result;
+        if (success) {
+            result = "<span style=\"color: #00b050;\">" + message + "</span>";
+        } else {
+            result = "<span style=\"color: red;\">" + message + "</span>";
+        }
+        return result;
+    }
+
+    public static String colorHTMLSuccessMessage(String message) {
+        return colorMessage(message, false);
+    }
+
+    public static String colorHTMLErrorMessage(String message) {
+        return colorMessage(message, false);
     }
 
     public static void errorPrint(String output) {

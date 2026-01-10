@@ -22,12 +22,15 @@ package gui.menu;
 
 
 import javax.swing.*;
+import javax.swing.event.MenuEvent;
+import javax.swing.event.MenuListener;
 import java.awt.event.ActionEvent;
 import java.io.Serializable;
 import java.io.File;
 import java.io.IOException;
 
 import java.lang.reflect.*;
+import java.util.Arrays;
 import java.util.jar.*;
 
 import grammar.Grammar;
@@ -105,7 +108,8 @@ public class MenuBarCreator {
 	 * @return
 	 */
 	public static JMenuBar getMenuBar(EnvironmentFrame frame, int isTuring) {
-		JMenuBar bar = new JMenuBar();
+		// TODO: look into combining this with the other version: getMenuBar(EnvironmentFrame frame)
+        JMenuBar bar = new JMenuBar();
 		JMenu menu;
 
 		menu = getFileMenu(frame);
@@ -532,8 +536,34 @@ public class MenuBarCreator {
 		JMenu menu = new JMenu("Submit");
 		Serializable object = environment.getObject();
 
-		addItem(menu, new SubmitAction(object, environment));
-			
+		//addItem(menu, new SubmitAction(object, environment));
+        SubmitAction action = new SubmitAction(object, environment);
+        //addItem(menu, action);
+        JMenuItem item = new JMenuItem(action);
+        item.setAccelerator((KeyStroke) action.getValue(Action.ACCELERATOR_KEY));
+        menu.add(item);
+
+        //TODO: try to make this work better
+//        menu.addMenuListener(new MenuListener() {
+//            @Override
+//            public void menuSelected(MenuEvent e) {
+//                System.out.println("menuSelected");
+//                // TODO: still opens menu even when you hover over from different menu option - fix this
+//                menu.doClick();
+//                item.doClick();
+//            }
+//
+//            @Override
+//            public void menuDeselected(MenuEvent e) {
+//                System.out.println("menuDeselected");
+//            }
+//
+//            @Override
+//            public void menuCanceled(MenuEvent e) {
+//                System.out.println("menuCanceled");
+//            }
+//        });
+
 		return menu;
 	}
     

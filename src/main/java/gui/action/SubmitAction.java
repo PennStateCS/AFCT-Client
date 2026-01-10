@@ -22,6 +22,7 @@ package gui.action;
 
 import java.io.Serializable;
 
+import gui.Globals;
 import gui.deterministic.ConversionPane;
 import gui.environment.Environment;
 import gui.environment.Universe;
@@ -29,10 +30,13 @@ import gui.environment.tag.CriticalTag;
 
 import java.awt.event.ActionEvent;
 
-import javax.swing.JOptionPane;
+import javax.swing.*;
 
 import submission.LegacySubmitDialog;
 import submission.SubmitDialog;
+import submission.SubmitWindow;
+
+import static gui.Globals.positionFrameNearWindow;
 
 /**
  * This is a simple action to submit a JFLAP file
@@ -71,23 +75,53 @@ public class SubmitAction extends RestrictedAction {
 	 *            the action event
 	 */
 	public void actionPerformed(ActionEvent e) {
+        boolean useLessModernSubmissionGui = false;
+
         if (Universe.curProfile.getUseLegacySubmissionGui()) {
-            LegacySubmitDialog d = new LegacySubmitDialog(this.environment);
-            d.setVisible(true);
-        } else {
-            SubmitDialog d = Universe.submitDialogForEnvironment(this.environment);
+            LegacySubmitDialog d = (LegacySubmitDialog) Universe.submitDialogForEnvironment(this.environment);
             if (d == null) {
-                d = new SubmitDialog(this.environment);
-                d.setContentPane(d.getMainPanel());
-                d.pack();
-                d.setLocationRelativeTo(null);
-                d.setResizable(false);
-                d.setVisible(true);
+                d = new LegacySubmitDialog(this.environment);
                 Universe.registerSubmitDialog(this.environment, d);
+                d.setVisible(true);
             } else {
-                d.refreshDialog();
                 d.setVisible(true);
                 d.toFront();
+            }
+        } else {
+            if (useLessModernSubmissionGui) {
+                SubmitDialog d = (SubmitDialog) Universe.submitDialogForEnvironment(this.environment);
+                if (d == null) {
+                    d = new SubmitDialog(this.environment);
+                    Universe.registerSubmitDialog(this.environment, d);
+                    d.setContentPane(d.getMainPanel());
+                    d.pack();
+                    d.setLocationRelativeTo(null);
+                    d.setResizable(false);
+                    d.refreshDialog();
+                    d.setVisible(true);
+                } else {
+                    d.refreshDialog();
+                    d.setVisible(true);
+                    d.toFront();
+                }
+            } else {
+                SubmitWindow d = (SubmitWindow) Universe.submitDialogForEnvironment(this.environment);
+                if (d == null) {
+                    d = Globals.sessionHandler.createNewSubmitWindow(environment);
+                    Universe.registerSubmitDialog(this.environment, d);
+                    d.pack();
+                    //d.setLocationRelativeTo(null);
+                    positionFrameNearWindow(d, Globals.Position.RIGHT, Universe.frameForEnvironment(environment));
+                    //d.setResizable(false);
+                    d.displaySubmitWindow();
+//                    d.refreshDialog();
+//                    d.setVisible(true);
+                } else {
+                    d.displaySubmitWindow();
+//                    d.refreshDialog();
+//                    d.setVisible(true);
+//                    d.toFront();
+                }
             }
         }
 	}
