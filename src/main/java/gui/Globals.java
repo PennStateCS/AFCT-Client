@@ -15,6 +15,7 @@ import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
 import java.util.ArrayList;
+import java.util.List;
 import java.util.Objects;
 import java.util.prefs.Preferences;
 
@@ -29,7 +30,7 @@ import static java.lang.Math.floor;
  */
 public class Globals {
     public static String testingPath = "src\\main\\resources";
-    public final static String currentVersion = "v" + gui.Globals.class.getPackage().getImplementationVersion();
+    public final static String currentVersion = "v" + Globals.class.getPackage().getImplementationVersion();
     public static final String JUST_NAME = "AFCT ";
     public final static String APP_NAME = JUST_NAME + currentVersion;
     public static final String APP_URL = "https://www.cs.rit.edu/~afct";
@@ -237,9 +238,9 @@ public class Globals {
     }
 
     public enum Position {
-        TOP_LEFT,   TOP,    TOP_RIGHT,
-        LEFT,      CENTER,      RIGHT,
-        BOT_LEFT,   BOT,    BOT_RIGHT,
+        TOP_LEFT, TOP, TOP_RIGHT,
+        LEFT, CENTER, RIGHT,
+        BOT_LEFT, BOT, BOT_RIGHT,
     }
 
     private static int positionNewX(int newX, Position targetPosition, Rectangle frameBounds, Rectangle screenBounds) {
@@ -294,6 +295,21 @@ public class Globals {
         return newX;
     }
 
+    public static Position getOppositePosition(Position position) {
+        return switch (position) {
+            case TOP_LEFT -> Position.BOT_RIGHT;
+            case TOP -> Position.BOT;
+            case TOP_RIGHT -> Position.BOT_LEFT;
+            case LEFT -> Position.RIGHT;
+            case CENTER -> Position.CENTER;
+            case RIGHT -> Position.LEFT;
+            case BOT_LEFT -> Position.TOP_RIGHT;
+            case BOT -> Position.TOP;
+            case BOT_RIGHT -> Position.TOP_LEFT;
+            default -> Position.CENTER;
+        };
+    }
+
     private static class WindowFit {
         public int x;
         public int y;
@@ -301,9 +317,25 @@ public class Globals {
         public int xDiff;
         public int yDiff;
 
+        public boolean forceToTarget = false;
+
         public WindowFit(int x, int y) {
             this.x = x;
             this.y = y;
+        }
+
+        public WindowFit(int x, int y, int dx, int dy) {
+            this.x = dx;
+            this.y = dy;
+            this.xDiff = dx - x;
+            this.yDiff = dy - y;
+        }
+
+        public WindowFit(WindowFit oldFit, int x, int y) {
+            this.x = x;
+            this.y = y;
+            this.xDiff = x - oldFit.x;
+            this.yDiff = y - oldFit.y;
         }
 
         public boolean isSmallXChange() {
@@ -314,9 +346,32 @@ public class Globals {
             return abs(yDiff) <= positioningFudgeFactor;
         }
 
+        public boolean isGoodFit() {
+            return isSmallXChange() && isSmallYChange();
+        }
     }
 
-    private static Point fitToScreen(int dx, int dy, Rectangle frameBounds, Rectangle screenBounds) {
+    private static WindowFit getBestFit(List<WindowFit> fits) {
+        WindowFit bestFit = null;
+        double minDiag = Double.MAX_VALUE;
+
+        double diag;
+        for (WindowFit fit : fits) {
+            diag = Math.sqrt((fit.xDiff * fit.xDiff) + (fit.yDiff * fit.yDiff));
+            if (diag < minDiag) {
+                minDiag = diag;
+                bestFit = fit;
+            }
+        }
+        return bestFit;
+    }
+
+    private static WindowFit fitToScreen(int dx, int dy, Rectangle frameBounds, Rectangle screenBounds) {
+        // Avoid being placed off the edge of the screen:
+        int x = dx;
+        int y = dy;
+
+        // bottom
         if (dy + frameBounds.height > screenBounds.y + screenBounds.height) {
             dy = screenBounds.y + screenBounds.height - frameBounds.height;
         }
@@ -332,54 +387,55 @@ public class Globals {
         if (dx < screenBounds.x) {
             dx = screenBounds.x;
         }
-        return new Point(dx, dy);
+        return new WindowFit(x, y, dx, dy);
     }
 
-    private static Point positionFrame(JFrame window, Position targetPosition) {
+    private static WindowFit fitToScreen(WindowFit windowFit, Rectangle frameBounds, Rectangle screenBounds) {
+        return fitToScreen(windowFit.x, windowFit.y, frameBounds, screenBounds);
+    }
+
+    private static WindowFit positionFrame(JFrame window, JFrame frame, Position targetPosition) {
         Rectangle windowBounds = window.getBounds();
+        Rectangle frameBounds = frame.getBounds();
 
         int dx = window.getX();
         int dy = window.getY();
 
         Position tPos = targetPosition;
         if (tPos == Position.TOP_LEFT || tPos == Position.TOP || tPos == Position.TOP_RIGHT) {
-            dy += windowBounds.height;
+            dy -= frameBounds.height;
         } else if (tPos == Position.BOT_LEFT || tPos == Position.BOT || tPos == Position.BOT_RIGHT) {
-            dy -= windowBounds.height;
+            dy += windowBounds.height;
         }
 
         if (tPos == Position.TOP_LEFT || tPos == Position.LEFT || tPos == Position.BOT_LEFT) {
-            dx -= windowBounds.width;
+            dx -= frameBounds.width;
         } else if (tPos == Position.TOP_RIGHT || tPos == Position.RIGHT || tPos == Position.BOT_RIGHT) {
             dx += windowBounds.width;
         }
 
-        return new Point(dx, dy);
+        return new WindowFit(dx, dy);
     }
 
-    private static boolean tryFitPosition(JFrame frame, Position targetPosition, JFrame window, Rectangle screenBounds, boolean forceToTarget) {
+    private static WindowFit tryFitPosition(JFrame frame, Position targetPosition, JFrame window, Rectangle screenBounds, boolean forceToTarget) {
         Rectangle frameBounds = frame.getBounds();
 
         // Try to position frame at targetPosition
-        Point dPoint = positionFrame(window, targetPosition);
-        int dx = dPoint.x;
-        int dy = dPoint.y;
+        WindowFit dPoint = positionFrame(window, frame, targetPosition);
 
         // Avoid being placed off the edge of the screen:
-        dPoint = fitToScreen(dx, dy, frameBounds, screenBounds);
-        boolean isSmallXChange = abs(dx - dPoint.x) <= positioningFudgeFactor;
-        boolean isSmallYChange = abs(dy - dPoint.y) <= positioningFudgeFactor;
-        if (forceToTarget || (isSmallXChange && isSmallYChange)) {
-            frame.setLocation(dx, dy);
-            return true;
+        dPoint = fitToScreen(dPoint, frameBounds, screenBounds);
+        if (forceToTarget || dPoint.isGoodFit()) {
+            dPoint.forceToTarget = true;
+            //frame.setLocation(dPoint.x, dPoint.y);
+            return dPoint;
         }
-        return false;
+        return dPoint;
     }
 
-    private static boolean tryFitPosition(JFrame frame, Position targetPosition, JFrame window, Rectangle screenBounds) {
+    private static WindowFit tryFitPosition(JFrame frame, Position targetPosition, JFrame window, Rectangle screenBounds) {
         return tryFitPosition(frame, targetPosition, window, screenBounds, false);
     }
-
 
 
     public static void positionFrameNearWindow(JFrame frame, Position targetPosition, JFrame window, boolean forceToTarget) {
@@ -391,7 +447,7 @@ public class Globals {
         boolean validX = false;
         boolean validY = false;
         Rectangle screenBounds = null;
-        Rectangle frameBounds = frame.getBounds();
+        Rectangle windowBounds = window.getBounds();
 
         // get the bounds of each screen the device has
         // Determine which screen the window is on
@@ -399,12 +455,12 @@ public class Globals {
             screenBounds = device.getDefaultConfiguration().getBounds();
 
             // LEFT EDGE: check if the left edge of the window is on this screen
-            if ((frameBounds.x >= screenBounds.x) && (frameBounds.x <= screenBounds.x + screenBounds.width)) {
+            if ((windowBounds.x >= screenBounds.x) && (windowBounds.x <= screenBounds.x + screenBounds.width)) {
                 validX = true;
             }
 
             // TOP EDGE: check if the top edge of the  window is on this screen
-            if ((frameBounds.y >= screenBounds.y) && (frameBounds.y <= screenBounds.y + screenBounds.height)) {
+            if ((windowBounds.y >= screenBounds.y) && (windowBounds.y <= screenBounds.y + screenBounds.height)) {
                 validY = true;
             }
 
@@ -418,37 +474,27 @@ public class Globals {
         }
 
         // Try to position frame at targetPosition
-        Point dPoint = positionFrame(window, targetPosition);
-        int dx = dPoint.x;
-        int dy = dPoint.y;
+        WindowFit targetFit = tryFitPosition(frame, targetPosition, window, screenBounds, forceToTarget);
+        WindowFit backupFit;
+        WindowFit bestFit = targetFit;
 
-        // Avoid being placed off the edge of the screen:
-        dPoint = fitToScreen(dx, dy, frameBounds, screenBounds);
-        boolean isSmallXChange = abs(dx - dPoint.x) <= positioningFudgeFactor;
-        boolean isSmallYChange = abs(dy - dPoint.y) <= positioningFudgeFactor;
-
-        if (forceToTarget || (isSmallXChange && isSmallYChange)) {
-            dx = dPoint.x;
-            dy = dPoint.y;
-            frame.setLocation(dx, dy);
+        if (forceToTarget || targetFit.isGoodFit()) {
+            frame.setLocation(targetFit.x, targetFit.y);
             return;
-        } else if (!isSmallXChange && !isSmallYChange) {
-            switch (targetPosition) {
-                case CENTER -> {
-                    frame.setLocationRelativeTo(window);
-                    return;
-                }
-                case TOP_LEFT -> {
-                    tryFitPosition(frame, targetPosition, window, screenBounds);
-                }
+        } else {
+            // TODO: include more backup fits, especially ones that are more intelligently chosen
+            backupFit = tryFitPosition(frame, getOppositePosition(targetPosition), window, screenBounds);
+            if (backupFit.isGoodFit()) {
+                bestFit = backupFit;
+            } else {
+                ArrayList<WindowFit> bestFits = new ArrayList<>();
+                bestFits.add(targetFit);
+                bestFits.add(backupFit);
+                bestFit = getBestFit(bestFits);
             }
-
         }
 
-        dx = dPoint.x;
-        dy = dPoint.y;
-
-        frame.setLocation(dx, dy);
+        frame.setLocation(bestFit.x, bestFit.y);
     }
 
     public static void positionFrameNearWindow(JFrame frame, Position targetPosition, JFrame window) {

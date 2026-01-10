@@ -772,7 +772,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             public void actionPerformed(ActionEvent e) {
                 JFrame automataFrame = Universe.frameForEnvironment(environment);
 
-                positionFrameNearWindow(automataFrame, Position.RIGHT, submitWindow);
+                // TODO: should this be LEFT OR RIGHT?
+                //  - maybe should add an option to the prefs menu that lets you choose any Position?
+                positionFrameNearWindow(automataFrame, Position.LEFT, submitWindow);
 //                automataFrame.setLocationRelativeTo(submitWindow);
 //
 //                int newX = submitWindow.getX() + submitWindow.getWidth();
