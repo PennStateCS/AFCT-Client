@@ -667,7 +667,7 @@ public class SessionHandler {
         model.addElement(new ProblemItem("",  SubmitWindow.PLACEHOLDER));
         for (Map<String, Object> problem : problemList) {
             Boolean isSolved = (Boolean) problem.get("solved");
-            String instTitle = String.format("%s %s", problem.get("title"), isSolved ? "\u2714" : "");
+            String instTitle = String.format("%s %s", problem.get("title"), isSolved ? "\u2714" : " ");
             model.addElement(new ProblemItem(problem.get("id").toString(), instTitle, problem.get("description").toString()));
         }
         return model;
