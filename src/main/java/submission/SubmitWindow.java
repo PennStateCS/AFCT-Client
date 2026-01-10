@@ -52,7 +52,13 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private String resultText = "";
     private JScrollPane resultScrollPane;
 
+    private JTextPane feedbackTextPane;
+    private JLabel feedbackLabel;
+
     private JScrollPane scrollPane;
+
+    private String feedbackPrefix = "Feedback: ";
+
 
     // Tracking for optimization
     private String selectedCourseID = null;
@@ -64,7 +70,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     // Event guarding
     public volatile boolean isPopulating = false;
-
     private boolean populateCoursesOnceLoggedIn = false;
 
     public SubmitWindow(Environment environment) {
@@ -90,6 +95,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         result = new JTextPane();
         result.setContentType("text/html");
         resultScrollPane = new JScrollPane(result);
+
+        feedbackTextPane = new JTextPane();
+        feedbackTextPane.setContentType("text/html");
+        feedbackLabel = new JLabel("<html> </html>");
 
         setupGui();
         populateGui();
@@ -136,6 +145,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         resultText += (line.endsWith("<br>") ? line : (line + "<br>"));
         result.setText(resultText);
         result.setCaretPosition(result.getDocument().getLength());
+
+        feedbackTextPane.setText(line);
+        feedbackTextPane.setCaretPosition(feedbackTextPane.getDocument().getLength());
+
+        if (line.startsWith(feedbackPrefix)) {
+            feedbackLabel.setText("<html>" + line.substring(0, line.length() - feedbackPrefix.length()) + "</html>");
+        } else {
+            feedbackLabel.setText("<html>" + line + "</html>");
+        }
     }
 
     public void toggleSubmitButton(boolean enabled) {
@@ -258,11 +276,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         c.insets = new Insets(vrtInset + 5, hozInset, vrtInset, hozInset);
         contentPane.add(submitButton, c);
 
-        // Add result to contentPane
-        result.setBorder(new LineBorder(new Color(210, 210, 210)));
-        c.gridy = y++;
-        // TODO: probably remove this before pushing to students?
-        contentPane.add(createInputPanel(resultScrollPane, "Result", false), c);
+        addFeedbackSection(c, y, vrtInset, hozInset);
     }
 
     private JPanel createCurrentFilePanel() {
@@ -292,6 +306,42 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         filePanel.add(viewCurrentButton, c);
 
         return filePanel;
+    }
+
+    private void addFeedbackSection(GridBagConstraints c, int y, int vrtInset, int hozInset) {
+        // Add result to contentPane
+        result.setBorder(new LineBorder(new Color(210, 210, 210)));
+        c.gridy = y++;
+        //contentPane.add(createInputPanel(resultScrollPane, "Result", false), c);
+
+        // Add feedbackTextPane to contentPane
+        c.insets = new Insets(vrtInset, hozInset, vrtInset, hozInset);
+        feedbackTextPane.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+        feedbackTextPane.setBackground(Color.WHITE);
+        //contentPane.add(createInputPanel(feedbackTextPane, "Feedback", false), c);
+
+
+        // TODO: maybe eventually switch to feedbackTextPane so that the feedback message can be copy and pasted
+        // Stylize feedbackLabel
+        feedbackLabel.setBackground(Color.WHITE);
+        //changeSize(feedbackLabel, 14);
+        changeSize(feedbackLabel, 16);
+        unBoldFont(feedbackLabel);
+
+        // create feedbackLabelPanel
+        JPanel feedbackLabelPanel = new JPanel(new GridBagLayout());
+        feedbackLabelPanel.setBackground(Color.WHITE);
+        feedbackLabelPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+        // Add feedbackLabel to feedbackLabelPanel
+        GridBagConstraints c2 = setConstraints(1, 1, 0, 0);
+        c2.insets = new Insets(6, 12, 6, 12);
+        //feedbackLabelPanel.add(feedbackLabel, c);
+        c2.insets = new Insets(10, 12, 10, 12);
+        feedbackLabelPanel.add(feedbackLabel, c2);
+
+        // Add feedbackLabelPanel to contentPane
+        c.gridy = y++;
+        contentPane.add(createInputPanel(feedbackLabelPanel, "Feedback", false), c);
     }
 
     private <T> JPanel createComboBoxWithRefreshPanel(JComboBox<T> comboBox, JButton refreshButton, String headerText) {
@@ -715,14 +765,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             //publish("Grade: " + submission.get("grade"));
                             String feedback = (String) submission.get("feedback");
                             boolean correct = (boolean) submission.get("correct");
-                            publish("Feedback: " + colorMessage(feedback, correct));
+                            publish(feedbackPrefix + colorMessage(feedback, correct));
                             if (correct) {
                                 Globals.sessionHandler.populateProblems(submitWindow, assignment, true);
                             }
                         } catch (IOException ex) {
                             publish(colorHTMLErrorMessage("Submission failed: " + ex.getMessage()));
                         }
-                        publish("");
+                        //publish("");
                         return null;
                     }
 
