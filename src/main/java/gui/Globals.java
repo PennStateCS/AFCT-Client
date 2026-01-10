@@ -19,6 +19,7 @@ import java.util.Objects;
 import java.util.prefs.Preferences;
 
 import static gui.editor.IconKeeper.getRefreshIcon;
+import static java.lang.Math.abs;
 import static java.lang.Math.floor;
 
 /**
@@ -40,6 +41,8 @@ public class Globals {
 
     private static final String htmlProperty = "html.disable";
     public final static String UPDATE = "UPDATE";
+
+    private static int positioningFudgeFactor = 20;
 
     public final static Preferences preferences = Preferences.userNodeForPackage(Globals.class);
     public static ArrayList<ExtensionPopup> popups = new ArrayList<>();
@@ -291,12 +294,37 @@ public class Globals {
         return newX;
     }
 
+
+    private static Point fitToScreen(int dx, int dy, Rectangle frameBounds, Rectangle screenBounds) {
+        if (dy + frameBounds.height > screenBounds.y + screenBounds.height) {
+            dy = screenBounds.y + screenBounds.height - frameBounds.height;
+        }
+        // top
+        if (dy < screenBounds.y) {
+            dy = screenBounds.y;
+        }
+        // right
+        if (dx + frameBounds.width > screenBounds.x + screenBounds.width) {
+            dx = screenBounds.x + screenBounds.width - frameBounds.width;
+        }
+        // left
+        if (dx < screenBounds.x) {
+            dx = screenBounds.x;
+        }
+        return new Point(dx, dy);
+    }
+
+    private static Point positionFrame() {
+        return new Point(0, 0);
+    }
+
     public static void positionFrameNearWindow(JFrame frame, Position targetPosition, JFrame window, boolean forceToTarget) {
         if (targetPosition == Position.CENTER) {
             frame.setLocationRelativeTo(window);
         }
 
         Rectangle frameBounds = frame.getBounds();
+        Rectangle windowBounds = window.getBounds();
 
         // determine which screen the frame should appear on
         Dimension maxBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds().getSize();
@@ -335,35 +363,29 @@ public class Globals {
 
         Position tPos = targetPosition;
         if (tPos == Position.TOP_LEFT || tPos == Position.TOP || tPos == Position.TOP_RIGHT) {
-            dy += frameBounds.height;
+            dy += windowBounds.height;
         } else if (tPos == Position.BOT_LEFT || tPos == Position.BOT || tPos == Position.BOT_RIGHT) {
-            dy -= frameBounds.height;
+            dy -= windowBounds.height;
         }
 
         if (tPos == Position.TOP_LEFT || tPos == Position.LEFT || tPos == Position.BOT_LEFT) {
-            dx -= frameBounds.width;
+            dx -= windowBounds.width;
         } else if (tPos == Position.TOP_RIGHT || tPos == Position.RIGHT || tPos == Position.BOT_RIGHT) {
-            dx += frameBounds.width;
+            dx += windowBounds.width;
         }
 
         // Avoid being placed off the edge of the screen:
+        Point dPoint = fitToScreen(dx, dy, frameBounds, screenBounds);
+        boolean isSmallXChange = abs(dx - dPoint.x) <= positioningFudgeFactor;
+        boolean isSmallYChange = abs(dy - dPoint.y) <= positioningFudgeFactor;
 
-        // bottom
-        if (dy + frameBounds.height > screenBounds.y + screenBounds.height) {
-            dy = screenBounds.y + screenBounds.height - frameBounds.height;
+        if (forceToTarget || (isSmallXChange && isSmallYChange)) {
+            dx = dPoint.x;
+            dy = dPoint.y;
         }
-        // top
-        if (dy < screenBounds.y) {
-            dy = screenBounds.y;
-        }
-        // right
-        if (dx + frameBounds.width > screenBounds.x + screenBounds.width) {
-            dx = screenBounds.x + screenBounds.width - frameBounds.width;
-        }
-        // left
-        if (dx < screenBounds.x) {
-            dx = screenBounds.x;
-        }
+
+        dx = dPoint.x;
+        dy = dPoint.y;
 
         frame.setLocation(dx, dy);
     }

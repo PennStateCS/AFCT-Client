@@ -150,7 +150,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         feedbackTextPane.setCaretPosition(feedbackTextPane.getDocument().getLength());
 
         if (line.startsWith(feedbackPrefix)) {
-            feedbackLabel.setText("<html>" + line.substring(0, line.length() - feedbackPrefix.length()) + "</html>");
+            feedbackLabel.setText("<html>" + line.substring(feedbackPrefix.length() - 1, line.length()) + "</html>");
         } else {
             feedbackLabel.setText("<html>" + line + "</html>");
         }
