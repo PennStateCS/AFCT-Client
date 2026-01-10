@@ -36,6 +36,8 @@ import submission.LegacySubmitDialog;
 import submission.SubmitDialog;
 import submission.SubmitWindow;
 
+import static gui.Globals.positionFrameNearWindow;
+
 /**
  * This is a simple action to submit a JFLAP file
  *
@@ -108,7 +110,8 @@ public class SubmitAction extends RestrictedAction {
                     d = Globals.sessionHandler.createNewSubmitWindow(environment);
                     Universe.registerSubmitDialog(this.environment, d);
                     d.pack();
-                    d.setLocationRelativeTo(null);
+                    //d.setLocationRelativeTo(null);
+                    positionFrameNearWindow(d, Globals.Position.RIGHT, Universe.frameForEnvironment(environment));
                     //d.setResizable(false);
                     d.displaySubmitWindow();
 //                    d.refreshDialog();
