@@ -853,7 +853,13 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             boolean correct = (boolean) submission.get("correct");
                             publish(feedbackPrefix + colorMessage(feedback, correct));
                             if (correct) {
-                                Globals.sessionHandler.populateProblems(submitWindow, assignment, true);
+                                // Keep submitted problem selected if the "All Problems" radio button is selected
+                                if (allProblems.isSelected()) {
+                                    Globals.sessionHandler.populateProblems(submitWindow, assignment, true, true);
+                                } else {
+                                    selectedProblemID = null;
+                                    Globals.sessionHandler.populateProblems(submitWindow, assignment, true);
+                                }
                             }
                         } catch (IOException ex) {
                             publish(colorHTMLErrorMessage("Submission failed: " + ex.getMessage()));

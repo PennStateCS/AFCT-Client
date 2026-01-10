@@ -580,9 +580,13 @@ public class SessionHandler {
         }.execute();
     }
 
-    public void populateProblems(SubmitWindow submitWindow, AssignmentItem selectedAssignment, boolean forceReload) {
+    public void populateProblems(SubmitWindow submitWindow, AssignmentItem selectedAssignment, boolean forceReload, boolean avoidComboBoxReset) {
         // Disable and reset ProblemBox
-        submitWindow.disableAndResetTargetComboBox(PROBLEM);
+        if (avoidComboBoxReset) {
+            submitWindow.toggleTargetComboBox(PROBLEM, false);
+        } else {
+            submitWindow.disableAndResetTargetComboBox(PROBLEM);
+        }
 
         if (assignmentToProblemMap.containsKey(selectedAssignment.id) && !forceReload) {
             if (submitWindow.allProblems.isSelected()) {
@@ -595,6 +599,10 @@ public class SessionHandler {
         } else {
             loadProblemsAsync(selectedAssignment);
         }
+    }
+
+    public void populateProblems(SubmitWindow submitWindow, AssignmentItem selectedAssignment, boolean forceReload) {
+        populateProblems(submitWindow, selectedAssignment, forceReload, false);
     }
 
     public void populateProblems(SubmitWindow submitWindow, AssignmentItem selectedAssignment) {
