@@ -233,6 +233,145 @@ public class Globals {
         }
     }
 
+    public enum Position {
+        TOP_LEFT,   TOP,    TOP_RIGHT,
+        LEFT,      CENTER,      RIGHT,
+        BOT_LEFT,   BOT,    BOT_RIGHT,
+    }
+
+    private static int positionNewX(int newX, Position targetPosition, Rectangle frameBounds, Rectangle screenBounds) {
+        Position tPos = targetPosition;
+        if (tPos == Position.TOP_LEFT || tPos == Position.LEFT || tPos == Position.BOT_LEFT) {
+            newX -= frameBounds.width;
+        } else if (tPos == Position.TOP_RIGHT || tPos == Position.RIGHT || tPos == Position.BOT_RIGHT) {
+            newX += frameBounds.width;
+        }
+
+        int xMod;
+        if (newX > screenBounds.width) {
+            xMod = newX % screenBounds.width;
+        } else if (newX < -screenBounds.width) {
+            xMod = -((-newX) % screenBounds.width);
+        } else {
+            xMod = newX;
+        }
+
+        if (xMod + frameBounds.width > screenBounds.width) {
+            // Check if frame runs partly off the right side of the screen
+
+            int temp = newX - xMod;
+            // newX = xMod = 3
+            // screenBounds.width = 5
+            // xMod + frameBounds.width = 6
+            // frameBounds.width = 3
+            // newX = newX + (screenBounds.width - (xMod + frameBounds.width))
+            // newX = 3 + (5 - (3 + 3))
+            // newX = 3 + (5 - 6)
+            // newX = 3 -1
+            // newX = 2
+
+            newX = newX + (screenBounds.width - (xMod + frameBounds.width));
+        } else if (xMod < screenBounds.width) {
+            // Check if frame runs partly off the left side of the screen
+
+            int temp = newX - xMod;
+            // newX = xMod = -1
+            // screenBounds.width = 5
+            // xMod + frameBounds.width = 6
+            // frameBounds.width = 3
+            // newX = newX + (screenBounds.width - (xMod + frameBounds.width))
+            // newX = 3 + (5 - (3 + 3))
+            // newX = 3 + (5 - 6)
+            // newX = 3 -1
+            // newX = 2
+
+            newX = newX + (screenBounds.width - (xMod + frameBounds.width));
+        }
+
+        return newX;
+    }
+
+    public static void positionFrameNearWindow(JFrame frame, Position targetPosition, JFrame window, boolean forceToTarget) {
+        if (targetPosition == Position.CENTER) {
+            frame.setLocationRelativeTo(window);
+        }
+
+        Rectangle frameBounds = frame.getBounds();
+
+        // determine which screen the frame should appear on
+        Dimension maxBounds = GraphicsEnvironment.getLocalGraphicsEnvironment().getMaximumWindowBounds().getSize();
+        int width = maxBounds.width;
+        int height = maxBounds.height;
+        boolean validX = false;
+        boolean validY = false;
+        Rectangle screenBounds = null;
+
+        // get the bounds of each screen the device has
+        // Determine which screen the window is on
+        for (GraphicsDevice device : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
+            screenBounds = device.getDefaultConfiguration().getBounds();
+
+            // LEFT EDGE: check if the left edge of the window is on this screen
+            if ((frameBounds.x >= screenBounds.x) && (frameBounds.x <= screenBounds.x + screenBounds.width)) {
+                validX = true;
+            }
+
+            // TOP EDGE: check if the top edge of the  window is on this screen
+            if ((frameBounds.y >= screenBounds.y) && (frameBounds.y <= screenBounds.y + screenBounds.height)) {
+                validY = true;
+            }
+
+            if (validX && validY) {
+                break;
+            }
+        }
+        if (screenBounds == null) {
+            frame.setLocationRelativeTo(window);
+            return;
+        }
+
+        int dx = window.getX();
+        int dy = window.getY();
+
+        Position tPos = targetPosition;
+        if (tPos == Position.TOP_LEFT || tPos == Position.TOP || tPos == Position.TOP_RIGHT) {
+            dy += frameBounds.height;
+        } else if (tPos == Position.BOT_LEFT || tPos == Position.BOT || tPos == Position.BOT_RIGHT) {
+            dy -= frameBounds.height;
+        }
+
+        if (tPos == Position.TOP_LEFT || tPos == Position.LEFT || tPos == Position.BOT_LEFT) {
+            dx -= frameBounds.width;
+        } else if (tPos == Position.TOP_RIGHT || tPos == Position.RIGHT || tPos == Position.BOT_RIGHT) {
+            dx += frameBounds.width;
+        }
+
+        // Avoid being placed off the edge of the screen:
+
+        // bottom
+        if (dy + frameBounds.height > screenBounds.y + screenBounds.height) {
+            dy = screenBounds.y + screenBounds.height - frameBounds.height;
+        }
+        // top
+        if (dy < screenBounds.y) {
+            dy = screenBounds.y;
+        }
+        // right
+        if (dx + frameBounds.width > screenBounds.x + screenBounds.width) {
+            dx = screenBounds.x + screenBounds.width - frameBounds.width;
+        }
+        // left
+        if (dx < screenBounds.x) {
+            dx = screenBounds.x;
+        }
+
+        frame.setLocation(dx, dy);
+    }
+
+    public static void positionFrameNearWindow(JFrame frame, Position targetPosition, JFrame window) {
+        positionFrameNearWindow(frame, targetPosition, window, false);
+    }
+
     public static void changeSize(Component component, int fontSize) {
         component.setFont(component.getFont().deriveFont((float) fontSize));
     }

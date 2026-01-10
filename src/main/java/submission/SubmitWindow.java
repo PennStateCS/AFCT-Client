@@ -766,9 +766,26 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     }
 
     private void handlers_file() {
+        SubmitWindow submitWindow = this;
         viewCurrentButton.addActionListener(new ActionListener() {
             @Override
             public void actionPerformed(ActionEvent e) {
+                JFrame automataFrame = Universe.frameForEnvironment(environment);
+
+                positionFrameNearWindow(automataFrame, Position.RIGHT, submitWindow);
+//                automataFrame.setLocationRelativeTo(submitWindow);
+//
+//                int newX = submitWindow.getX() + submitWindow.getWidth();
+//                int newY = submitWindow.getY();
+//                automataFrame.setLocation(newX, newY);
+
+
+
+                //automataFrame.setLocationRelativeTo(automataFrame);
+
+
+
+
                 Universe.frameForEnvironment(environment).toFront();
             }
         });
