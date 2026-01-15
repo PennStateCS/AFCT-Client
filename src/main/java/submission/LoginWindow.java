@@ -32,6 +32,8 @@ public class LoginWindow extends JFrame {
     private String resultText = "";
     private JScrollPane resultScrollPane;
 
+    private JLabel loginResultLabel;
+
 
     private JScrollPane scrollPane;
 
@@ -47,6 +49,10 @@ public class LoginWindow extends JFrame {
 
         result = new JTextPane();
         resultScrollPane = new JScrollPane(result);
+
+        // TODO: find out how many spaces to add here so that the window does not need to resize when other messages apper here,
+        //  also do this for SubmitWindow.java
+        loginResultLabel = new JLabel("<html>               </html>");
 
         setupGui();
         populateGui(sessionHandler);
@@ -72,10 +78,12 @@ public class LoginWindow extends JFrame {
         this.submitWindowToShow = submitWindowToShow;
     }
 
-    private void appendResult(String line) {
+    public void appendResult(String line) {
         resultText += (line.endsWith("\n") ? line : (line + "\n"));
         result.setText(resultText);
         result.setCaretPosition(result.getDocument().getLength());
+
+        loginResultLabel.setText("<html>" + line + "</html>");
     }
 
     private void setupGui() {
@@ -125,10 +133,28 @@ public class LoginWindow extends JFrame {
         contentPane.add(loginButton, c);
 
         // Add result to contentPane
-        result.setBorder(new LineBorder(new Color(210, 210, 210)));
+//        result.setBorder(new LineBorder(new Color(210, 210, 210)));
+//        c.gridy = y++;
+//        // TODO: probably remove this before pushing to students?
+//        contentPane.add(resultScrollPane, c);
+
+        // Stylize loginResultLabel
+        loginResultLabel.setBackground(Color.WHITE);
+        changeSize(loginResultLabel, 16);
+        unBoldFont(loginResultLabel);
+
+        // create loginResultLabelPanel
+        JPanel loginResultLabelPanel = new JPanel(new GridBagLayout());
+        loginResultLabelPanel.setBackground(Color.WHITE);
+        loginResultLabelPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+        // Add loginResultLabel to loginResultLabelPanel
+        GridBagConstraints c2 = setConstraints(1, 1, 0, 0);
+        c2.insets = new Insets(10, 12, 10, 12);
+        loginResultLabelPanel.add(loginResultLabel, c2);
+
+        // Add loginResultLabelPanel to contentPane
         c.gridy = y++;
-        // TODO: probably remove this before pushing to students?
-        contentPane.add(resultScrollPane, c);
+        contentPane.add(createInputPanel(loginResultLabelPanel, "Result", false), c);
     }
 
     public static JPanel createInputPanel(Component component, String headerText, boolean setMargin) {

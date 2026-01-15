@@ -1,6 +1,8 @@
 package submission;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonSyntaxException;
 import gui.Globals;
 
 import java.io.*;
@@ -11,6 +13,8 @@ import java.time.Instant;
 import java.util.List;
 import java.util.Map;
 import java.util.prefs.Preferences;
+
+import static gui.Globals.stringToJson;
 
 public class AFCTClient {
     private static final ObjectMapper MAPPER = new ObjectMapper();
@@ -198,6 +202,15 @@ public class AFCTClient {
         String pretty = tryPretty(body);
         System.err.println("HTTP ERROR " + status + " on " + label);
         System.err.println("Body:\n" + pretty);
+        try {
+            JsonObject jsonBody = stringToJson(body);
+            if (jsonBody.has("error")) {
+                return new IOException(jsonBody.get("error").getAsString());
+            }
+        } catch (JsonSyntaxException e) {
+            return new IOException("HTTP " + status + " on " + label);
+        }
+
         return new IOException("HTTP " + status + " on " + label);
     }
 

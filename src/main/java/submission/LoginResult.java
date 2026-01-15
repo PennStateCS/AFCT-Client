@@ -24,6 +24,6 @@ public class LoginResult {
     }
 
     public static LoginResult getErrorResult(String message) {
-        return new LoginResult(LoginStatus.ERROR, "Authentication error: " + message);
+        return new LoginResult(LoginStatus.ERROR, "Authentication Error: " + message);
     }
 }

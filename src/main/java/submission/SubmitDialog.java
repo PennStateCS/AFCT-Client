@@ -233,7 +233,7 @@ public class SubmitDialog extends JFrame implements ActionListener, SubmissionGU
                                 publish("Authentication failed.");
                             }
                         } catch (IOException ex) {
-                            publish("Authentication error: " + ex.getMessage());
+                            publish("Authentication Error: " + ex.getMessage());
                         }
                         publish("");
                         return null;

@@ -4,6 +4,7 @@ import automata.Automaton;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.google.gson.JsonSyntaxException;
 import com.sun.tools.javac.Main;
 import gui.popups.ExtensionPopup;
 import submission.AFCTClient;
@@ -83,7 +84,7 @@ public class Globals {
         }
     }
 
-    public static JsonObject stringToJson(String jsonString) {
+    public static JsonObject stringToJson(String jsonString) throws JsonSyntaxException {
         JsonElement element = JsonParser.parseString(jsonString);
         return element.getAsJsonObject();
     }

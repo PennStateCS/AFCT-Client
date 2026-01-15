@@ -18,6 +18,7 @@ import java.util.List;
 import java.util.prefs.Preferences;
 
 import static gui.Globals.*;
+import static gui.Globals.colorHTMLErrorMessage;
 import static submission.AFCTClient.fixUrl;
 import static submission.LoginResult.*;
 import static submission.SubmitWindow.ComboBoxTarget.*;
@@ -170,10 +171,14 @@ public class SessionHandler {
                 preferences.put(PREF_SAVED_CREDS_EXPIRE_AFTER, dateFormat.format(calendar.getTime()));
                 return getSuccessResult();
             } else {
+                // Login failed
+                this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
                 this.loggedIn = false;
                 return getFailureResult();
             }
         } catch (IOException ex) {
+            // Connection failed
+            this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
             this.loggedIn = false;
             return getErrorResult(ex.getMessage());
         }
@@ -213,6 +218,8 @@ public class SessionHandler {
                     LoginResult loginResult = login(serverUrl, portText, userEmail, userPassword);
                     if (loginResult.status == LoginResult.LoginStatus.SUCCESS) {
                         return true;
+                    } else {
+                        loginWindow.appendResult(colorHTMLErrorMessage(loginResult.message));
                     }
                 }
             } catch (ParseException ignored) { }
