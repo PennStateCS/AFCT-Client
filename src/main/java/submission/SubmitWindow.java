@@ -850,6 +850,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             publish("Submitted At: " + submission.get("submittedAt"));
                             //publish("Grade: " + submission.get("grade"));
                             String feedback = (String) submission.get("feedback");
+                            if (submission.get("correct") == null) {
+                                //publish(feedbackPrefix + colorHTMLErrorMessage("Error: Invalid feedback given by server!"));
+                                throw new IOException("Invalid feedback given by server!");
+                            }
                             boolean correct = (boolean) submission.get("correct");
                             publish(feedbackPrefix + colorMessage(feedback, correct));
                             if (correct) {
