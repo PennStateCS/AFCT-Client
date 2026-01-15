@@ -549,7 +549,7 @@ public class Globals {
     }
 
     public static String colorHTMLSuccessMessage(String message) {
-        return colorMessage(message, false);
+        return colorMessage(message, true);
     }
 
     public static String colorHTMLErrorMessage(String message) {
