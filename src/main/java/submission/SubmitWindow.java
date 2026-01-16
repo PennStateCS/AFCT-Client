@@ -262,6 +262,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         c.gridy = y++;
         contentPane.add(createComboBoxWithTopRadioButtons(problemBox, problemRefreshButton, problemDetailsPanel, allProblems, uncompletedProblems, "Problem"), c);
 
+        setPointerCursor(assignmentBox);
+        setPointerCursor(problemBox);
+
         // Add current file info
         c.gridy = y++;
         contentPane.add(createCurrentFilePanel(), c);
