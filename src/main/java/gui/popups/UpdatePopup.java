@@ -142,6 +142,7 @@ public class UpdatePopup implements ExtensionPopup {
         for (String element : Arrays.asList(blank, tomorrow, nextWeek, nextUpdate)) {
             remindDropdown.addItem(element);
         }
+        setPointerCursor(remindDropdown);
         remindLaterPanel.add(remindDropdown);
 
         // add remindLaterPanel to contentPane
@@ -187,14 +188,17 @@ public class UpdatePopup implements ExtensionPopup {
         // create buttonPanel
         JPanel buttonPanel = new JPanel(new FlowLayout(FlowLayout.RIGHT));
 
+        // TODO: color buttons like other such menus so that one is like highlighted blue and the other is gray
 
         // add closeButton
         JButton closeButton = new JButton("Close");
+        setPointerCursor(closeButton);
         closeButton.addActionListener(evt -> SwingUtilities.invokeLater(() -> windowListener.windowClosing(null)));
         buttonPanel.add(closeButton);
 
         // add updateButton
         JButton updateButton = new JButton("Update");
+        setPointerCursor(updateButton);
         // TODO: pick color - makeButtonOrange(updateButton);
         updateButton.addActionListener(evt -> {
             SwingUtilities.invokeLater(() -> {
