@@ -11,6 +11,7 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import static gui.Globals.allowHTMLInComponent;
+import static gui.Globals.setPointerCursor;
 
 public class LinkLabel extends JLabel {
     private static final Pattern linkRegex = Pattern.compile("(.*?)(\\[)(.+?)(]\\()(.+?)(\\))(.*?)");
@@ -25,7 +26,7 @@ public class LinkLabel extends JLabel {
         allowHTMLInComponent(this);
 
         LinkLabel link = this;
-        link.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        setPointerCursor(this);
         link.addMouseListener(new MouseAdapter() {
             @Override
             public void mouseClicked(MouseEvent e) {
