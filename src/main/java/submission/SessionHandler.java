@@ -65,7 +65,7 @@ public class SessionHandler {
 
     // Default values
     public static final String defaultServer = "http://localhost";
-    public static final String defaultPort = "3000";
+    public static final String defaultPort = "3001";
     public static final String defaultEmail = "student@example.com";
     public static final String defaultPassword = "";
 
