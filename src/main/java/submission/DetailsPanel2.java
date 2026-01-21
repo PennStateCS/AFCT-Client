@@ -24,11 +24,14 @@ public class DetailsPanel2 extends JPanel {
 
     public void toggle(boolean enable) {
         detailsToggle.setEnabled(enable);
+        if (!enable) {
+            this.toggleDetailsPanel(false);
+        }
     }
 
     public void disableDetailsPanel() {
         detailsToggle.setEnabled(false);
-        toggleDetailsPanel(false);
+        this.toggleDetailsPanel(false);
     }
 
     public void setDetailsText(String text) {
