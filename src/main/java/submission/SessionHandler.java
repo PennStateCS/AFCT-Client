@@ -323,22 +323,13 @@ public class SessionHandler {
                                     submitWindow.courseBox.setSelectedIndex(1);
                                 }
                             }
+                            // Re-enable CourseBox
                             submitWindow.toggleCourseBox(true);
                         }
 
                         // Display number of courses loaded
                         int numCourses = courseList.size();
                         //publish(String.format("Loaded %s %s", numCourses, numCourses == 1 ? "course" : "courses"));
-
-                        // If there is only one course, select it and load the assignments for that course
-                        if (numCourses == 1) {
-                            // TODO: figure this out
-                            //courseBox.setSelectedIndex(1);
-                            //loadAssignmentsAsync();
-//                            for (SubmitWindow submitWindow : submitWindows) {
-//                                submitWindow.appendResult(s);
-//                            }
-                        }
                     } catch (IOException ex) {
                         // TODO: determine why this will sometimes be shown when first opening submit window during a session
                         publish(colorHTMLErrorMessage("Error loading courses: " + ex.getMessage()));
