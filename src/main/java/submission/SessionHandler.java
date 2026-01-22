@@ -302,6 +302,10 @@ public class SessionHandler {
                             courses.put(course.get("id").toString(), course);
                         }
 
+                        // Clear assignment and problem caches
+                        courseToAssignmentMap.clear();
+                        assignmentToProblemMap.clear();
+
                         //TODO: replace with generic method - updateComboBoxesWithoutChangingSelection()
                         // Update course combobox for all SubmitWindows, without changing which course is selected
                         for (SubmitWindow submitWindow : submitWindows) {
@@ -488,6 +492,9 @@ public class SessionHandler {
             } else {
                 submitWindow.assignmentBox.setModel(createAssignmentModelFromList(courseToAssignmentMap.get(selectedCourse.id).get(false)));
             }
+
+            handleComboBoxAutoSelect(submitWindow.assignmentBox);
+
             // Re-enable AssignmentBox
             submitWindow.toggleAssignmentBox(true);
         } else {
@@ -597,6 +604,9 @@ public class SessionHandler {
             } else {
                 submitWindow.problemBox.setModel(createProblemModelFromList(assignmentToProblemMap.get(selectedAssignment.id).get(false)));
             }
+
+            handleComboBoxAutoSelect(submitWindow.problemBox);
+
             // Re-enable ProblemBox
             submitWindow.toggleProblemBox(true);
         } else {
@@ -633,9 +643,32 @@ public class SessionHandler {
             // No item selected, just update model like normal
             comboBox.setModel((ComboBoxModel<DropdownItem>) model);
         }
+
+        // Slight issue, this only runs when data is reloaded from the network
+        // I am adding class to his in other places to account for this
+        handleComboBoxAutoSelect(comboBox);
+
         // Re-enable ComboBox
         submitWindow.toggleTargetComboBox(target, true);
     }
+
+    /**
+     * If there is only one (non-placeholder) item in the ComboBox, select it automatically.
+     *
+     * @param comboBox the combobox to autoselect an item in
+     * @param <T> DropdownItem (CourseItem, AssignmentItem, or ProblemItem)
+     */
+    private <T> void handleComboBoxAutoSelect(JComboBox<T> comboBox) {
+        // If there is only one (non-placeholder) item in the ComboBox, select it automatically
+
+        // Check for comboBox.getSelectedIndex() <= 0 so that this is only triggered if the user has nothing selected
+        // Check for comboBox.getItemCount() == 2, because we expect the ComboBox to have its first element always be a
+        //      PLACEHOLDER element (like "— Select —", so it is obvious to the user that nothing is selected)
+        if (comboBox.getSelectedIndex() <= 0 && comboBox.getItemCount() == 2) {
+            comboBox.setSelectedIndex(1);
+        }
+    }
+
 
     /**
      * Update target combobox for all SubmitWindows, without changing which item is selected
