@@ -318,6 +318,7 @@ public class SessionHandler {
                                 }
                             } else {
                                 submitWindow.courseBox.setModel(createCourseModelFromList(courseList));
+                                // If the user is in only one course, select it automatically
                                 if (courseList.size() == 1) {
                                     submitWindow.courseBox.setSelectedIndex(1);
                                 }
@@ -373,6 +374,10 @@ public class SessionHandler {
 
         if (courseListCache != null && !forceReload) {
             submitWindow.courseBox.setModel(createCourseModelFromList(courseListCache));
+            // If the user is in only one course, select it automatically
+            if (courseListCache.size() == 1) {
+                submitWindow.courseBox.setSelectedIndex(1);
+            }
             // Re-enable CourseBox
             submitWindow.toggleCourseBox(true);
         } else {
