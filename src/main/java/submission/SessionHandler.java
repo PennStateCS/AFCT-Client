@@ -414,6 +414,9 @@ public class SessionHandler {
 
                     // Get assignments based on default parameters
                     for (Map<String, Object> assignment : assignmentList) {
+                        // Remove cached problems for this assignment
+                        assignmentToProblemMap.remove(assignment.get("id").toString());
+
                         // Get the date this assignment is due
                         dueDateStr = assignment.get("dueDate").toString();
                         assert dueDateStr != null;
