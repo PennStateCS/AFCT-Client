@@ -41,6 +41,7 @@ import automata.mealy.MealyMachine;
 import automata.mealy.MooreMachine;
 
 import static gui.Globals.APP_NAME;
+import static gui.Globals.guaranteedPositionFrameOnWindow;
 
 /**
  * The <CODE>NewAction</CODE> handles when the user decides to create some new
@@ -110,8 +111,12 @@ public class NewAction extends RestrictedAction {
 	 *            the object that we are to edit
 	 */
 	private static void createWindow(Serializable object) {
-		DIALOG.setVisible(false);
-		FrameFactory.createFrame(object);
+        DIALOG.setVisible(false);
+        JFrame frame = FrameFactory.createFrame(object);
+        // Position the window over where the dialog used to be.
+        if (frame != null) {
+            guaranteedPositionFrameOnWindow(frame, DIALOG);
+        }
 	}
 
 	/** The dialog box that allows one to create new environments. */

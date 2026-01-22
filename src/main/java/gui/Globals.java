@@ -238,6 +238,41 @@ public class Globals {
         }
     }
 
+    public static void guaranteedPositionFrameOnWindow(JFrame frame, JFrame window, boolean selectScreenByArea) {
+        if (window.isShowing()) {
+            frame.setLocationRelativeTo(window);
+            return;
+        }
+
+        // Determine which screen the frame should appear on
+        Rectangle screenBounds;
+        if (selectScreenByArea) {
+            screenBounds = getScreenBoundsForWindowByArea(window);
+        } else {
+            screenBounds = getScreenBounds(window);
+        }
+        if (screenBounds == null) {
+            frame.setLocationRelativeTo(window);
+            return;
+        }
+
+        Rectangle frameBounds = frame.getBounds();
+
+        Dimension windowSize = window.getSize();
+        //Point windowLocation1 = window.getLocationOnScreen();
+        Point windowLocation = window.getLocation();
+        int dx = windowLocation.x + ((windowSize.width - frameBounds.width) / 2);
+        int dy = windowLocation.y + ((windowSize.height - frameBounds.height) / 2);
+
+        // Avoid being placed off the edge of the screen
+        WindowFit targetFit = fitToScreen(dx, dy, frameBounds, screenBounds);
+        frame.setLocation(targetFit.x, targetFit.y);
+    }
+
+    public static void guaranteedPositionFrameOnWindow(JFrame frame, JFrame window) {
+        guaranteedPositionFrameOnWindow(frame, window, true);
+    }
+
     public enum Position {
         TOP_LEFT, TOP, TOP_RIGHT,
         LEFT, CENTER, RIGHT,
@@ -438,30 +473,32 @@ public class Globals {
         return tryFitPosition(frame, targetPosition, window, screenBounds, false);
     }
 
-
-    public static void positionFrameNearWindow(JFrame frame, Position targetPosition, JFrame window, boolean forceToTarget) {
-        if (targetPosition == Position.CENTER) {
-            frame.setLocationRelativeTo(window);
-        }
-
+    private static Rectangle getScreenBounds(JFrame window) {
         // determine which screen the frame should appear on
         boolean validX = false;
         boolean validY = false;
         Rectangle screenBounds = null;
         Rectangle windowBounds = window.getBounds();
 
-        // get the bounds of each screen the device has
+        // Get the bounds of each screen the device has
         // Determine which screen the window is on
         for (GraphicsDevice device : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
             screenBounds = device.getDefaultConfiguration().getBounds();
+            // Correct for HiDPI / OS display scaling
+            DisplayMode dm = device.getDisplayMode();
+            int screenWidth = dm.getWidth();
+            int screenHeight = dm.getHeight();
+            //screenBounds.width = screenWidth;
+            //screenBounds.height = screenHeight;
 
             // LEFT EDGE: check if the left edge of the window is on this screen
-            if ((windowBounds.x >= screenBounds.x) && (windowBounds.x <= screenBounds.x + screenBounds.width)) {
+            int test = screenBounds.x + screenWidth;
+            if ((windowBounds.x >= screenBounds.x) && (windowBounds.x <= (screenBounds.x + screenWidth))) {
                 validX = true;
             }
 
             // TOP EDGE: check if the top edge of the  window is on this screen
-            if ((windowBounds.y >= screenBounds.y) && (windowBounds.y <= screenBounds.y + screenBounds.height)) {
+            if ((windowBounds.y >= screenBounds.y) && (windowBounds.y <= (screenBounds.y + screenHeight))) {
                 validY = true;
             }
 
@@ -469,6 +506,101 @@ public class Globals {
                 break;
             }
         }
+
+        return screenBounds;
+    }
+
+    private static Rectangle getScreenBoundsForWindowByArea(JFrame window) {
+        // determine which screen the frame should appear on
+        Rectangle screenBounds;
+        Rectangle windowBounds = window.getBounds();
+
+        Rectangle firstScreenBounds = null;
+        Rectangle bestScreenBounds = null;
+        int maxArea = 0;
+
+        // Get the bounds of each screen the device has
+        // Determine which screen the window is on
+        for (GraphicsDevice device : GraphicsEnvironment.getLocalGraphicsEnvironment().getScreenDevices()) {
+            screenBounds = device.getDefaultConfiguration().getBounds();
+
+            if (firstScreenBounds == null) {
+                firstScreenBounds = screenBounds;
+            }
+
+            // Correct for HiDPI / OS display scaling
+            DisplayMode dm = device.getDisplayMode();
+            int screenWidth = dm.getWidth();
+            int screenHeight = dm.getHeight();
+
+            // Get window width on this screen
+            int left;
+            int right;
+            int top;
+            int bottom;
+
+            // LEFT EDGE: check if the left edge of the window is on this screen
+            if ((windowBounds.x >= screenBounds.x) && (windowBounds.x <= (screenBounds.x + screenWidth))) {
+                // set left = the x coordinate of the left edge of the window
+                left = windowBounds.x;
+            } else {
+                // if left edge of the window is NOT on this screen:
+                // set left = the x coordinate of the left edge of the screen
+                left = screenBounds.x;
+            }
+
+            // Check if ANY of the window is on this screen horizontally
+            if (windowBounds.x > screenBounds.x + screenWidth) {
+                // If not, continue to next screen to check
+                continue;
+            }
+
+            // set right to the minimum of the right edge of the window and the right edge of the screen
+            right = Math.min((windowBounds.x + windowBounds.width), (screenBounds.x + screenWidth));
+
+
+            // TOP EDGE: check if the top edge of the  window is on this screen
+            if ((windowBounds.y >= screenBounds.y) && (windowBounds.y <= (screenBounds.y + screenHeight))) {
+                top = windowBounds.y;
+            } else {
+                top = screenBounds.y;
+            }
+
+            // Check if ANY of the window is on this screen vertically
+            if (windowBounds.y > screenBounds.y + screenHeight) {
+                // If not, continue to next screen to check
+                continue;
+            }
+
+            // set bottom to the minimum of the bottom edge of the window and the bottom edge of the screen
+            bottom = Math.min((windowBounds.y + windowBounds.height), (screenBounds.y + screenHeight));
+
+            int width = (right - left);
+            int height = (bottom - top);
+            int area = width * height;
+
+            if (area > maxArea) {
+                maxArea = area;
+                bestScreenBounds = screenBounds;
+            }
+        }
+
+        // Handle the window not being on any screen
+        // TODO: could be improved by using the screen bounds for the screen the window is closest to
+        if (bestScreenBounds == null) {
+            bestScreenBounds = firstScreenBounds;
+        }
+
+        return bestScreenBounds;
+    }
+
+    public static void positionFrameNearWindow(JFrame frame, Position targetPosition, JFrame window, boolean forceToTarget) {
+        if (targetPosition == Position.CENTER) {
+            frame.setLocationRelativeTo(window);
+        }
+
+        // Determine which screen the frame should appear on
+        Rectangle screenBounds = getScreenBounds(window);
         if (screenBounds == null) {
             frame.setLocationRelativeTo(window);
             return;
