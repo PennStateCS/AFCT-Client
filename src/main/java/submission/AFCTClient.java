@@ -113,7 +113,7 @@ public class AFCTClient {
         String body = readBody(conn);
 
         if (status != 200) {
-            throw httpError("GET /api/courses/{id}/assignments", status, body);
+            throw httpError("GET /api/courses/[id]/assignments", status, body);
         }
         return parseJson(body, List.class);
     }
@@ -130,7 +130,7 @@ public class AFCTClient {
         String body = readBody(conn);
 
         if (status != 200) {
-            throw httpError("GET /api/assignments/{id}/problems", status, body);
+            throw httpError("GET /api/assignments/[id]/problems", status, body);
         }
         return parseJson(body, List.class);
     }
