@@ -36,9 +36,7 @@ import java.io.Serializable;
 import java.util.Iterator;
 import java.util.List;
 
-import javax.swing.JFileChooser;
-import javax.swing.JOptionPane;
-import javax.swing.KeyStroke;
+import javax.swing.*;
 import javax.swing.filechooser.FileFilter;
 
 import automata.Automaton;
@@ -82,6 +80,11 @@ public class OpenAction extends RestrictedAction {
 		lastFileOpened = false;
 		try {
 			source = (Component) event.getSource();
+            Component component = source.getParent();
+            if (component instanceof JPopupMenu popupMenu) {
+                component = SwingUtilities.getWindowAncestor(popupMenu.getInvoker());
+            }
+            source = component;
 		} catch (Throwable e) {
 			// Might not be a component, or the event may be null.
 			// Who cares.
@@ -94,6 +97,7 @@ public class OpenAction extends RestrictedAction {
 		fileChooser.setCurrentDirectory(tempFile);
 		fileChooser.rescanCurrentDirectory();
 		fileChooser.setMultiSelectionEnabled(true);
+        fileChooser.setDialogTitle("Open");
 
 		// Open the dialog.
 		int result = fileChooser.showOpenDialog(source);

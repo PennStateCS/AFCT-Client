@@ -234,7 +234,7 @@ public class EnvironmentFrame extends JFrame {
 		} else {
 			Universe.CHOOSER.setFileFilter((FileFilter) encoders.get(0));
 		}
-        if(saveAs) Universe.CHOOSER.setDialogTitle("Save As");
+        Universe.CHOOSER.setDialogTitle("Save As");
 		// Check the name.
 		if (file != null && codec != null) {
 			// Get the suggested file name.
