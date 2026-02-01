@@ -99,6 +99,11 @@ public class OpenAction extends RestrictedAction {
 		fileChooser.setMultiSelectionEnabled(true);
         fileChooser.setDialogTitle("Open");
 
+        // Set file filter so .jff files are shown by default
+        FileFilter spec = new FileNameExtensionFilter("JFF Files", "jff");
+        Universe.CHOOSER.addChoosableFileFilter(spec);
+        Universe.CHOOSER.setFileFilter(spec);
+
 		// Open the dialog.
 		int result = fileChooser.showOpenDialog(source);
 		if (result != JFileChooser.APPROVE_OPTION)
