@@ -21,6 +21,7 @@
 package gui.environment;
 
 import automata.State;
+import automata.Transition;
 import file.Codec;
 import file.ParseException;
 import file.XMLCodec;
@@ -124,9 +125,18 @@ public class AutomatonEnvironment extends Environment {
         myKeeper.saveStatus();
         State[] states = automaton.getStates();
 
+        // Delete selected states (if any)
         for (State state : states) {
             if (state.isSelected()) {
                 automaton.removeState(state);
+            }
+        }
+
+        // Delete selected transitions (if any)
+        Transition[] transitions = automaton.getTransitions();
+        for (Transition transition : transitions) {
+            if (transition.isSelected) {
+                automaton.removeTransition(transition);
             }
         }
     }
