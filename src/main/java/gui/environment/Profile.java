@@ -23,6 +23,7 @@ import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.File;
 import java.io.IOException;
+import java.nio.file.Path;
 import java.util.List;
 import java.util.Map;
 
@@ -128,7 +129,7 @@ public class Profile {
     private JCheckBoxMenuItem legacyUseLegacySubmissionGuiCheckBox;
 
 
-    public String pathToFile = "";
+    public Path pathToFile;
 	
     public void setNumUndo(int nn){
     	undo_num = nn;
@@ -365,7 +366,12 @@ public class Profile {
 		DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
 		DocumentBuilder builder;
 		try {
-			File file = new File(pathToFile);
+            File file;
+            if (pathToFile != null) {
+                file = pathToFile.toFile();
+            } else {
+                file = new File("");
+            }
 			
 			builder = factory.newDocumentBuilder();
 			Document doc = builder.newDocument();
@@ -438,11 +444,10 @@ public class Profile {
      * This method loads from the preferences file, if one exists.
      */
     public void loadPreferences() {
-        String path = getPreferencesFilePath();
-        pathToFile = path;
+        pathToFile = getPreferencesFilePath();
+        File file = pathToFile.toFile();
 
-        if(new File(path).exists()){
-            File file = new File(path);
+        if(file.exists()){
             DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
             DocumentBuilder builder;
             try {

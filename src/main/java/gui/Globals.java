@@ -15,6 +15,9 @@ import java.awt.*;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
+import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
@@ -713,7 +716,7 @@ public class Globals {
         }
     }
 
-    public static String getAFCTDataFolderPath() {
+    public static String OLD_getAFCTDataFolderPath() {
         OSType osType = determineOSType();
         String sep = FileSystems.getDefault().getSeparator();
         String dataFolderPath;
@@ -750,13 +753,79 @@ public class Globals {
         return dataFolderPath;
     }
 
-    public static String getPreferencesFilePath() {
-        String dataFolderPath = getAFCTDataFolderPath();
+    public static String OLD_getPreferencesFilePath() {
+        String dataFolderPath = OLD_getAFCTDataFolderPath();
         String sep = FileSystems.getDefault().getSeparator();
 
         String filepath = dataFolderPath + sep + PREFERENCES_FILE_NAME;
 
         File prefsFile = new File(filepath);
+
+        // TODO: handle being unable to create preferences file
+        try {
+            if (prefsFile.createNewFile()) {
+                print("AFCT-Preferences file created successfully: " + prefsFile.getName());
+            }
+        } catch (IOException e) {
+            errorPrint("An error occurred while creating the file: " + e.getMessage());
+            e.printStackTrace();
+        }
+        return filepath;
+    }
+
+    public static Path getAFCTDataFolderPath() {
+        OSType osType = determineOSType();
+        Path dataFolderPath;
+
+        String homeDir = System.getProperty("user.home");
+
+        //TODO: test if the paths for Mac and Linux actually work
+        switch (osType) {
+            case WINDOWS:
+                dataFolderPath = Paths.get(homeDir, "AppData", "Local", AFCT_DATA_FOLDER_NAME);
+                break;
+            case MAC:
+                dataFolderPath = Paths.get(homeDir, "Library", "Application Support", AFCT_DATA_FOLDER_NAME);
+                break;
+            case LINUX:
+                String xdgConfigHome = System.getenv("XDG_CONFIG_HOME");
+                if (xdgConfigHome != null && !xdgConfigHome.isBlank()) {
+                    dataFolderPath = Paths.get(xdgConfigHome, AFCT_DATA_FOLDER_NAME);
+                } else {
+                    dataFolderPath = Paths.get(homeDir, ".config", AFCT_DATA_FOLDER_NAME);
+                }
+                break;
+            default:
+                String workingDIr = System.getProperty("user.dir");
+                dataFolderPath = Paths.get(workingDIr, AFCT_DATA_FOLDER_NAME);
+                break;
+        }
+
+
+        // Create the AFCT-Data folder if it is missing
+        if (Files.notExists(dataFolderPath)) {
+            try {
+                Files.createDirectories(dataFolderPath);
+                print("AFCT data folder created: " + dataFolderPath);
+            } catch (IOException e) {
+                errorPrint("Error creating AFCT data folder: " + dataFolderPath);
+                errorPrint(e.getMessage());
+            }
+        } else if (!Files.isDirectory(dataFolderPath)) {
+            errorPrint("Error: Path exists but is not a directory: " + dataFolderPath);
+        } else {
+            //print("AFCT data folder already exists: " + dataFolderPath);
+        }
+
+        return dataFolderPath;
+    }
+
+    public static Path getPreferencesFilePath() {
+        Path dataFolderPath = getAFCTDataFolderPath();
+
+        Path filepath = dataFolderPath.resolve(PREFERENCES_FILE_NAME);
+
+        File prefsFile = filepath.toFile();
 
         // TODO: handle being unable to create preferences file
         try {
