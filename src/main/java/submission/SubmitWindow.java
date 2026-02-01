@@ -241,15 +241,21 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         int vrtInset = 15;
         int hozInset = 20;
 
-        // Create headerLabel
-        JLabel headerLabel = new JLabel("AFCT Server - Submit");
-        changeSize(headerLabel, 24);
+//        // Create headerLabel
+//        JLabel headerLabel = new JLabel("AFCT Server - Submit");
+//        changeSize(headerLabel, 24);
+//
+//        // Add headerLabel to contentPane
+//        c = setConstraints(1, 1, 0, y++, GridBagConstraints.NORTH);
+//        c.fill = GridBagConstraints.NONE;
+//        c.insets = new Insets(vrtInset, hozInset, vrtInset, hozInset);
+//        contentPane.add(headerLabel, c);
 
         // Add headerLabel to contentPane
         c = setConstraints(1, 1, 0, y++, GridBagConstraints.NORTH);
-        c.fill = GridBagConstraints.NONE;
+        c.fill = GridBagConstraints.HORIZONTAL;
         c.insets = new Insets(vrtInset, hozInset, vrtInset, hozInset);
-        contentPane.add(headerLabel, c);
+        contentPane.add(createHeaderPanel(vrtInset, hozInset), c);
 
         // Add combo boxes
         c.insets = new Insets(vrtInset, hozInset, 0, hozInset);
@@ -280,6 +286,151 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         contentPane.add(submitButton, c);
 
         addFeedbackSection(c, y, vrtInset, hozInset);
+    }
+
+    private Component createHeaderPanel(int vrtInset, int hozInset) {
+        JPanel headerPanel = new JPanel(new BorderLayout());
+
+        JLabel headerLabel = new JLabel("AFCT Server - Submit", SwingConstants.CENTER);
+        changeSize(headerLabel, 24);
+
+        JButton signOutButton = new JButton("Sign out");
+        signOutButton.setFocusPainted(false);
+
+        // Invisible spacer with same preferred width as the button
+        Component spacer = Box.createRigidArea(
+                new Dimension(signOutButton.getPreferredSize().width, 1)
+        );
+
+        headerPanel.add(spacer, BorderLayout.WEST);
+        headerPanel.add(headerLabel, BorderLayout.CENTER);
+        headerPanel.add(signOutButton, BorderLayout.EAST);
+
+        return headerPanel;
+
+
+//
+//        // Create headerPanel
+//        JPanel headerPanel = new JPanel(new GridBagLayout());
+//        GridBagConstraints hc = new GridBagConstraints();
+//
+////        // Add Left filler (absorbs extra space)
+////        hc.gridx = 0;
+////        hc.gridy = 0;
+////        hc.weightx = 1.0;
+////        hc.fill = GridBagConstraints.HORIZONTAL;
+////        //hc.insets = new Insets(vrtInset, hozInset, vrtInset, 0);
+////        headerPanel.add(Box.createHorizontalGlue(), hc);
+//
+//        // Add left spacer (absorbs extra space)
+//        hc.gridx = 0;
+//        hc.weightx = 1.0;
+//        hc.fill = GridBagConstraints.HORIZONTAL;
+//        headerPanel.add(new JPanel(), hc);
+//
+//        // Create headerLabel
+//        JLabel headerLabel = new JLabel("AFCT Server - Submit");
+//        changeSize(headerLabel, 24);
+//
+//        // Add centered headerLabel to headerPanel
+//        hc.gridx = 1;
+//        hc.weightx = 0;
+//        hc.anchor = GridBagConstraints.CENTER;
+//        hc.fill = GridBagConstraints.NONE;
+//        //hc.insets = new Insets(vrtInset, 0, vrtInset, 0);
+//        headerPanel.add(headerLabel, hc);
+//
+//        // Create settingsButton
+//        //JButton settingsButton = new JButton("⚙");
+//        JButton settingsButton = new JButton("Sign out");
+//        settingsButton.setFocusPainted(false);
+//
+//        // Add settingsButton to headerPanel
+//        hc.gridx = 2;
+//        hc.weightx = 0;
+//        hc.anchor = GridBagConstraints.EAST;
+//        hc.fill = GridBagConstraints.NONE;
+//        //hc.fill = GridBagConstraints.HORIZONTAL;
+//        //hc.insets = new Insets(vrtInset, 0, vrtInset, 0);
+//        headerPanel.add(settingsButton, hc);
+//
+//        // Right spacer (mirrors left)
+//        hc.gridx = 3;
+//        hc.weightx = 1.0;
+//        hc.fill = GridBagConstraints.HORIZONTAL;
+//        headerPanel.add(new JPanel(), hc);
+//
+//        return headerPanel;
+
+//        // Create headerPanel
+//        JPanel headerPanel = new JPanel(new GridBagLayout());
+//        GridBagConstraints hc = new GridBagConstraints();
+//
+//        // Add Left filler (absorbs extra space)
+//        hc.gridx = 0;
+//        hc.gridy = 0;
+//        hc.weightx = 1.0;
+//        hc.fill = GridBagConstraints.HORIZONTAL;
+//        headerPanel.add(Box.createHorizontalGlue(), hc);
+//
+//        // Create headerLabel
+//        JLabel headerLabel = new JLabel("AFCT Server - Submit");
+//        changeSize(headerLabel, 24);
+//
+//        // Add centered headerLabel to headerPanel
+//        hc.gridx = 1;
+//        hc.weightx = 0;
+//        hc.anchor = GridBagConstraints.CENTER;
+//        hc.insets = new Insets(vrtInset, 0, vrtInset, 0);
+//        headerPanel.add(headerLabel, hc);
+//
+//        // Create rightPanel
+//        JPanel rightPanel = new JPanel(new GridBagLayout());
+//        GridBagConstraints rightC = new GridBagConstraints();
+//
+//        // Add Right filler (absorbs extra space)
+//        rightC.gridx = 0;
+//        rightC.gridy = 0;
+//        rightC.weightx = 1.0;
+//        rightC.fill = GridBagConstraints.HORIZONTAL;
+//        rightPanel.add(Box.createHorizontalGlue(), rightC);
+//
+//        // Create settingsButton
+//        JButton settingsButton = new JButton("⚙");
+//        settingsButton.setFocusPainted(false);
+//
+//        // Add settingsButton to headerPanel
+//        hc.gridx = 2;
+//        hc.weightx = 1.0;
+//        hc.anchor = GridBagConstraints.EAST;
+//        hc.insets = new Insets(vrtInset, hozInset, vrtInset, hozInset);
+//        headerPanel.add(settingsButton, hc);
+//
+//        // Add rightPanel to headerPanel
+//        hc.gridx = 2;
+//        hc.weightx = 1.0;
+//        hc.anchor = GridBagConstraints.EAST;
+//        hc.insets = new Insets(vrtInset, hozInset, vrtInset, hozInset);
+//        headerPanel.add(settingsButton, hc);
+//
+//        return headerPanel;
+
+
+//        // Create layeredPane
+//        JLayeredPane layeredPane = new JLayeredPane();
+//
+//        // Add a base panel at the default layer
+//        JPanel basePanel = new JPanel();
+//        layeredPane.add(basePanel, 0); // Layer 0
+//
+//        // Create headerLabel
+//        JLabel headerLabel = new JLabel("AFCT Server - Submit");
+//        changeSize(headerLabel, 24);
+//
+//        // Add headerLabel at the default layer
+//        layeredPane.add(headerLabel, 0); // Layer 0
+//
+//        return layeredPane;
     }
 
     private JPanel createCurrentFilePanel() {
