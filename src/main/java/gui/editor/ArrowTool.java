@@ -29,11 +29,7 @@ import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 import gui.viewer.CurvedArrow;
 
-import java.awt.Color;
-import java.awt.Component;
-import java.awt.GridLayout;
-import java.awt.Point;
-import java.awt.Rectangle;
+import java.awt.*;
 import java.awt.event.*;
 import java.awt.geom.Point2D;
 import java.util.ArrayList;
@@ -57,7 +53,6 @@ import automata.turing.TuringMachineBuildingBlocks;
 import debug.EDebug;
 
 import static gui.editor.IconKeeper.getArrowToolIcon;
-import static java.awt.event.InputEvent.CTRL_DOWN_MASK;
 import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 
 /**
@@ -189,11 +184,13 @@ public class ArrowTool extends Tool {
 		lastClickedTransition = null;
 	}
 
+    private static int CTRL_CMD_SHORTCUT_MASK = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+
     private boolean ctrlAndShiftUp(InputEvent event) {
         // Check currently pressed keys
         int modifiersEx = event.getModifiersEx();
         // Check if Ctrl is NOT pressed
-        boolean isCtrlUp = (modifiersEx & CTRL_DOWN_MASK) == 0;
+        boolean isCtrlUp = (modifiersEx & CTRL_CMD_SHORTCUT_MASK) == 0;
         // Check if Shift is NOT pressed
         boolean isShiftUp = (modifiersEx & SHIFT_DOWN_MASK) == 0;
         // Ctrl and Shift are both up

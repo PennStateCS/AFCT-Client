@@ -4,6 +4,7 @@ import gui.environment.Environment;
 import gui.environment.EnvironmentFrame;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
@@ -12,6 +13,8 @@ import java.awt.event.KeyEvent;
  * @author Jesse Burdick-Pless
  */
 public class EditorKeyBindings {
+    private static int CTRL_CMD_SHORTCUT_MASK = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+
     public static void SetUpKeyBindings(EnvironmentFrame environmentFrame) {
         Environment environment = environmentFrame.getEnvironment();
 
@@ -121,12 +124,12 @@ public class EditorKeyBindings {
     }
 
     private static void addCTRLAction(String actionName, int keyEvent, InputMap inputMap, ActionMap actionMap, AbstractAction action) {
-        inputMap.put(KeyStroke.getKeyStroke(keyEvent, InputEvent.CTRL_DOWN_MASK), actionName);
+        inputMap.put(KeyStroke.getKeyStroke(keyEvent, CTRL_CMD_SHORTCUT_MASK), actionName);
         actionMap.put(actionName, action);
     }
 
     private static void addCTRLShiftAction(String actionName, int keyEvent, InputMap inputMap, ActionMap actionMap, AbstractAction action) {
-        inputMap.put(KeyStroke.getKeyStroke(keyEvent, InputEvent.CTRL_DOWN_MASK | InputEvent.SHIFT_DOWN_MASK), actionName);
+        inputMap.put(KeyStroke.getKeyStroke(keyEvent, CTRL_CMD_SHORTCUT_MASK | InputEvent.SHIFT_DOWN_MASK), actionName);
         actionMap.put(actionName, action);
     }
 }
