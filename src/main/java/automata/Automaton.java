@@ -1440,18 +1440,16 @@ public class Automaton implements Serializable, Cloneable {
 
         int numIncompatibleTransitions = 0;
         for (State state : states) {
-            if (state.isSelected()) {
-                Transition[] transitions = from.getTransitionsFromState(state);
-                for (Transition transition : transitions) {
-                    if (!onlyCopySelected || (transition.from.isSelected() && transition.to.isSelected())) {
-                        Transition toBeAdded = (Transition) transition.clone();
-                        toBeAdded.setFromState(newStates.get(transition.from));
-                        toBeAdded.setToState(newStates.get(transition.to));
-                        try {
-                            to.addTransition(toBeAdded);
-                        } catch (IncompatibleTransitionException e) {
-                            numIncompatibleTransitions++;
-                        }
+            Transition[] transitions = from.getTransitionsFromState(state);
+            for (Transition transition : transitions) {
+                if (!onlyCopySelected || (transition.from.isSelected() && transition.to.isSelected())) {
+                    Transition toBeAdded = (Transition) transition.clone();
+                    toBeAdded.setFromState(newStates.get(transition.from));
+                    toBeAdded.setToState(newStates.get(transition.to));
+                    try {
+                        to.addTransition(toBeAdded);
+                    } catch (IncompatibleTransitionException e) {
+                        numIncompatibleTransitions++;
                     }
                 }
             }
