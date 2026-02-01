@@ -183,7 +183,12 @@ public class SessionHandler {
             return getErrorResult(ex.getMessage());
         }
     }
-    
+
+    public void logout() {
+        this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
+        this.loggedIn = false;
+        this.client = null;
+    }
 
     /**
      * Saved credentials will not be used to auto re-authenticate if they have not been used in the last 7 days.

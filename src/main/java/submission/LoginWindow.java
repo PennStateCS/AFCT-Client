@@ -39,6 +39,10 @@ public class LoginWindow extends JFrame {
 
     private SubmitWindow submitWindowToShow = null;
 
+    // TODO: find out how many spaces to add here so that the window does not need to resize when other messages apper here,
+    //  also do this for SubmitWindow.java
+    private String defaultLoginResultLabelText = "<html>               </html>";
+
     public LoginWindow(SessionHandler sessionHandler) {
         contentPane = new JPanel();
         serverTF = new JTextField();
@@ -49,10 +53,7 @@ public class LoginWindow extends JFrame {
 
         result = new JTextPane();
         resultScrollPane = new JScrollPane(result);
-
-        // TODO: find out how many spaces to add here so that the window does not need to resize when other messages apper here,
-        //  also do this for SubmitWindow.java
-        loginResultLabel = new JLabel("<html>               </html>");
+        loginResultLabel = new JLabel(defaultLoginResultLabelText);
 
         setupGui();
         populateGui(sessionHandler);
@@ -68,6 +69,7 @@ public class LoginWindow extends JFrame {
         if (!this.isVisible()) {
             this.populateGui(sessionHandler);
         }
+        loginResultLabel.setText(defaultLoginResultLabelText);
         this.pack();
         this.setVisible(true);
         this.toFront();

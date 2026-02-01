@@ -59,6 +59,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     private String feedbackPrefix = "Feedback: ";
 
+    private JButton logoutButton;
+
 
     // Tracking for optimization
     private String selectedCourseID = null;
@@ -91,6 +93,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         currentFileLabel = new JLabel("No File Selected");
         viewCurrentButton = new JButton("View");
         submitButton = new JButton("Submit");
+        logoutButton = new JButton("Logout");
 
         result = new JTextPane();
         result.setContentType("text/html");
@@ -291,20 +294,18 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private Component createHeaderPanel() {
         JPanel headerPanel = new JPanel(new BorderLayout());
 
+        // Create headerLabel
         JLabel headerLabel = new JLabel("AFCT Server - Submit", SwingConstants.CENTER);
         changeSize(headerLabel, 24);
 
-        JButton signOutButton = new JButton("Sign out");
-        signOutButton.setFocusPainted(false);
-
         // Invisible spacer with same preferred width as the button
         Component spacer = Box.createRigidArea(
-                new Dimension(signOutButton.getPreferredSize().width, 1)
+                new Dimension(logoutButton.getPreferredSize().width, 1)
         );
 
         headerPanel.add(spacer, BorderLayout.WEST);
         headerPanel.add(headerLabel, BorderLayout.CENTER);
-        headerPanel.add(signOutButton, BorderLayout.EAST);
+        headerPanel.add(logoutButton, BorderLayout.EAST);
 
         return headerPanel;
     }
@@ -589,6 +590,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         handlers_problem();
         handlers_file();
         handlers_submit();
+        handlers_logout();
     }
 
     private void handlers_course() {
@@ -912,6 +914,18 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         submitButton.setEnabled(true);
                     }
                 }.execute();
+            }
+        });
+    }
+
+    private void handlers_logout() {
+        SubmitWindow submitWindow = this;
+        logoutButton.addActionListener(new ActionListener() {
+            @Override
+            public void actionPerformed(ActionEvent e) {
+                submitWindow.setVisible(false);
+                Globals.sessionHandler.logout();
+                Globals.sessionHandler.displayLoginThenSubmission(submitWindow);
             }
         });
     }
