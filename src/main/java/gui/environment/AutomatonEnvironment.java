@@ -170,6 +170,8 @@ public class AutomatonEnvironment extends Environment {
 
     @Override
     public void handlePaste(boolean shiftHeld) {
+        myKeeper.saveStatus();
+
         Clipboard clipboard = Toolkit.getDefaultToolkit().getSystemClipboard();
         Transferable contents;
         try {
