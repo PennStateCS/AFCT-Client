@@ -212,6 +212,8 @@ public class ArrowTool extends Tool {
 	 */
 	public void mousePressed(MouseEvent event) {
         //TODO: this will save the status unnecessarily if the user simply clicks on nothing
+        //      Is this call even needed here really?
+        //      like is the goal to be able to undo selections? -- if so, find more optimal way to do this...
 		if (getDrawer().getAutomaton().getEnvironmentFrame() !=null) {
     			((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
 		} else {
