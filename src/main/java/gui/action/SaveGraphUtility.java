@@ -20,29 +20,20 @@
 package gui.action;
 
 import java.awt.Component;
-import javax.swing.JComponent;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
-import java.awt.image.ImageObserver;
 import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
-import javax.swing.JFileChooser;
-import javax.swing.JFrame;
-import javax.swing.JMenu;
-import javax.swing.JOptionPane;
 import javax.swing.JComponent;
+import javax.swing.JFileChooser;
+import javax.swing.JOptionPane;
 import javax.swing.filechooser.FileFilter;
 
 import gui.editor.EditorPane;
-import gui.environment.AutomatonEnvironment;
-import gui.environment.Environment;
-import gui.viewer.AutomatonPane;
-import gui.viewer.SelectionDrawer;
 import gui.environment.Universe;
 
 
@@ -54,7 +45,6 @@ import gui.environment.Universe;
 public class SaveGraphUtility{
 
         public static void saveGraph(Component apane, JComponent c, String description,  String format){
-           
            if (apane instanceof EditorPane){
                apane = ((EditorPane)apane).getAutomatonPane();
            }
@@ -63,10 +53,15 @@ public class SaveGraphUtility{
            Graphics imgG = canvasimage.getGraphics();
            apane.paint(imgG);
            BufferedImage bimg = new BufferedImage(canvasimage.getWidth(null), canvasimage.getHeight(null), BufferedImage.TYPE_INT_RGB);
+           
            Graphics2D g = bimg.createGraphics();
            g.drawImage(canvasimage, null, null);
-           
 
+            ImagePreviewer imgpreview = new ImagePreviewer(bimg);
+            boolean accepted_preview = imgpreview.display();
+            if (!accepted_preview) {
+                return;
+            }
 
            Universe.CHOOSER.resetChoosableFileFilters();
            Universe.CHOOSER.setAcceptAllFileFilterUsed(false);
