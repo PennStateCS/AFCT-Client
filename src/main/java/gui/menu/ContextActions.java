@@ -33,6 +33,14 @@ public class ContextActions {
         defaultContextMenu = new DefaultContextMenu(view, drawer);
     }
 
+    public AutomatonPane getView() {
+        return view;
+    }
+
+    public AutomatonDrawer getDrawer() {
+        return drawer;
+    }
+
     public void addMenuItems(MenuElement menu, Tool tool, Point point, boolean showDefault) {
         boolean stateContext = false;
         boolean transitionContext = false;

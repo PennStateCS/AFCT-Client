@@ -70,6 +70,10 @@ public class MenuBarCreator {
         menu = getEditMenu(frame);
         bar.add(menu);
 
+        menu = getViewMenu(frame);
+        if (menu.getItemCount() > 0)
+            bar.add(menu);
+
 		menu = getInputMenu(frame);
 		if (menu.getItemCount() > 0)
 			bar.add(menu);
@@ -78,7 +82,7 @@ public class MenuBarCreator {
 		if (menu.getItemCount() > 0)
 			bar.add(menu);
 		
-		menu = getViewMenu(frame);
+		menu = getLayoutMenu(frame);
 		if (menu.getItemCount() > 0)
 			bar.add(menu);
 
@@ -119,6 +123,10 @@ public class MenuBarCreator {
         menu = getEditMenu(frame);
         bar.add(menu);
 
+        menu = getViewMenu(frame);
+        if (menu.getItemCount() > 0)
+            bar.add(menu);
+
 		menu = getInputMenu(frame, isTuring);
 		if (menu.getItemCount() > 0)
 			bar.add(menu);
@@ -127,7 +135,7 @@ public class MenuBarCreator {
 		if (menu.getItemCount() > 0)
 			bar.add(menu);
 		
-		menu = getViewMenu(frame);
+		menu = getLayoutMenu(frame);
 		if (menu.getItemCount() > 0)
 			bar.add(menu);
 
@@ -252,6 +260,20 @@ public class MenuBarCreator {
         return menu;
     }
 
+    /**
+     * Instantiates the view menu.
+     *
+     * @param frame the environment frame
+     * @return the view menu
+     */
+    private static JMenu getViewMenu(EnvironmentFrame frame) {
+        Environment environment = frame.getEnvironment();
+        JMenu menu = new ViewMenu(environment);
+
+        return menu;
+    }
+
+
 	/**
 	 * Instantiates the menu that holds input related menu events.
 	 * 
@@ -353,11 +375,11 @@ public class MenuBarCreator {
 	 * 
 	 * @param frame
 	 *            the environment frame that holds the environment and object
-	 * @return a view menu
+	 * @return a layout menu
 	 */
-	private static JMenu getViewMenu(EnvironmentFrame frame) {
+	private static JMenu getLayoutMenu(EnvironmentFrame frame) {
 		Environment environment = frame.getEnvironment();
-		JMenu menu = new JMenu("View");
+		JMenu menu = new JMenu("Layout");
 		Serializable object = environment.getObject();
 		if (AutomatonAction.isApplicable(object)) {
 			Automaton automaton = (Automaton) object;
