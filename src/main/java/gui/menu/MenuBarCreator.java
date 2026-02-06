@@ -68,7 +68,8 @@ public class MenuBarCreator {
 			bar.add(menu);
 
         menu = getEditMenu(frame);
-        bar.add(menu);
+        if (menu.getItemCount() > 0)
+            bar.add(menu);
 
         menu = getViewMenu(frame);
         if (menu.getItemCount() > 0)
@@ -121,7 +122,8 @@ public class MenuBarCreator {
 			bar.add(menu);
 
         menu = getEditMenu(frame);
-        bar.add(menu);
+        if (menu.getItemCount() > 0)
+            bar.add(menu);
 
         menu = getViewMenu(frame);
         if (menu.getItemCount() > 0)
