@@ -40,7 +40,7 @@ public class ViewMenu extends JMenu {
 
             this.add(stateLabelsCheckbox);
             this.add(autoZoomCheckbox);
-            //this.add(highlightNondeterminismCheckbox);
+            this.add(highlightNondeterminismCheckbox);
         }
     }
 
@@ -62,6 +62,8 @@ public class ViewMenu extends JMenu {
         });
 
         // highlightNondeterminismCheckbox
+        highlightNondeterminismCheckbox.setSelected(false);
+
 
     }
 }

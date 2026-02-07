@@ -913,6 +913,8 @@ public class Automaton implements Serializable, Cloneable {
 	 *            the event to distribute
 	 */
 	void distributeTransitionEvent(AutomataTransitionEvent event) {
+        updateAlphabet(event);
+
 		Iterator<AutomataTransitionListener> it = transitionListeners.iterator();
 		while (it.hasNext()) {
 			AutomataTransitionListener listener = (AutomataTransitionListener) it
@@ -1262,6 +1264,13 @@ public class Automaton implements Serializable, Cloneable {
     public AutomatonPane getView() {
         return view;
     }
+
+
+    private void updateAlphabet(AutomataTransitionEvent event) {
+        if (event.isAdd());
+    }
+
+    //private HashMap<>
 
     // AUTOMATA SPECIFIC CRAP
 	// This includes lots of stuff not strictly necessary for the
