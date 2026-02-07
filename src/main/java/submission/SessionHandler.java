@@ -188,6 +188,11 @@ public class SessionHandler {
         this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
         this.loggedIn = false;
         this.client = null;
+
+        // TODO: maybe track which submitWindows are visible, and re open them when the user logs back in?
+        for (SubmitWindow submitWindow : submitWindows) {
+            submitWindow.setVisible(false);
+        }
     }
 
     /**
