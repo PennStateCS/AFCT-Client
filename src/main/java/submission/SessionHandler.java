@@ -189,10 +189,26 @@ public class SessionHandler {
         this.loggedIn = false;
         this.client = null;
 
+        this.courses.clear();
+        courseListCache = null;
+        this.courseToAssignmentMap.clear();
+        this.assignmentToProblemMap.clear();
+
         // TODO: maybe track which submitWindows are visible, and re open them when the user logs back in?
         for (SubmitWindow submitWindow : submitWindows) {
             submitWindow.setVisible(false);
         }
+
+        // Logout all submit windows in background
+        new SwingWorker<Void, String>() {
+            @Override
+            protected Void doInBackground() {
+                for (SubmitWindow submitWindow : submitWindows) {
+                    submitWindow.logout();
+                }
+                return null;
+            }
+        }.execute();
     }
 
     /**

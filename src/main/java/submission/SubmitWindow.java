@@ -160,6 +160,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         }
     }
 
+    public void logout() {
+        appendResult("");
+        //populateCoursesOnceLoggedIn = true;
+
+        selectedCourseID = null;
+        selectedAssignmentID = null;
+        selectedProblemID = null;
+    }
+
     public void toggleSubmitButton(boolean enabled) {
         submitButton.setEnabled(enabled);
     }
@@ -930,6 +939,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             public void actionPerformed(ActionEvent e) {
                 submitWindow.setVisible(false);
                 Globals.sessionHandler.logout();
+                // TODO: make the login window appear over where the submit window was
                 Globals.sessionHandler.displayLoginThenSubmission(submitWindow);
             }
         });
