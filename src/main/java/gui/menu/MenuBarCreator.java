@@ -61,44 +61,21 @@ public class MenuBarCreator {
 	 */
 	public static JMenuBar getMenuBar(EnvironmentFrame frame) {
 		JMenuBar bar = new JMenuBar();
-		JMenu menu;
-
-		menu = getFileMenu(frame);
-		if (menu.getItemCount() > 0)
-			bar.add(menu);
-
-        menu = getEditMenu(frame);
-        if (menu.getItemCount() > 0)
-            bar.add(menu);
-
-        menu = getViewMenu(frame);
-        if (menu.getItemCount() > 0)
-            bar.add(menu);
-
-		menu = getInputMenu(frame);
-		if (menu.getItemCount() > 0)
-			bar.add(menu);
-
-		menu = getTestMenu(frame);
-		if (menu.getItemCount() > 0)
-			bar.add(menu);
-		
-		menu = getLayoutMenu(frame);
-		if (menu.getItemCount() > 0)
-			bar.add(menu);
-
-		menu = getConvertMenu(frame);
-		if (menu.getItemCount() > 0)
-			bar.add(menu);
-
-		menu = getSubmitMenu(frame);
-		if (menu.getItemCount() > 0)
-			bar.add(menu);
-		
-		menu = getHelpMenu(frame);
-		if (menu.getItemCount() > 0)
-			bar.add(menu);
-
+		JMenu[] menus = {
+				getFileMenu(frame),
+				getEditMenu(frame),
+				getViewMenu(frame),
+				getInputMenu(frame),
+				getTestMenu(frame),
+				getLayoutMenu(frame),
+				getConvertMenu(frame),
+				getSubmitMenu(frame),
+				getHelpMenu(frame)
+		};
+		for ( JMenu menu : menus){
+			if (menu.getItemCount() > 0)
+				bar.add(menu);
+		}
         CloseButton dismiss = new CloseButton(frame.getEnvironment());
         bar.add(Box.createGlue());
         bar.add(dismiss);
