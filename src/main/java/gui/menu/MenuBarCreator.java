@@ -79,7 +79,6 @@ public class MenuBarCreator {
         CloseButton dismiss = new CloseButton(frame.getEnvironment());
         bar.add(Box.createGlue());
         bar.add(dismiss);
-        
 		return bar;
 	}
 	
