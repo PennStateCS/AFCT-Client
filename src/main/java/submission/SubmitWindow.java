@@ -138,6 +138,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     @Override
     public void refreshDialog() {
+        // TODO: maybe clear feedback label text here?
         EnvironmentFrame frame = Universe.frameForEnvironment(this.environment);
         this.setTitle(frame.getDescription() + " - Submit");
         currentFileLabel.setText(frame.getDescription());
@@ -165,6 +166,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     public void toggleCourseBox(boolean enabled) {
         courseBox.setEnabled(enabled);
+        courseRefreshButton.setEnabled(enabled);
+    }
+
+    public void toggleCourseRefreshButton(boolean enabled) {
         courseRefreshButton.setEnabled(enabled);
     }
 

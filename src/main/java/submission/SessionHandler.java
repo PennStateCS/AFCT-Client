@@ -342,6 +342,10 @@ public class SessionHandler {
                     } catch (IOException ex) {
                         // TODO: determine why this will sometimes be shown when first opening submit window during a session
                         publish(colorHTMLErrorMessage("Error loading courses: " + ex.getMessage()));
+                        // Re-enable CourseBox refresh buttons
+                        for (SubmitWindow submitWindow : submitWindows) {
+                            submitWindow.toggleCourseRefreshButton(true);
+                        }
                     }
                 }
                 return null;
