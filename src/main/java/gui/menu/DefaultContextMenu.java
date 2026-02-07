@@ -40,13 +40,13 @@ public class DefaultContextMenu extends ContextMenu implements ActionListener {
     }
 
     public void addMenuItems(MenuElement menu, boolean displayOnly) {
-        addMenuItemHelper(menu, stateLabels);
+        //addMenuItemHelper(menu, stateLabels); // moved to view menu
 
         if (!displayOnly) {
             addMenuItemHelper(menu, layoutGraph);
             addMenuItemHelper(menu, renameStates);
             addMenuItemHelper(menu, addNote);
-            addMenuItemHelper(menu, adaptView);
+            //addMenuItemHelper(menu, adaptView); // moved to view menu
         }
         allListenersAdded = true;
     }

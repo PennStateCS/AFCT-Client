@@ -23,6 +23,9 @@ public class EditorKeyBindings {
         InputMap inputMap = contentPane.getInputMap(condition);
         ActionMap actionMap = contentPane.getActionMap();
 
+        // TODO: make it so that when actions are added, they are also put in a list of keyboard shortcuts
+        //      that can be displayed to the user.
+
         // Delete action
         addActionNoModifiers("delete", KeyEvent.VK_DELETE, inputMap, actionMap, new AbstractAction() {
             @Override

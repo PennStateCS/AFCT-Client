@@ -43,7 +43,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
     private static final String makeFinal_MULTI = "Mark Selected as Final";
     private static final String changeLabel_MULTI = "Change Selected Labels";
     private static final String deleteLabel_MULTI = "Clear Selected Labels";
-    private static final String setName_MULTI = "Set Selected Names";
+    private static final String setName_MULTI = "Set Selected Names"; // TODO: maybe should be "Rename selected states"?
 
     public StateContextMenu(AutomatonPane view, AutomatonDrawer drawer) {
         super(view, drawer);
