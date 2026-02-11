@@ -188,6 +188,27 @@ public class SessionHandler {
         this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
         this.loggedIn = false;
         this.client = null;
+
+        this.courses.clear();
+        courseListCache = null;
+        this.courseToAssignmentMap.clear();
+        this.assignmentToProblemMap.clear();
+
+        // TODO: maybe track which submitWindows are visible, and re open them when the user logs back in?
+        for (SubmitWindow submitWindow : submitWindows) {
+            submitWindow.setVisible(false);
+        }
+
+        // Logout all submit windows in background
+        new SwingWorker<Void, String>() {
+            @Override
+            protected Void doInBackground() {
+                for (SubmitWindow submitWindow : submitWindows) {
+                    submitWindow.logout();
+                }
+                return null;
+            }
+        }.execute();
     }
 
     /**
@@ -342,6 +363,10 @@ public class SessionHandler {
                     } catch (IOException ex) {
                         // TODO: determine why this will sometimes be shown when first opening submit window during a session
                         publish(colorHTMLErrorMessage("Error loading courses: " + ex.getMessage()));
+                        // Re-enable CourseBox refresh buttons
+                        for (SubmitWindow submitWindow : submitWindows) {
+                            submitWindow.toggleCourseRefreshButton(true);
+                        }
                     }
                 }
                 return null;

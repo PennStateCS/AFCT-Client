@@ -138,6 +138,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     @Override
     public void refreshDialog() {
+        // TODO: maybe clear feedback label text here?
         EnvironmentFrame frame = Universe.frameForEnvironment(this.environment);
         this.setTitle(frame.getDescription() + " - Submit");
         currentFileLabel.setText(frame.getDescription());
@@ -159,12 +160,25 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         }
     }
 
+    public void logout() {
+        appendResult("");
+        //populateCoursesOnceLoggedIn = true;
+
+        selectedCourseID = null;
+        selectedAssignmentID = null;
+        selectedProblemID = null;
+    }
+
     public void toggleSubmitButton(boolean enabled) {
         submitButton.setEnabled(enabled);
     }
 
     public void toggleCourseBox(boolean enabled) {
         courseBox.setEnabled(enabled);
+        courseRefreshButton.setEnabled(enabled);
+    }
+
+    public void toggleCourseRefreshButton(boolean enabled) {
         courseRefreshButton.setEnabled(enabled);
     }
 
@@ -925,6 +939,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             public void actionPerformed(ActionEvent e) {
                 submitWindow.setVisible(false);
                 Globals.sessionHandler.logout();
+                // TODO: make the login window appear over where the submit window was
                 Globals.sessionHandler.displayLoginThenSubmission(submitWindow);
             }
         });
