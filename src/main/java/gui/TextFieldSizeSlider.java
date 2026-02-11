@@ -68,4 +68,8 @@ public class TextFieldSizeSlider extends JSlider{
                 myField.setSize(myField.getWidth(), (int) source.getValue()/10+10);
             }
       }
+
+	  public int getMaxSize() {
+		return FONT_SIZE_MAX;
+	  }
 } 

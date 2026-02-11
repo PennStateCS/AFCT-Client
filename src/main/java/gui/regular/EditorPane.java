@@ -70,16 +70,37 @@ public class EditorPane extends JPanel {
 				updateExpression();
 			}
 		});
-		setLayout(new GridBagLayout());
-		GridBagConstraints c = new GridBagConstraints();
-		c.fill = GridBagConstraints.BOTH;
-		c.weightx = 1.0;
-		c.gridwidth = GridBagConstraints.REMAINDER;
+		setLayout(new BoxLayout(this, BoxLayout.Y_AXIS));
+		add(new JLabel("Edit the regular expression below:"));
+		
+		source = new TextFieldSizeSlider(field, JSlider.HORIZONTAL, "Input Field Text Size");
+		JLabel special_characters = new JLabel("<html><i>Special characters:{(, ), !, +, *}<i></html>"); // italics
+		
+		int maxTextHeight = ((TextFieldSizeSlider) source).getMaxSize() / 10 + 10;
+		field.setPreferredSize(new Dimension(field.getPreferredSize().width, maxTextHeight / 2));
+		field.setMaximumSize(new Dimension(Integer.MAX_VALUE, maxTextHeight));
+		add(field);
+		add(Box.createVerticalGlue());
+		add(source);
+		add(special_characters);
 
-		add(new JLabel("Edit the regular expression below:"), c);
-		add(field, c);
-		add(new TextFieldSizeSlider(field, JSlider.HORIZONTAL, "Input Field Text Size (For optimiztion, adjust the size of "
-				+ "this window after resizing the text field)"), c);
+		this.addComponentListener(new ComponentAdapter() {
+            @Override
+            public void componentResized(ComponentEvent e) {
+                resizeTextField();
+            }
+        }); 
+	}
+
+	/*
+		Resize the text field when the window changes
+		Matches the slider position
+	*/
+	private void resizeTextField() {
+		int newHeight = source.getValue() / 10;
+		int newWidth = this.getWidth();
+		field.setSize(new Dimension(newWidth, newHeight + 10));
+		field.setFont(new Font("Default", Font.PLAIN, newHeight));
 	}
 
 	/**
@@ -95,6 +116,8 @@ public class EditorPane extends JPanel {
 
 	/** The field where the expression is displayed and edited. */
 	private JTextField field = new JTextField("");
+
+	private JSlider source;
 
 	/**
 	 * The expression change listener for a regular expression detects if there
