@@ -434,11 +434,10 @@ public class Automaton implements Serializable, Cloneable {
 	}
 
 	/**
-	 * Adds a new state to this automata. Clients should use the <CODE>createState</CODE>
+	 * Adds a new state to this automaton. Clients should use the <CODE>createState</CODE>
 	 * method instead.
 	 * 
-	 * @param state
-	 *            the state to add
+	 * @param state the state to add
 	 */
 	public final void addState(State state) {
 		states.add(state);
@@ -448,6 +447,15 @@ public class Automaton implements Serializable, Cloneable {
 
 		distributeStateEvent(new AutomataStateEvent(this, state, true, false,
 				false));
+
+		// check if this is the first state that has ever been placed down in this environment
+		// if so, mark it automatically as the initial state for quality of life reasons
+		EnvironmentFrame automatonsEnvFrame = getEnvironmentFrame();
+		if (automatonsEnvFrame.getAutomaticallySetFirstStateAsInitial() && state.getID() == 0)
+		{
+			setInitialState(state);
+			automatonsEnvFrame.setAutomaticallySetFirstStateAsInitial(false);
+		}
 	}
 
 	/**
