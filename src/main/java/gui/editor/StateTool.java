@@ -20,6 +20,7 @@
 
 package gui.editor;
 
+import automata.State;
 import gui.environment.AutomatonEnvironment;
 import gui.environment.EnvironmentFrame;
 import gui.viewer.AutomatonDrawer;
@@ -116,7 +117,24 @@ public class StateTool extends Tool {
     public void mouseReleased(MouseEvent event) {
         ObjectSnappingHandler objectSnappingHandler = getObjectSnappingHandler();
         objectSnappingHandler.clearSnappingIndicators(getView());
-        //state.setSelect(false);
+		// Prevent newly created states from overlapping with existing
+		State movedState = getDrawer().stateAtPoint(event.getPoint());
+		// null check is not extraneous; ctrl + x while dragging new state will result in null
+		if (movedState != null){
+			Point movedStatePoint = movedState.getPoint();
+			double movedStateX = movedStatePoint.getX();
+			double movedStateY = movedStatePoint.getY();
+			for (State otherState : getAutomaton().getStates()){
+				if (otherState == movedState) continue;
+				// check if the recently moved state is overlapping with another
+				Point otherStatePoint = otherState.getPoint();
+				if (movedStatePoint.equals(otherStatePoint)){
+					// add an offset between overlapping states to easily distinguish the two
+					movedState.getPoint().setLocation(movedStateX + 10, movedStateY);
+				}
+			}
+		}
+		//state.setSelect(false);
         getView().repaint();
     }
 
