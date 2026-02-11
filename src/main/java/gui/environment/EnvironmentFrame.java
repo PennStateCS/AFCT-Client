@@ -60,6 +60,8 @@ public class EnvironmentFrame extends JFrame {
 	 */
 	private static final long serialVersionUID = 1L;
 
+	private boolean automaticallySetFirstStateAsInitial = true;
+
 	/**
 	 * Instantiates a new <CODE>EnvironmentFrame</CODE>. This does not fill
 	 * the environment with anything.
@@ -362,7 +364,15 @@ public class EnvironmentFrame extends JFrame {
 	                });
 	}
 
+	public boolean getAutomaticallySetFirstStateAsInitial()
+	{
+		return automaticallySetFirstStateAsInitial;
+	}
 
+	public void setAutomaticallySetFirstStateAsInitial(boolean value)
+	{
+		automaticallySetFirstStateAsInitial = value;
+	}
 
 
 	/**
