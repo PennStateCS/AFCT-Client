@@ -68,8 +68,11 @@ public class MenuBarCreator {
 			bar.add(menu);
 
         menu = getEditMenu(frame);
-        if (menu.getItemCount() > 0)
+        Environment environment = frame.getEnvironment();
+        Serializable object = environment.getObject();
+        if (object instanceof Automaton) {
             bar.add(menu);
+        }
 
         menu = getViewMenu(frame);
         if (menu.getItemCount() > 0)
@@ -122,8 +125,11 @@ public class MenuBarCreator {
 			bar.add(menu);
 
         menu = getEditMenu(frame);
-        if (menu.getItemCount() > 0)
+        Environment environment = frame.getEnvironment();
+        Serializable object = environment.getObject();
+        if (object instanceof Automaton) {
             bar.add(menu);
+        }
 
         menu = getViewMenu(frame);
         if (menu.getItemCount() > 0)
