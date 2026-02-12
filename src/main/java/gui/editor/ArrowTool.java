@@ -545,7 +545,7 @@ public class ArrowTool extends Tool {
 			showPopup(event);
 
 		// Prevent overlapping states if an automata state was moved on mouse release
-		StateOverlap.handleStateOverlap(event, getDrawer(), getAutomaton());
+		StateOverlap.handleStateOverlap(getAutomaton());
 
 		State[] states = getView().getDrawer().getAutomaton().getStates();
 		int count = 0;

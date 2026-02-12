@@ -118,7 +118,7 @@ public class StateTool extends Tool {
         ObjectSnappingHandler objectSnappingHandler = getObjectSnappingHandler();
         objectSnappingHandler.clearSnappingIndicators(getView());
 		// Prevent newly created states from overlapping with existing states
-		StateOverlap.handleStateOverlap(event, getDrawer(), getAutomaton());
+		StateOverlap.handleStateOverlap(getAutomaton());
 		//state.setSelect(false);
         getView().repaint();
     }
