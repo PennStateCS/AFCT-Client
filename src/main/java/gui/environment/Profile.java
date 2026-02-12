@@ -95,6 +95,9 @@ public class Profile {
     /**The tag name for legacy icons preference.*/
     public static final String LEGACY_SUBMISSION_GUI = "legacy_use_legacy_submission_gui";
 
+    /**The tag name for legacy icons preference.*/
+    public static final String AUTO_INITIAL_STATE = "auto_set_first_state_as_initial_state";
+
 
 	/**
 	 * Determines whether transitions can be issued from the final
@@ -119,6 +122,16 @@ public class Profile {
 	private JCheckBoxMenuItem turingAcceptByHaltingCheckBox; 
 	private JCheckBoxMenuItem turingAllowStayCheckBox;
 
+    /**
+     * Flag to keep track of if in this environment we should automatically
+     * set the first state placed down to be the initial state. This is
+     * just for quality of life reasons.
+     */
+    // TODO make it possible to override this setting for individual environments (i.e. individual editor windows)
+    //   This will likely be part of the planned update to include a preferences menu on editor windows,
+    //      not just the manu window.
+    private boolean autoInitialState;
+    private JCheckBoxMenuItem autoInitialStateCheckBox;
 
     /**
      * Legacy options
@@ -206,6 +219,19 @@ public class Profile {
                 savePreferences();
             }
         });
+
+        autoInitialState = true;
+        //autoInitialStateCheckBox = new JCheckBoxMenuItem("Make 1st State the Initial State");
+        autoInitialStateCheckBox = new JCheckBoxMenuItem("Auto Set the Initial State");
+        autoInitialStateCheckBox.setSelected(autoInitialState);
+        autoInitialStateCheckBox.addActionListener(new ActionListener() {
+            public void actionPerformed(ActionEvent e)
+            {
+                setAutoInitialState(autoInitialStateCheckBox.isSelected());
+                savePreferences();
+            }
+        });
+
 	}
 	
 	/**
@@ -314,6 +340,16 @@ public class Profile {
         return turingAcceptByHalting;
     }
 
+
+    public void setAutoInitialState(boolean t) {
+        autoInitialState = t;
+        autoInitialStateCheckBox.setSelected(t);
+    }
+
+    public boolean getAutoInitialState() {
+        return autoInitialState;
+    }
+
 	/**
 	 * Returns the JCheckBoxMenuItem that can allow the user to change whether
 	 * Turing machine final states are allowed.
@@ -339,6 +375,10 @@ public class Profile {
 
     public JCheckBoxMenuItem getUseLegacySubmissionGuiCheckBox() {
         return legacyUseLegacySubmissionGuiCheckBox;
+    }
+
+    public JCheckBoxMenuItem getAutoInitialStateCheckBox() {
+        return autoInitialStateCheckBox;
     }
 
     protected static Element createElement(Document document, String tagname, Map<?, ?> attributes, String text) {
@@ -393,6 +433,7 @@ public class Profile {
             savePreferencesHelper(EMPTY_STRING_NAME, empty, doc);
             savePreferencesHelper(TURING_FINAL_NAME, transTuringFinal, doc);
             savePreferencesHelper(UNDO_AMOUNT_NAME, undo_num, doc);
+            savePreferencesHelper(AUTO_INITIAL_STATE, autoInitialState, doc);
             savePreferencesHelper(ACCEPT_FINAL_STATE, turingAcceptByFinalState, doc);
             savePreferencesHelper(ACCEPT_HALT, turingAcceptByHalting, doc);
             savePreferencesHelper(ALLOW_STAY, turingAllowStay, doc);
@@ -513,6 +554,13 @@ public class Profile {
                     if (parent!=null) {
                         String number = parent.getTextContent();
                         setNumUndo(Integer.parseInt(number));
+                    }
+
+                    //Now set Auto Initial State
+                    parent = preferencesElementLoaderHelper(AUTO_INITIAL_STATE, doc);
+                    if (parent!=null) {
+                        boolean AutoInitialState = parent.getTextContent().equals("true");
+                        setAutoInitialState(AutoInitialState);
                     }
 
                 } catch (SAXException e) {

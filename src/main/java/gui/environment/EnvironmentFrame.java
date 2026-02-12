@@ -363,8 +363,6 @@ public class EnvironmentFrame extends JFrame {
 	}
 
 
-
-
 	/**
 	 * Returns the string that describes this frame.
 	 * 
