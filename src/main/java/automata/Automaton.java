@@ -48,6 +48,7 @@ import automata.mealy.MooreMachine;
 import automata.turing.TuringMachine;
 import automata.turing.TuringMachineBuildingBlocks;
 
+import gui.environment.Universe;
 import gui.viewer.AutomatonPane;
 
 
@@ -434,11 +435,10 @@ public class Automaton implements Serializable, Cloneable {
 	}
 
 	/**
-	 * Adds a new state to this automata. Clients should use the <CODE>createState</CODE>
+	 * Adds a new state to this automaton. Clients should use the <CODE>createState</CODE>
 	 * method instead.
 	 * 
-	 * @param state
-	 *            the state to add
+	 * @param state the state to add
 	 */
 	public final void addState(State state) {
 		states.add(state);
@@ -446,8 +446,15 @@ public class Automaton implements Serializable, Cloneable {
 		transitionToStateMap.put(state, new LinkedList<Transition>());
 		cachedStates = null;
 
-		distributeStateEvent(new AutomataStateEvent(this, state, true, false,
-				false));
+        // check if this is the first state that has been placed down in this environment
+        // if so, mark it automatically as the initial state for quality of life reasons
+        if (Universe.curProfile.getAutoInitialState()) {
+            if (this.states.size() == 1) {
+                setInitialState(state);
+            }
+        }
+
+		distributeStateEvent(new AutomataStateEvent(this, state, true, false, false));
 	}
 
 	/**

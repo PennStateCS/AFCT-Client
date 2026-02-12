@@ -198,6 +198,7 @@ public class NewAction extends RestrictedAction {
             MenuBarCreator.addItem(menu, new EmptyStringCharacterAction());
 //            menu.add(Universe.curProfile.getTuringFinalCheckBox());
             menu.add(new SetUndoAmountAction());
+            menu.add(Universe.curProfile.getAutoInitialStateCheckBox());
             menu.add(new ColorChooserAction());
 
             menu.add(tmPrefMenu);
