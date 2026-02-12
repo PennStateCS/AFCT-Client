@@ -20,14 +20,12 @@
 
 package gui.editor;
 
-import gui.LambdaCellRenderer;
-import gui.viewer.AutomatonPane;
-
 import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Point;
 import java.awt.event.ComponentEvent;
 import java.awt.event.ComponentListener;
+import java.awt.event.KeyAdapter;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseAdapter;
 import java.awt.event.MouseEvent;
@@ -35,7 +33,6 @@ import java.awt.event.MouseListener;
 
 import javax.swing.JTable;
 import javax.swing.KeyStroke;
-import javax.swing.table.TableCellEditor;
 import javax.swing.table.TableCellRenderer;
 import javax.swing.table.TableModel;
 
@@ -43,7 +40,8 @@ import automata.State;
 import automata.Transition;
 import automata.turing.TMTransition;
 import automata.turing.Tape;
-import debug.EDebug;
+import gui.LambdaCellRenderer;
+import gui.viewer.AutomatonPane;
 /**
  * This allows the user to create transition creators that have tables directly
  * in the editing window with a minimum of effort.
@@ -228,6 +226,12 @@ public abstract class TableTransitionCreator extends TransitionCreator {
 
 		getParent().setTablePoint(tablePoint);
 		editingTable = createTable(transition);
+		
+		// set size to accomodate text
+		int fontSize = editingTable.getFontMetrics(editingTable.getFont()).getHeight();
+		editingTable.setSize(new Dimension(editingTable.getWidth(), fontSize + 5));
+		editingTable.setRowHeight(fontSize + 5);
+
 		getParent().add(editingTable);
 		getParent().validate();
 		tableDimensions = editingTable.getSize();
@@ -252,11 +256,19 @@ public abstract class TableTransitionCreator extends TransitionCreator {
 			public void componentShown(ComponentEvent e) {
 			}
 		});
-		
+
+		editingTable.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyTyped(KeyEvent e) {
+				if (e.getKeyChar() == ' ') {
+					e.setKeyChar('\u2423');
+				}
+			}
+		});
 		
 		editingTable.setLocation(tablePoint);
 		editingTable.setSize(tableDimensions);
-		
+	
 //		editingTable.editCellAt(0, 0);
 		
 		editingTable.setCellSelectionEnabled(true);

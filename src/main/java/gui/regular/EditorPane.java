@@ -25,6 +25,10 @@ import java.awt.event.*;
 import java.lang.ref.*;
 import javax.swing.*;
 import javax.swing.event.*;
+import javax.swing.text.AbstractDocument;
+import javax.swing.text.AttributeSet;
+import javax.swing.text.BadLocationException;
+import javax.swing.text.DocumentFilter;
 
 import gui.TextFieldSizeSlider;
 import regular.*;
@@ -80,6 +84,32 @@ public class EditorPane extends JPanel {
 		add(field, c);
 		add(new TextFieldSizeSlider(field, JSlider.HORIZONTAL, "Input Field Text Size (For optimiztion, adjust the size of "
 				+ "this window after resizing the text field)"), c);
+
+		AbstractDocument doc = (AbstractDocument) field.getDocument();
+
+		doc.setDocumentFilter(new DocumentFilter() {
+			@Override
+			public void insertString(FilterBypass fb, int offset,
+									String string, AttributeSet attr)
+					throws BadLocationException {
+
+				if (string != null) {
+					string = string.replace(" ", "\u2423"); // symbol for space
+				}
+				super.insertString(fb, offset, string, attr);
+			}
+
+			@Override
+			public void replace(FilterBypass fb, int offset, int length,
+								String text, AttributeSet attrs)
+					throws BadLocationException {
+
+				if (text != null) {
+					text = text.replace(" ", "\u2423");
+				}
+				super.replace(fb, offset, length, text, attrs);
+			}
+		});
 	}
 
 	/**

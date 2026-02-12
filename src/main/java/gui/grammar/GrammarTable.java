@@ -28,6 +28,8 @@ import gui.environment.Universe;
 
 import java.awt.BorderLayout;
 import java.awt.Color;
+import java.awt.event.KeyAdapter;
+import java.awt.event.KeyEvent;
 import java.awt.Component;
 import java.awt.Font;
 
@@ -106,6 +108,14 @@ public class GrammarTable extends HighlightTable {
 		getColumnModel().getColumn(2).setCellRenderer(RENDERER);
 		add(new TableTextSizeSlider(this, JSlider.HORIZONTAL), BorderLayout.NORTH);
 	
+		this.addKeyListener(new KeyAdapter() {
+			@Override
+			public void keyTyped(KeyEvent e) {
+				if (e.getKeyChar() == ' ') {
+					e.setKeyChar('\u2423');
+				}
+			}
+		});
 	}
 
 	/**
