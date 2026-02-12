@@ -61,13 +61,6 @@ public class EnvironmentFrame extends JFrame {
 	private static final long serialVersionUID = 1L;
 
 	/**
-	 * Flag to keep track of if in this environment we should automatically
-	 * set the first state placed down to be the initial state. This is
-	 * just for quality of life reasons.
-	 */
-	private boolean automaticallySetFirstStateAsInitial = true;
-
-	/**
 	 * Instantiates a new <CODE>EnvironmentFrame</CODE>. This does not fill
 	 * the environment with anything.
 	 * 
@@ -367,26 +360,6 @@ public class EnvironmentFrame extends JFrame {
 	                                environment.resizeSplit();
 	                        }
 	                });
-	}
-
-	/**
-	 * Getter for whether in this environment we should automatically set the first
-	 * state placed down as the initial state
-	 * @return Boolean
-	 */
-	public boolean getAutomaticallySetFirstStateAsInitial()
-	{
-		return automaticallySetFirstStateAsInitial;
-	}
-
-	/**
-	 * Setter for whether in this environment we should automatically set the first
-	 * state placed down as the initial state
-	 * @param value Boolean
-	 */
-	public void setAutomaticallySetFirstStateAsInitial(boolean value)
-	{
-		automaticallySetFirstStateAsInitial = value;
 	}
 
 
