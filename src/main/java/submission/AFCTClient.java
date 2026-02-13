@@ -22,10 +22,21 @@ public class AFCTClient {
     private String token;
     private int connectTimeoutMs = 15_000;
     private int readTimeoutMs = 60_000; // TODO: add a way to get the appropriate timeout from the server
+    private boolean useHTTPS = false;
 
     public AFCTClient(String baseUrl) {
         //this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
-        this.baseUrl = fixUrl(baseUrl);
+        String url = fixUrl(baseUrl);
+
+        if (baseUrl.trim().startsWith("https://") || url.endsWith("443")) {
+            this.useHTTPS = true;
+        }
+
+        if (useHTTPS) {
+            this.baseUrl = "https://" + url;
+        } else {
+            this.baseUrl = "http://" + url;
+        }
     }
 
     public static String fixUrl(String baseUrl) {
@@ -37,8 +48,14 @@ public class AFCTClient {
 
         // TODO: test *https* on AFCT server
         // Add "http://" to the beginning if it is missing
-        if (!fixedUrl.startsWith("http://") && !fixedUrl.startsWith("https://")) {
-            fixedUrl = "http://" + fixedUrl;
+//        if (!fixedUrl.startsWith("http://") && !fixedUrl.startsWith("https://")) {
+//            fixedUrl = "http://" + fixedUrl;
+//        }
+
+        if (fixedUrl.startsWith("http://")) {
+            fixedUrl = fixedUrl.substring("http://".length());
+        } else if (fixedUrl.startsWith("https://")) {
+            fixedUrl = fixedUrl.substring("https://".length());
         }
         return fixedUrl;
     }
