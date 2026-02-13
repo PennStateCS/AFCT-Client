@@ -5,6 +5,7 @@ import gui.Globals;
 import gui.environment.Environment;
 import gui.popups.UpdatePopup;
 
+import javax.net.ssl.SSLHandshakeException;
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
@@ -176,6 +177,10 @@ public class SessionHandler {
                 this.loggedIn = false;
                 return getFailureResult();
             }
+        } catch (SSLHandshakeException ex) {
+            // TODO: handle the SSL error here - deal with untrusted cert
+
+            return getErrorResult(ex.getMessage());
         } catch (IOException ex) {
             // Connection failed
             this.preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
