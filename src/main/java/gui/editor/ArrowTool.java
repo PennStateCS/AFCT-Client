@@ -240,10 +240,6 @@ public class ArrowTool extends Tool {
             getAutomaton().deselectAllTransitions();
         }
 
-		// Should we show a popup menu?
-		if (event.isPopupTrigger())
-			showPopup(event);
-
         // State selected
 		if (lastClickedState != null) {
 			initialPointState.setLocation(lastClickedState.getPoint());
@@ -275,6 +271,10 @@ public class ArrowTool extends Tool {
             }
 			getView().getDrawer().setSelectionBounds(bounds);
 		}
+
+		// Should we show a popup menu?
+		if (event.isPopupTrigger())
+			showPopup(event);
 
         //reset the selectedTransition after an Undo has happened.
         Transition[] trans = getAutomaton().getTransitions();
