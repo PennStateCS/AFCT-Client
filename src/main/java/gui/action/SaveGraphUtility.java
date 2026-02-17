@@ -23,6 +23,7 @@ import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+import java.awt.Window;
 import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
@@ -30,8 +31,12 @@ import java.io.IOException;
 import javax.imageio.ImageIO;
 import javax.swing.JComponent;
 import javax.swing.JFileChooser;
+import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileFilter;
+
+import org.apache.commons.io.FilenameUtils;
 
 import gui.editor.EditorPane;
 import gui.environment.Universe;
@@ -68,10 +73,17 @@ public class SaveGraphUtility{
         
            FileFilter spec = new FileNameExtensionFilter(description, format.split(","));
 
-           Universe.CHOOSER.addChoosableFileFilter(spec);
-           Universe.CHOOSER.addChoosableFileFilter(new AcceptAllFileFilter());
-           Universe.CHOOSER.setFileFilter(spec);
+            Universe.CHOOSER.addChoosableFileFilter(spec);
+            Universe.CHOOSER.addChoosableFileFilter(new AcceptAllFileFilter());
+            Universe.CHOOSER.setFileFilter(spec);
 
+            Window window = SwingUtilities.getWindowAncestor(c);
+            String title = "";
+
+            if (window instanceof JFrame) {
+                title = FilenameUtils.removeExtension(((JFrame) window).getTitle());
+            }
+            Universe.CHOOSER.setSelectedFile(new File(Universe.CHOOSER.getCurrentDirectory() + title));
 
            int result = Universe.CHOOSER.showSaveDialog(c);
            while (result == JFileChooser.APPROVE_OPTION) {
