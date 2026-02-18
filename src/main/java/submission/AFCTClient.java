@@ -5,6 +5,7 @@ import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
 import gui.Globals;
 
+import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -75,7 +76,7 @@ public class AFCTClient {
     // ================================================================
     public String login(String email, String password) throws IOException {
         URL url = new URL(baseUrl + "/api/public/login");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        HttpURLConnection conn = openConnection(url);
         conn.setConnectTimeout(connectTimeoutMs);
         conn.setReadTimeout(readTimeoutMs);
         conn.setRequestMethod("POST");
@@ -167,7 +168,7 @@ public class AFCTClient {
 
         String boundary = "----JavaBoundary" + System.currentTimeMillis();
         URL url = new URL(baseUrl + "/api/submissions");
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        HttpURLConnection conn = openConnection(url);
         conn.setConnectTimeout(connectTimeoutMs);
         conn.setReadTimeout(readTimeoutMs);
         conn.setRequestMethod("POST");
@@ -197,7 +198,7 @@ public class AFCTClient {
     // Helpers
     // ================================================================
     private HttpURLConnection openGet(URL url) throws IOException {
-        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+        HttpURLConnection conn = openConnection(url);
         conn.setConnectTimeout(connectTimeoutMs);
         conn.setReadTimeout(readTimeoutMs);
         conn.setRequestMethod("GET");
@@ -266,6 +267,12 @@ public class AFCTClient {
         if (!isAuthenticated()) {
             throw new IOException("Not authenticated; call login() first.");
         }
+    }
+
+    private HttpURLConnection openConnection(URL url) throws IOException {
+        HttpURLConnection conn = (HttpURLConnection) url.openConnection();
+
+        return conn;
     }
 
     private static void writeFormField(DataOutputStream out, String name, String value, String boundary) throws IOException {
