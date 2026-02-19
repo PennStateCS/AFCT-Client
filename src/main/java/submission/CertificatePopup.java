@@ -3,6 +3,8 @@ package submission;
 import gui.popups.ExtensionPopup;
 
 import javax.swing.*;
+import javax.swing.border.CompoundBorder;
+import javax.swing.border.EmptyBorder;
 import java.awt.*;
 
 import static gui.Globals.*;
@@ -19,9 +21,8 @@ public class CertificatePopup implements ExtensionPopup {
 
     /** Subject section */
     private JPanel subjectPanel;
-    private JLabel subjectTitleLabel;
-    private JLabel subjectCountryLabel;
-    private JTextField subjectCountryValue;
+    private CopyableJLabel subjectCountryValue;
+    private CopyableJLabel subjectStateValue;
 
     public CertificatePopup(CertificateHandler certificateHandler) {
         this.certificateHandler = certificateHandler;
@@ -55,6 +56,7 @@ public class CertificatePopup implements ExtensionPopup {
         c.gridy = y++;
         contentPane.add(headerCertificateLabel, c);
 
+        // Set constraints that are unchanged for all certificate info sections
         c.insets = new Insets(0, 0, 0, 0);
         c.gridy = y++;
 
@@ -87,17 +89,23 @@ public class CertificatePopup implements ExtensionPopup {
 
     private JPanel setUpSubjectSection() {
         subjectPanel = new JPanel(new GridBagLayout());
+        //subjectPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+        subjectPanel.setBorder(new CompoundBorder(
+                BorderFactory.createLineBorder(Color.GRAY, 1),
+                new EmptyBorder(26, 30, 26, 30)
+        ));
+
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0;
         int y = 0;
 
-        Color labelColor = new Color(32, 35, 36);
+        //Color labelColor = new Color(32, 35, 36);
+        Color labelColor = new Color(100, 100, 100);
         double labelWeightX = 0.25;
         double valueWeightX = 0.75;
 
-
         // Create subjectTitleLabel
-        subjectTitleLabel = new JLabel("Subject Name");
+        JLabel subjectTitleLabel = new JLabel("Subject Name");
         boldFontAndChangeSize(subjectTitleLabel, 16);
         // Add subjectTitleLabel
         c.anchor = GridBagConstraints.EAST;
@@ -106,32 +114,42 @@ public class CertificatePopup implements ExtensionPopup {
         c.gridy = y++;
         subjectPanel.add(subjectTitleLabel, c);
 
-        // Set constraints that are unchanged for all following elements
-        c.insets = new Insets(1, 0, 1, 0);
-
-        // Create subjectCountryLabel
-        subjectCountryLabel = new JLabel("Country");
-        boldFontAndChangeSize(subjectCountryLabel, 16);
-        subjectCountryLabel.setForeground(labelColor);
-        // Add subjectCountryLabel
-        c.anchor = GridBagConstraints.EAST;
-        c.weightx = labelWeightX;
+        // Country info line
         c.gridy = y++;
-        subjectPanel.add(subjectCountryLabel, c);
+        JLabel subjectCountryLabel = new JLabel("Country");
+        subjectCountryValue = new CopyableJLabel("US"); // TODO -- change: just for testing
+        addCertificateInfoLine(subjectCountryLabel, subjectCountryValue, subjectPanel, c, labelColor, labelWeightX, valueWeightX);
 
-        // Create subjectCountryValue
-        subjectCountryValue = new JTextField("US"); // TODO -- change: just for testing
-        boldFontAndChangeSize(subjectCountryValue, 16);
-        // Add countryLabel
-        c.anchor = GridBagConstraints.WEST;
-        c.weightx = valueWeightX;
-        subjectPanel.add(subjectCountryValue, c);
+        // state info line
+        c.gridy = y++;
+        JLabel subjectStateLabel = new JLabel("State/Province");
+        subjectStateValue = new CopyableJLabel("State"); // TODO -- change: just for testing
+        addCertificateInfoLine(subjectCountryLabel, subjectStateValue, subjectPanel, c, labelColor, labelWeightX, valueWeightX);
+
 
         return subjectPanel;
     }
 
-    private void addCertificateInfoLine() {
+    private void addCertificateInfoLine(JLabel label, JLabel value, JPanel panel, GridBagConstraints c, Color labelColor, double labelWeightX, double valueWeightX) {
+        // Set label font size and color
+        boldFontAndChangeSize(label, 16);
+        label.setForeground(labelColor);
+        // Add label to panel
+        c.insets = new Insets(1, 0, 1, 30);
+        c.gridx = 0;
+        c.anchor = GridBagConstraints.EAST;
+        c.weightx = labelWeightX;
+        panel.add(label, c);
 
+        // Set value font size
+        changeSize(value, 16);
+        unBoldFont(value);
+        // Add value to panel
+        c.insets = new Insets(1, 0, 1, 0);
+        c.gridx = 1;
+        c.anchor = GridBagConstraints.WEST;
+        c.weightx = valueWeightX;
+        panel.add(value, c);
     }
 
     private void setUpCertificateInfoSection() {
