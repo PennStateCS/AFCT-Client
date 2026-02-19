@@ -23,6 +23,10 @@ public class CertificatePopup implements ExtensionPopup {
     private JPanel subjectPanel;
     private CopyableJLabel subjectCountryValue;
     private CopyableJLabel subjectStateValue;
+    private CopyableJLabel subjectLocalityValue;
+    private CopyableJLabel subjectOrganizationValue;
+    private CopyableJLabel subjectOrganizationalUnitValue;
+    private CopyableJLabel subjectCommonNameValue;
 
     public CertificatePopup(CertificateHandler certificateHandler) {
         this.certificateHandler = certificateHandler;
@@ -52,7 +56,9 @@ public class CertificatePopup implements ExtensionPopup {
         changeSize(headerCertificateLabel, 24);
         // Add headerCertificateLabel
         c.fill = GridBagConstraints.HORIZONTAL;
-        c.insets = new Insets(0, 20, 24, 0);
+        int top = 0;
+        top = 15;
+        c.insets = new Insets(top, 20, 24, 0);
         c.gridy = y++;
         contentPane.add(headerCertificateLabel, c);
 
@@ -68,7 +74,11 @@ public class CertificatePopup implements ExtensionPopup {
     private JPanel setUpHeader() {
         Color cyan_ish = new Color(0, 202, 219);
         headerPanel = new JPanel(new GridBagLayout());
-        headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, cyan_ish));
+        //headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, cyan_ish));
+        headerPanel.setBorder(new CompoundBorder(
+                BorderFactory.createMatteBorder(1, 1, 0, 1, Color.GRAY),
+                BorderFactory.createMatteBorder(0, 0, 3, 0, cyan_ish)
+        ));
 
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0;
@@ -114,20 +124,44 @@ public class CertificatePopup implements ExtensionPopup {
         c.gridy = y++;
         subjectPanel.add(subjectTitleLabel, c);
 
+        /** Create and add all info lines */
+
         // Country info line
         c.gridy = y++;
-        JLabel subjectCountryLabel = new JLabel("Country");
         subjectCountryValue = new CopyableJLabel("US"); // TODO -- change: just for testing
-        addCertificateInfoLine(subjectCountryLabel, subjectCountryValue, subjectPanel, c, labelColor, labelWeightX, valueWeightX);
+        addCertificateInfoLine("Country", subjectCountryValue, subjectPanel, c, labelColor, labelWeightX, valueWeightX);
 
-        // state info line
+        // State info line
         c.gridy = y++;
-        JLabel subjectStateLabel = new JLabel("State/Province");
         subjectStateValue = new CopyableJLabel("State"); // TODO -- change: just for testing
-        addCertificateInfoLine(subjectCountryLabel, subjectStateValue, subjectPanel, c, labelColor, labelWeightX, valueWeightX);
+        addCertificateInfoLine("State/Province", subjectStateValue, subjectPanel, c, labelColor, labelWeightX, valueWeightX);
 
+        // Locality info line
+        c.gridy = y++;
+        subjectLocalityValue = new CopyableJLabel("City"); // TODO -- change: just for testing
+        addCertificateInfoLine("Locality", subjectLocalityValue, subjectPanel, c, labelColor, labelWeightX, valueWeightX);
+
+        // Organization info line
+        c.gridy = y++;
+        subjectOrganizationValue = new CopyableJLabel("AFCT"); // TODO -- change: just for testing
+        addCertificateInfoLine("Organization", subjectOrganizationValue, subjectPanel, c, labelColor, labelWeightX, valueWeightX);
+
+        // Organizational Unit info line
+        c.gridy = y++;
+        subjectOrganizationalUnitValue = new CopyableJLabel("Dev"); // TODO -- change: just for testing
+        addCertificateInfoLine("Organizational Unit", subjectOrganizationalUnitValue, subjectPanel, c, labelColor, labelWeightX, valueWeightX);
+
+        // Common Name info line
+        c.gridy = y++;
+        subjectCommonNameValue = new CopyableJLabel("localhost"); // TODO -- change: just for testing
+        addCertificateInfoLine("Common Name", subjectCommonNameValue, subjectPanel, c, labelColor, labelWeightX, valueWeightX);
 
         return subjectPanel;
+    }
+
+    private void addCertificateInfoLine(String labelText, JLabel value, JPanel panel, GridBagConstraints c, Color labelColor, double labelWeightX, double valueWeightX) {
+        JLabel label = new JLabel(labelText);
+        addCertificateInfoLine(label, value, panel, c, labelColor, labelWeightX, valueWeightX);
     }
 
     private void addCertificateInfoLine(JLabel label, JLabel value, JPanel panel, GridBagConstraints c, Color labelColor, double labelWeightX, double valueWeightX) {
