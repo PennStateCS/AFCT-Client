@@ -21,6 +21,10 @@ public class CertificatePopup implements ExtensionPopup {
     private CertificateHandler certificateHandler;
 
     private final Color cyan_ish = new Color(0, 202, 219);
+    //private final Color labelColor = new Color(32, 35, 36);
+    private final Color labelColor = new Color(100, 100, 100);
+    private final double labelWeightX = 0.25;
+    private final double valueWeightX = 0.75;
 
     /** GUI Components */
     private final JFrame frame;
@@ -49,6 +53,8 @@ public class CertificatePopup implements ExtensionPopup {
         this.contentPane = new JPanel(new GridBagLayout());
 
         int y = setUpHeader();
+        JPanel certificateTabPanel = createCertificateTabPanel(y);
+        y += 1;
 
         // Create cards
         this.cards = new JPanel(new CardLayout());
@@ -65,16 +71,17 @@ public class CertificatePopup implements ExtensionPopup {
         for (X509Certificate cert : this.certificateHandler.getCertificateChain()) {
             String commonName = cert.get(); // TODO: get the Common Name somehow
             CertificateTab certificateTab = new CertificateTab(commonName, this, cards);
+            certificateTabPanel.add(certificateTab);
 
+            JPanel infoSection = setUpInfoSections(cert);
+            // TODO: handle possibility of multiple certs having the same common name
+            cards.add(commonName, infoSection);
 
             if (this.lastSelected == null) {
                 certificateTab.setAsSelectedTab(true);
                 this.lastSelected = certificateTab;
             }
         }
-
-
-        setupGui();
 
         this.scrollPane = new JScrollPane(this.contentPane);
         this.frame.getContentPane().add(this.scrollPane);
@@ -111,8 +118,19 @@ public class CertificatePopup implements ExtensionPopup {
         return y;
     }
 
-    private JPanel createCertificateTabPanel() {
-        return null;
+    private JPanel createCertificateTabPanel(int y) {
+        // Create certificateTabPanel
+        JPanel certificateTabPanel = new JPanel();
+        certificateTabPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+
+        // Add certificateTabPanel
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.gridx = 0;
+        c.gridy = y;
+        this.contentPane.add(certificateTabPanel, c);
+
+        return certificateTabPanel;
     }
 
     public class CertificateTab extends JPanel {
@@ -155,7 +173,8 @@ public class CertificatePopup implements ExtensionPopup {
                 public void mouseEntered(MouseEvent e) {
                     // the mouse has entered the panel
                     if (!certificateTab.selected) {
-                        certificateTab.setBorder(BorderFactory.createMatteBorder(1, 1, 3, 1, Color.GRAY));
+                        //certificateTab.setBorder(BorderFactory.createMatteBorder(1, 1, 3, 1, Color.GRAY));
+                        certificateTab.setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, Color.GRAY));
                     }
                 }
 
@@ -163,7 +182,8 @@ public class CertificatePopup implements ExtensionPopup {
                 public void mouseExited(MouseEvent e) {
                     // the mouse has exited the panel
                     if (!certificateTab.selected) {
-                        certificateTab.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+                        //certificateTab.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+                        certificateTab.setBorder(BorderFactory.createEmptyBorder());
                     }
                 }
             });
@@ -181,22 +201,25 @@ public class CertificatePopup implements ExtensionPopup {
                 if (lastSelected != null) {
                     lastSelected.setAsSelectedTab(false);
                 }
+                certificatePopup.setLastSelected(this);
 
                 headerLabel.setForeground(cyan_ish);
-                this.setBorder(new CompoundBorder(
-                        BorderFactory.createMatteBorder(1, 1, 0, 1, Color.GRAY),
-                        BorderFactory.createMatteBorder(0, 0, 3, 0, cyan_ish)
-                ));
+                this.setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, cyan_ish));
+//                this.setBorder(new CompoundBorder(
+//                        BorderFactory.createMatteBorder(1, 1, 0, 1, Color.GRAY),
+//                        BorderFactory.createMatteBorder(0, 0, 3, 0, cyan_ish)
+//                ));
             } else {
                 this.selected = false;
                 setPointerCursor(this);
                 headerLabel.setForeground(defaultForegroundColor);
-                this.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+                //this.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+                this.setBorder(BorderFactory.createEmptyBorder());
             }
         }
     }
 
-    private JPanel setupGui() {
+    private JPanel setUpInfoSections(X509Certificate cert) {
         JPanel panel = new JPanel(new GridBagLayout());
         int y = 0;
         GridBagConstraints c = setConstraints(1, 1, 0, 0);
@@ -206,12 +229,60 @@ public class CertificatePopup implements ExtensionPopup {
         // Set constraints that are unchanged for all certificate info sections
         c.insets = new Insets(0, 0, 0, 0);
         c.gridy = y++;
-        panel.add(setUpSubjectSection(), c);
+
+
+
+        panel.add(setUpSubjectSection(), c);// TODO: remove
+
+        // TODO: figure this out
+        for (section : cert.sections) {
+            String sectionTitle = section.title;
+            JPanel infoSectionPanel = setUpTargetInfoSection(sectionTitle, section.elements);
+        }
+
+        return panel;
     }
 
 
+    private JPanel setUpTargetInfoSection(String sectionTitle, [] sectionElements) {
+        // TODO: make this dynamic
+        JPanel panel = new JPanel(new GridBagLayout());
+        //panel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+        panel.setBorder(new CompoundBorder(
+                BorderFactory.createLineBorder(Color.GRAY, 1),
+                new EmptyBorder(26, 30, 26, 30)
+        ));
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        int y = 0;
+
+        // Create titleLabel
+        JLabel titleLabel = new JLabel(sectionTitle);
+        boldFontAndChangeSize(titleLabel, 16);
+        // Add titleLabel
+        c.anchor = GridBagConstraints.EAST;
+        c.insets = new Insets(0, 0, 15, 30);
+        c.weightx = labelWeightX;
+        c.gridy = y++;
+        panel.add(titleLabel, c);
+
+        // TODO: figure this out
+        for (element : sectionElements) {
+            String elementValue = element.value;
+            String elementName = element.name;
+
+            c.gridy = y++;
+            JLabel value = new CopyableJLabel(elementValue);
+            addCertificateInfoLine(elementName, value, panel, c);
+        }
+
+        return panel;
+    }
+
 
     private JPanel setUpSubjectSection() {
+        // TODO: make this dynamic
         subjectPanel = new JPanel(new GridBagLayout());
         //subjectPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
         subjectPanel.setBorder(new CompoundBorder(
@@ -222,11 +293,6 @@ public class CertificatePopup implements ExtensionPopup {
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0;
         int y = 0;
-
-        //Color labelColor = new Color(32, 35, 36);
-        Color labelColor = new Color(100, 100, 100);
-        double labelWeightX = 0.25;
-        double valueWeightX = 0.75;
 
         // Create subjectTitleLabel
         JLabel subjectTitleLabel = new JLabel("Subject Name");
@@ -273,6 +339,11 @@ public class CertificatePopup implements ExtensionPopup {
         addCertificateInfoLine("Common Name", subjectCommonNameValue, subjectPanel, c, labelColor, labelWeightX, valueWeightX);
 
         return subjectPanel;
+    }
+
+    private void addCertificateInfoLine(String labelText, JLabel value, JPanel panel, GridBagConstraints c) {
+        JLabel label = new JLabel(labelText);
+        addCertificateInfoLine(label, value, panel, c, labelColor, labelWeightX, valueWeightX);
     }
 
     private void addCertificateInfoLine(String labelText, JLabel value, JPanel panel, GridBagConstraints c, Color labelColor, double labelWeightX, double valueWeightX) {
