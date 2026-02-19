@@ -695,6 +695,10 @@ public class Globals {
         component.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
+    public static void setDefaultCursor(Component component) {
+        component.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+    }
+
     public static String colorHTMLMessage(String message, String color) {
         return "<span style=\"color: " + color + ";\">" + message + "</span>";
     }
