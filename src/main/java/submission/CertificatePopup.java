@@ -1,23 +1,33 @@
 package submission;
 
+import gui.Globals;
 import gui.popups.ExtensionPopup;
 
+import javax.security.auth.x500.X500Principal;
 import javax.swing.*;
 import javax.swing.border.CompoundBorder;
 import javax.swing.border.EmptyBorder;
 import java.awt.*;
+import java.awt.event.MouseAdapter;
+import java.awt.event.MouseEvent;
+import java.io.IOException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.security.cert.X509Certificate;
 
 import static gui.Globals.*;
 
 public class CertificatePopup implements ExtensionPopup {
     private CertificateHandler certificateHandler;
 
+    private final Color cyan_ish = new Color(0, 202, 219);
+
     /** GUI Components */
     private final JFrame frame;
     private JPanel contentPane;
+    private final JPanel cards;
     private JScrollPane scrollPane;
-    private JPanel headerPanel;
-    private JLabel headerLabel;
+    private CertificateTab lastSelected = null;
 
     /** Subject section */
     private JPanel subjectPanel;
@@ -31,9 +41,37 @@ public class CertificatePopup implements ExtensionPopup {
     public CertificatePopup(CertificateHandler certificateHandler) {
         this.certificateHandler = certificateHandler;
 
+        // Create frame
         this.frame = new JFrame();
+        frame.setTitle("TEST"); // TODO: replace
+
+        // Create contentPane
         this.contentPane = new JPanel(new GridBagLayout());
 
+        int y = setUpHeader();
+
+        // Create cards
+        this.cards = new JPanel(new CardLayout());
+
+        // Add cards to contentPane
+        GridBagConstraints c = new GridBagConstraints();
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.gridx = 0;
+        c.gridy = y;
+        this.contentPane.add(this.cards, c);
+
+
+
+        for (X509Certificate cert : this.certificateHandler.getCertificateChain()) {
+            String commonName = cert.get(); // TODO: get the Common Name somehow
+            CertificateTab certificateTab = new CertificateTab(commonName, this, cards);
+
+
+            if (this.lastSelected == null) {
+                certificateTab.setAsSelectedTab(true);
+                this.lastSelected = certificateTab;
+            }
+        }
 
 
         setupGui();
@@ -46,56 +84,132 @@ public class CertificatePopup implements ExtensionPopup {
         showPopup();
     }
 
-    private void setupGui() {
+    public CertificateTab getLastSelected() {
+        return lastSelected;
+    }
+
+    public void setLastSelected(CertificateTab lastSelected) {
+        this.lastSelected = lastSelected;
+    }
+
+    private int setUpHeader() {
         int y = 0;
-        GridBagConstraints c = setConstraints(1, 1, 0, 0);
+        GridBagConstraints c = new GridBagConstraints();
         c.fill = GridBagConstraints.HORIZONTAL;
+        c.gridx = 0;
 
         // Create headerCertificateLabel
         JLabel headerCertificateLabel = new JLabel("Certificate");
         changeSize(headerCertificateLabel, 24);
         // Add headerCertificateLabel
-        c.fill = GridBagConstraints.HORIZONTAL;
         int top = 0;
         top = 15;
         c.insets = new Insets(top, 20, 24, 0);
         c.gridy = y++;
-        contentPane.add(headerCertificateLabel, c);
+        this.contentPane.add(headerCertificateLabel, c);
+
+        return y;
+    }
+
+    private JPanel createCertificateTabPanel() {
+        return null;
+    }
+
+    public class CertificateTab extends JPanel {
+        private CertificatePopup certificatePopup;
+        private JPanel cards;
+        private JLabel headerLabel;
+        private Color defaultForegroundColor;
+        public boolean selected = false;
+        public final String commonName;
+
+        public CertificateTab(String commonName, CertificatePopup certificatePopup, JPanel cards) {
+            super(new GridBagLayout());
+
+            this.certificatePopup = certificatePopup;
+            this.cards = cards;
+            this.commonName = commonName;
+
+            GridBagConstraints c = new GridBagConstraints();
+            c.gridx = 0;
+            c.gridy = 0;
+
+            // Create headerLabel
+            headerLabel = new JLabel(commonName);
+            changeSize(headerLabel, 17);
+            defaultForegroundColor = headerLabel.getForeground();
+            // Add headerLabel
+            c.anchor = GridBagConstraints.NORTH;
+            c.insets = new Insets(18, 18, 15, 18);
+            this.add(headerLabel, c);
+
+            setPointerCursor(this);
+            CertificateTab certificateTab = this;
+            this.addMouseListener(new MouseAdapter() {
+                @Override
+                public void mouseClicked(MouseEvent e) {
+                    setAsSelectedTab(true);
+                }
+
+                @Override
+                public void mouseEntered(MouseEvent e) {
+                    // the mouse has entered the panel
+                    if (!certificateTab.selected) {
+                        certificateTab.setBorder(BorderFactory.createMatteBorder(1, 1, 3, 1, Color.GRAY));
+                    }
+                }
+
+                @Override
+                public void mouseExited(MouseEvent e) {
+                    // the mouse has exited the panel
+                    if (!certificateTab.selected) {
+                        certificateTab.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+                    }
+                }
+            });
+        }
+
+        public void setAsSelectedTab(boolean selected) {
+            if (selected) {
+                this.selected = true;
+                setDefaultCursor(this);
+
+                CardLayout cl = (CardLayout)(cards.getLayout());
+                cl.show(cards, this.commonName);
+
+                CertificateTab lastSelected = certificatePopup.getLastSelected();
+                if (lastSelected != null) {
+                    lastSelected.setAsSelectedTab(false);
+                }
+
+                headerLabel.setForeground(cyan_ish);
+                this.setBorder(new CompoundBorder(
+                        BorderFactory.createMatteBorder(1, 1, 0, 1, Color.GRAY),
+                        BorderFactory.createMatteBorder(0, 0, 3, 0, cyan_ish)
+                ));
+            } else {
+                this.selected = false;
+                setPointerCursor(this);
+                headerLabel.setForeground(defaultForegroundColor);
+                this.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+            }
+        }
+    }
+
+    private JPanel setupGui() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        int y = 0;
+        GridBagConstraints c = setConstraints(1, 1, 0, 0);
+        c.fill = GridBagConstraints.HORIZONTAL;
+
 
         // Set constraints that are unchanged for all certificate info sections
         c.insets = new Insets(0, 0, 0, 0);
         c.gridy = y++;
-
-        contentPane.add(setUpHeader(), c);
-        c.gridy = y++;
-        contentPane.add(setUpSubjectSection(), c);
+        panel.add(setUpSubjectSection(), c);
     }
 
-    private JPanel setUpHeader() {
-        Color cyan_ish = new Color(0, 202, 219);
-        headerPanel = new JPanel(new GridBagLayout());
-        //headerPanel.setBorder(BorderFactory.createMatteBorder(0, 0, 3, 0, cyan_ish));
-        headerPanel.setBorder(new CompoundBorder(
-                BorderFactory.createMatteBorder(1, 1, 0, 1, Color.GRAY),
-                BorderFactory.createMatteBorder(0, 0, 3, 0, cyan_ish)
-        ));
 
-        GridBagConstraints c = new GridBagConstraints();
-        c.gridx = 0;
-        int y = 0;
-
-        // Create headerLabel
-        headerLabel = new JLabel("localhost"); // TODO -- change: just for testing
-        changeSize(headerLabel, 17);
-        headerLabel.setForeground(cyan_ish);
-        // Add headerLabel
-        c.anchor = GridBagConstraints.NORTH;
-        c.insets = new Insets(18, 18, 15, 18);
-        c.gridy = y++;
-        headerPanel.add(headerLabel, c);
-
-       return headerPanel;
-    }
 
     private JPanel setUpSubjectSection() {
         subjectPanel = new JPanel(new GridBagLayout());
@@ -125,6 +239,8 @@ public class CertificatePopup implements ExtensionPopup {
         subjectPanel.add(subjectTitleLabel, c);
 
         /** Create and add all info lines */
+
+        // TODO: this should be done dynamically based on what is is the cert chain
 
         // Country info line
         c.gridy = y++;

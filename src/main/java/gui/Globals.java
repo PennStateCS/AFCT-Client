@@ -673,6 +673,10 @@ public class Globals {
         component.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
+    public static void setDefaultCursor(Component component) {
+        component.setCursor(Cursor.getPredefinedCursor(Cursor.DEFAULT_CURSOR));
+    }
+
     public static String colorMessage(String message, boolean success) {
         String result;
         if (success) {
