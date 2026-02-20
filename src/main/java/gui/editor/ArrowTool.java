@@ -240,6 +240,11 @@ public class ArrowTool extends Tool {
             getAutomaton().deselectAllTransitions();
         }
 
+		// Right-clicking a transition prompts the edit menu
+		if (event.getButton() == MouseEvent.BUTTON3 && lastClickedTransition != null){
+			creator.editTransition(lastClickedTransition, event.getPoint());
+		}
+
         // State selected
 		if (lastClickedState != null) {
 			initialPointState.setLocation(lastClickedState.getPoint());
@@ -283,13 +288,8 @@ public class ArrowTool extends Tool {
                 selectedTransition = trans[i];
                 return;
             }
-        
 
         selectedTransition = null;
-
-
-
-
 	}
 
 	/**
@@ -541,10 +541,11 @@ public class ArrowTool extends Tool {
 	 */
 	public void mouseReleased(MouseEvent event) {
         transitionInFlux = false;
-		if (event.isPopupTrigger())
+		// Don't show the popup window after right-clicking to edit a transition
+		if (lastClickedTransition == null && event.isPopupTrigger()){
 			showPopup(event);
-		
-		
+		}
+
 		State[] states = getView().getDrawer().getAutomaton().getStates();
 		int count = 0;
 		for(int k = 0; k < states.length; k++){			
