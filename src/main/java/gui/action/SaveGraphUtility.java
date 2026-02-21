@@ -63,7 +63,7 @@ public class SaveGraphUtility{
            Graphics2D g = bimg.createGraphics();
            g.drawImage(canvasimage, null, null);
 
-            ImagePreviewer imgpreview = new ImagePreviewer(bimg, environment);
+            ImagePreviewer imgpreview = new ImagePreviewer(apane, environment);
             boolean accepted_preview = imgpreview.display();
             if (!accepted_preview) {
                 return;

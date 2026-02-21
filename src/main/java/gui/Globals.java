@@ -12,6 +12,7 @@ import submission.SessionHandler;
 
 import javax.swing.*;
 import java.awt.*;
+import java.awt.image.BufferedImage;
 import java.io.File;
 import java.io.IOException;
 import java.nio.file.FileSystems;
@@ -24,8 +25,7 @@ import java.util.Objects;
 import java.util.prefs.Preferences;
 
 import static gui.editor.IconKeeper.getRefreshIcon;
-import static java.lang.Math.abs;
-import static java.lang.Math.floor;
+import static java.lang.Math.*;
 
 /**
  * A class containing global values, subclasses, and static methods.
@@ -689,6 +689,60 @@ public class Globals {
 
     public static String colorHTMLErrorMessage(String message) {
         return colorMessage(message, false);
+    }
+
+    public static BufferedImage getComponentSnapshot(Component c, double scale) {
+        int width = Math.max(1, c.getWidth());
+        int height = Math.max(1, c.getHeight());
+        width = (int) (width * scale);
+        height = (int) (height * scale);
+
+        BufferedImage img = new BufferedImage(width, height, BufferedImage.TYPE_INT_ARGB);
+        Graphics2D g2 = img.createGraphics();
+
+        // Scale *before* painting so the component renders at higher resolution
+        g2.scale(scale, scale);
+
+        // Quality hints
+        g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_TEXT_ANTIALIASING, RenderingHints.VALUE_TEXT_ANTIALIAS_ON);
+        g2.setRenderingHint(RenderingHints.KEY_RENDERING, RenderingHints.VALUE_RENDER_QUALITY);
+
+        // Important: use printAll to capture borders/children properly
+        c.printAll(g2);
+
+        g2.dispose();
+        return img;
+    }
+
+    public static BufferedImage getComponentSnapshotByArea(Component c, int minSnapshotArea) {
+        int width = Math.max(1, c.getWidth());
+        int height = Math.max(1, c.getHeight());
+
+        int currentArea = width * height;
+        double scale = 1.0;
+        if (currentArea < minSnapshotArea) {
+            double ratio = (double) minSnapshotArea / currentArea;
+            scale = sqrt(ratio);
+        }
+        return getComponentSnapshot(c, scale);
+    }
+
+    public static BufferedImage getComponentSnapshot(Component c) {
+        // should probably be based on the user's monitor resolution...
+        int minSnapshotArea = 2_000_000; // approximately the area of a 1080p monitor
+        return getComponentSnapshotByArea(c, minSnapshotArea);
+    }
+
+    public static BufferedImage getComponentSnapshot(Component c, int targetWidth, int targetHeight) {
+        int width = Math.max(1, c.getWidth());
+        int height = Math.max(1, c.getHeight());
+
+        double widthScale = (double) targetWidth / (double) width;
+        double heightScale = (double) targetHeight / (double) height;
+        double scale = (widthScale + heightScale) / 2;
+
+        return getComponentSnapshot(c, scale);
     }
 
     public static void errorPrint(String output) {

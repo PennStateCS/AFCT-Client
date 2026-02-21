@@ -140,16 +140,8 @@ public class PrintAction extends RestrictedAction {
 
 		// shows a preview of the image to print
 		private boolean showPreview() {
-			// get image to preview
-			Image canvasimage = apane.createImage(apane.getWidth(),apane.getHeight());
-			Graphics imgG = canvasimage.getGraphics();
-			apane.paint(imgG);
-			BufferedImage bimg = new BufferedImage(canvasimage.getWidth(null), canvasimage.getHeight(null), BufferedImage.TYPE_INT_RGB);
-			Graphics2D g = bimg.createGraphics();
-			g.drawImage(canvasimage, null, null);
-
 			// preview image
-			ImagePreviewer imgpreview = new ImagePreviewer(bimg, environment);
+			ImagePreviewer imgpreview = new ImagePreviewer(apane, environment);
 			return imgpreview.display();
 		}
 
