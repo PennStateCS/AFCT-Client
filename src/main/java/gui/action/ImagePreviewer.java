@@ -1,5 +1,8 @@
 package gui.action;
 
+import gui.environment.Environment;
+import gui.environment.Universe;
+
 import java.awt.BorderLayout;
 import java.awt.Frame;
 import java.awt.Graphics2D;
@@ -8,28 +11,52 @@ import java.awt.event.ActionListener;
 import java.awt.event.ComponentAdapter;
 import java.awt.event.ComponentEvent;
 import java.awt.image.BufferedImage;
+import java.io.File;
 
-import javax.swing.ImageIcon;
-import javax.swing.JButton;
-import javax.swing.JDialog;
-import javax.swing.JLabel;
-import javax.swing.JPanel;
+import javax.swing.*;
+
+import static gui.Globals.guaranteedPositionFrameOnWindow;
 
 public class ImagePreviewer extends JDialog {
-
+    private JFrame frame;
+    private Environment environment;
+    private JFrame parentFrame;
     private JPanel imagePane;
     private JPanel buttonPane;
     private JLabel piclabel;
     private boolean closedNicely;
     private BufferedImage img;
 
-    public ImagePreviewer(BufferedImage bimg) {
+    public ImagePreviewer(BufferedImage bimg, Environment environment, JFrame parentFrame) {
         // create a modal dialog that will stop the thread until closed
-        super(new Frame(), true); 
+        super(parentFrame != null ? parentFrame : Universe.frameForEnvironment(environment), true);
+
+        this.environment = environment;
+        if (parentFrame != null){
+            this.parentFrame = parentFrame;
+        } else {
+            if (this.environment != null) {
+                this.parentFrame = Universe.frameForEnvironment(this.environment);
+            }
+        }
+
+        String windowTitle = "Image preview";
+        String parentTitle = "";
+        if (environment != null) {
+            File currentFile = environment.getFile();
+            parentTitle = currentFile.getName();
+        } else {
+            if (parentFrame != null) {
+                parentTitle = parentFrame.getTitle();
+            }
+        }
+        if (!parentTitle.isEmpty()) {
+            windowTitle = parentTitle + " - " + windowTitle;
+        }
+        this.setTitle(windowTitle);
+
         this.setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
         this.closedNicely = true;
-
-        this.setTitle("Image preview");
 
         this.imagePane = new JPanel(new BorderLayout());
         this.buttonPane = new JPanel();
@@ -68,6 +95,14 @@ public class ImagePreviewer extends JDialog {
                 resizeImagePanel();
             }
         }); 
+    }
+
+    public ImagePreviewer(BufferedImage bimg, JFrame parentFrame) {
+        this(bimg, null, parentFrame);
+    }
+
+    public ImagePreviewer(BufferedImage bimg, Environment environment) {
+        this(bimg, environment, null);
     }
 
     // adds an image to the imagepreviewer
@@ -121,6 +156,7 @@ public class ImagePreviewer extends JDialog {
     // @return boolean whether the dialog closed nicely
     public Boolean display() {
         this.pack();
+        setLocationRelativeTo(parentFrame);
         this.toFront();
         this.setVisible(true);
         return this.closedNicely;

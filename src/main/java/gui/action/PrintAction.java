@@ -73,7 +73,7 @@ public class PrintAction extends RestrictedAction {
 	public void actionPerformed(ActionEvent e) {
 		JComponent c = (JComponent) environment.getActive();
 		Component apane = environment.tabbed.getSelectedComponent();
-		PrintUtilities.printComponent(c, apane);
+		PrintUtilities.printComponent(environment, c, apane);
 	}
 
 	/** The environment. */
@@ -85,12 +85,18 @@ public class PrintAction extends RestrictedAction {
 	 * advantage of some facilities of Swing.
 	 */
 	private static class PrintUtilities implements Printable {
-		public static void printComponent(JComponent c, Component apane) {
-			new PrintUtilities(c, apane).print();	
+        private Environment environment;
+		public static void printComponent(Environment environment, JComponent c, Component apane) {
+			new PrintUtilities(environment, c, apane).print();
 		}
 
-		public PrintUtilities(JComponent componentToBePrinted, Component apane) {
-			this.componentToBePrinted = componentToBePrinted;
+        public static void printComponent(JComponent c, Component apane) {
+            new PrintUtilities(null, c, apane).print();
+        }
+
+		public PrintUtilities(Environment environment, JComponent componentToBePrinted, Component apane) {
+			this.environment = environment;
+            this.componentToBePrinted = componentToBePrinted;
 			if (apane instanceof EditorPane){
 				apane = ((EditorPane)apane).getAutomatonPane();
 			}
@@ -143,7 +149,7 @@ public class PrintAction extends RestrictedAction {
 			g.drawImage(canvasimage, null, null);
 
 			// preview image
-			ImagePreviewer imgpreview = new ImagePreviewer(bimg);
+			ImagePreviewer imgpreview = new ImagePreviewer(bimg, environment);
 			return imgpreview.display();
 		}
 
