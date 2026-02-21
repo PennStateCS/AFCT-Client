@@ -28,6 +28,7 @@ import static submission.SubmitWindow.ComboBoxTarget.*;
 public class SessionHandler {
     public final Preferences preferences;
     private final DateFormat dateFormat;
+    public final CertificateHandler certificateHandler;
     private int expireAfterDays = 7;
 
     private Instant startTime = Instant.MIN;
@@ -73,6 +74,7 @@ public class SessionHandler {
     public SessionHandler() {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
         this.dateFormat = DateFormat.getDateInstance(DateFormat.SHORT);
+        this.certificateHandler = new CertificateHandler();
         this.submitWindows = new ArrayList<>();
         this.courses = new HashMap<>();
         this.courseToAssignmentMap = new HashMap<>();
@@ -80,6 +82,13 @@ public class SessionHandler {
 
         // Login GUI elements
         this.loginWindow = new LoginWindow(this);
+
+        // Certificate stuff
+        try {
+            CertificateHandler.enableCustomCertificateValidation();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
     }
 
     public SubmitWindow createNewSubmitWindow(Environment environment) {
@@ -179,7 +188,7 @@ public class SessionHandler {
             }
         } catch (SSLHandshakeException ex) {
             // TODO: handle the SSL error here - deal with untrusted cert
-
+            this.certificateHandler.test();
             return getErrorResult(ex.getMessage());
         } catch (IOException ex) {
             // Connection failed
