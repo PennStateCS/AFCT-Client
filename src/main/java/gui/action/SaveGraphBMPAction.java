@@ -85,7 +85,7 @@ public class SaveGraphBMPAction extends RestrictedAction{
 
                JComponent c=(JComponent)environment.getActive();
 
-               SaveGraphUtility.saveGraph(apane, c,"BMP files", "bmp"); 
+               SaveGraphUtility.saveGraph(environment, apane, c,"BMP files", "bmp");
 
 
 		

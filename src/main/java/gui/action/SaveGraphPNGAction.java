@@ -82,6 +82,6 @@ public class SaveGraphPNGAction extends RestrictedAction{
 
            Component apane = environment.tabbed.getSelectedComponent();
            JComponent c=(JComponent)environment.getActive();
-           SaveGraphUtility.saveGraph(apane, c,"PNG files", "png"); 
+           SaveGraphUtility.saveGraph(environment, apane, c,"PNG files", "png");
     }  
 }

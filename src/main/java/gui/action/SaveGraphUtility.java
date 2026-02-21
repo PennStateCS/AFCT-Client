@@ -36,6 +36,7 @@ import javax.swing.JOptionPane;
 import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileFilter;
 
+import gui.environment.Environment;
 import org.apache.commons.io.FilenameUtils;
 
 import gui.editor.EditorPane;
@@ -49,7 +50,7 @@ import gui.environment.Universe;
   */
 public class SaveGraphUtility{
 
-        public static void saveGraph(Component apane, JComponent c, String description,  String format){
+        public static void saveGraph(Environment environment, Component apane, JComponent c, String description, String format){
            if (apane instanceof EditorPane){
                apane = ((EditorPane)apane).getAutomatonPane();
            }
@@ -70,20 +71,32 @@ public class SaveGraphUtility{
 
            Universe.CHOOSER.resetChoosableFileFilters();
            Universe.CHOOSER.setAcceptAllFileFilterUsed(false);
-        
-           FileFilter spec = new FileNameExtensionFilter(description, format.split(","));
+
+           String[] formats = format.split(",");
+           FileFilter spec = new FileNameExtensionFilter(description, formats);
 
             Universe.CHOOSER.addChoosableFileFilter(spec);
             Universe.CHOOSER.addChoosableFileFilter(new AcceptAllFileFilter());
             Universe.CHOOSER.setFileFilter(spec);
 
-            Window window = SwingUtilities.getWindowAncestor(c);
             String title = "";
-
-            if (window instanceof JFrame) {
-                title = FilenameUtils.removeExtension(((JFrame) window).getTitle());
+            File currentFile = environment.getFile();
+            if (currentFile != null) {
+                title = currentFile.getName();
             }
-            Universe.CHOOSER.setSelectedFile(new File(Universe.CHOOSER.getCurrentDirectory() + title));
+
+            if (title.isEmpty()) {
+                Window window = SwingUtilities.getWindowAncestor(c);
+                if (window instanceof JFrame) {
+                    title = ((JFrame) window).getTitle();
+                }
+            }
+            if (title.startsWith("*")) {
+                // Remove "*" from beginning of name
+                title = title.substring(1);
+            }
+            title = FilenameUtils.removeExtension(title);
+            Universe.CHOOSER.setSelectedFile(new File(title + "." + formats[0]));
 
            int result = Universe.CHOOSER.showSaveDialog(c);
            while (result == JFileChooser.APPROVE_OPTION) {
