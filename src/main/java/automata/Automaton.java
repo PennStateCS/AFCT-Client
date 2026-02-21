@@ -391,10 +391,6 @@ public class Automaton implements Serializable, Cloneable {
 	}
 
 	
-	
-
-
-	
 	/**
 	 * Moves objects from Array to List
 	 * 
@@ -754,10 +750,16 @@ public class Automaton implements Serializable, Cloneable {
 
 	public void addBreakpoint(State state) {
 		state.setBreakpoint(true);
+		breakpointStates.add(state);
+		distributeStateEvent(new AutomataStateEvent(this, state, false, false,
+				true));
 	}
 
 	public void removeBreakpoint(State state) {
 		state.setBreakpoint(false);
+		breakpointStates.remove(state);
+		distributeStateEvent(new AutomataStateEvent(this, state, false, false,
+				true));
 	}
 
 	/**

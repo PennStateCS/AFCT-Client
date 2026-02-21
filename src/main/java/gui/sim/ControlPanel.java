@@ -77,9 +77,12 @@ public class ControlPanel extends JToolBar {
 
 			@Override
 			public void actionPerformed(ActionEvent e) {
-				controller.step(blockStep, true);
+				controller.step(blockStep, ConfigurationController.StepType.SINGLE);
 			}
 		});
+
+		
+		int MAX_ATTEMPTS = 10000;
 
 		this.add(new TooltipAction("Multi-step", "Moves existing valid "
 			+ "configurations forward by x configurations") {
@@ -96,9 +99,15 @@ public class ControlPanel extends JToolBar {
 					null,
 					"10"));
 					
+					int cur_attempt = 0;
 					for (int i = 0; i < steps; i++) {
-						boolean finished = controller.step(blockStep, false);
+						boolean finished = controller.step(blockStep, ConfigurationController.StepType.MULTI);
 						if (finished) {
+							break;
+						}
+						cur_attempt++;
+						if (cur_attempt > MAX_ATTEMPTS) {
+							JOptionPane.showMessageDialog(myself, "Max of " + MAX_ATTEMPTS + " steps generated");
 							break;
 						}
 					}
@@ -107,6 +116,30 @@ public class ControlPanel extends JToolBar {
 				}
 			}
 		});
+
+		this.add(new TooltipAction("Debug", "Moves existing valid "
+				+ "configurations until hitting a breakpoint, or hitting a max_attempts.") {
+			/**
+					 * 
+					 */
+					private static final long serialVersionUID = 1L;
+
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				boolean completed = false;
+				int cur_attempt = 0;
+				controller.step(blockStep, ConfigurationController.StepType.SINGLE);
+				while (!completed) {
+					completed = controller.step(blockStep, ConfigurationController.StepType.BREAK);
+					cur_attempt++;
+					if (cur_attempt > MAX_ATTEMPTS) {
+						JOptionPane.showMessageDialog(myself, "Max of " + MAX_ATTEMPTS + " steps generated");
+						break;
+					}
+				}
+			}
+		});
+
 		this.add(new TooltipAction("Reset", "Resets the simulation to "
 				+ "start conditions.") {
 					private static final long serialVersionUID = 1L;

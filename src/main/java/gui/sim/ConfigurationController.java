@@ -122,19 +122,43 @@ public class ConfigurationController implements ConfigurationSelectionListener {
 	}
 
 	/**
+	 * Types of step functions
+	 */
+	public enum StepType {
+        SINGLE, MULTI, BREAK
+    }
+
+	/**
+	 * Returns true if any configuration is on a breakpoint state
+	 * @param configs the list of configurations
+	 * @return true if any configuration is on a breakpoint state
+	 */
+	private boolean onBreakPoint(Configuration[] configs) {
+		for (Configuration config : configs) {
+			if (config.getCurrentState().isBreakpoint()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * The step method takes all configurations from the configuration pane, and
 	 * replaces them with "successor" transitions.
-	 * @ return true if there are no valid configurations
+	 * @return true if stepping is complete for multistep and breakpoint stepping
 	 * 
 	 * @param blockStep
 	 */
-	public boolean step(boolean blockStep, boolean removeCompleted) {
+	public boolean step(boolean blockStep, StepType steptype) {
 		Configuration[] configs = null;
-		if (removeCompleted) {
+		if (steptype == StepType.SINGLE) {
 			configs = configurations.getValidConfigurations();
 		} else {
 			configs = configurations.getConfigurations();
 			if (configurations.getValidConfigurations().length == 0) {
+				return true;
+			}
+			if (steptype == StepType.BREAK && onBreakPoint(configs)) {
 				return true;
 			}
 		}

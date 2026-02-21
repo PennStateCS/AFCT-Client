@@ -80,6 +80,7 @@ public class ColorChooserAction extends  RestrictedAction{
         	public void actionPerformed(ActionEvent event){
         		current.setColor("Original");
         		StateDrawer.STATE_COLOR = new Color(255, 255, 150);
+				StateDrawer.BREAKPOINT_COLOR = new Color(215, 0, 64);
         		StateDrawer.HIGHLIGHT_COLOR = new Color(100, 200, 200);
         		TransitionTool.COLOR = new Color(95,95,95);
         		CurvedArrow.ARROW_COLOR = new Color(0,0,0);
@@ -94,6 +95,7 @@ public class ColorChooserAction extends  RestrictedAction{
         		current.setColor("Blue");
         		StateDrawer.STATE_COLOR = new Color(225, 255, 255);
         		StateDrawer.HIGHLIGHT_COLOR = new Color(145,219,227);
+				StateDrawer.BREAKPOINT_COLOR = new Color(121, 41, 99);
         		TransitionTool.COLOR = new Color(116,120,128);
         		CurvedArrow.ARROW_COLOR = new Color(116,120,128);
         		CurvedArrow.HIGHLIGHT_COLOR = new Color(86,97,120);
@@ -108,6 +110,7 @@ public class ColorChooserAction extends  RestrictedAction{
         		current.setColor("Green");
         		StateDrawer.STATE_COLOR = new Color(186,255,184);
         		StateDrawer.HIGHLIGHT_COLOR = new Color(124,230,120);
+				StateDrawer.BREAKPOINT_COLOR = new Color(250, 160, 160);
         		TransitionTool.COLOR = new Color(219,160,161);
         		CurvedArrow.ARROW_COLOR = new Color(219,160,161);  
         		CurvedArrow.HIGHLIGHT_COLOR = new Color(194,103,103);		
@@ -122,6 +125,7 @@ public class ColorChooserAction extends  RestrictedAction{
         		current.setColor("Orange");
         		StateDrawer.STATE_COLOR = new Color(255,190,121);
         		StateDrawer.HIGHLIGHT_COLOR = new Color(204,123,42);
+				StateDrawer.BREAKPOINT_COLOR = new Color(236, 88, 0);
         		TransitionTool.COLOR = new Color(110,99,86);
         		CurvedArrow.ARROW_COLOR = new Color(110,99,86);  
         		CurvedArrow.HIGHLIGHT_COLOR = new Color(97,94,84);		
@@ -136,6 +140,7 @@ public class ColorChooserAction extends  RestrictedAction{
         		current.setColor("Purple");
         		StateDrawer.STATE_COLOR = new Color(230,230,250);
         		StateDrawer.HIGHLIGHT_COLOR = new Color(152,141,252);
+				StateDrawer.BREAKPOINT_COLOR = new Color(149, 53, 83);
         		TransitionTool.COLOR = new Color(0,0,94);
         		CurvedArrow.ARROW_COLOR = new Color(0,0,94);  
         		CurvedArrow.HIGHLIGHT_COLOR = new Color(100,149,237);		
@@ -150,6 +155,7 @@ public class ColorChooserAction extends  RestrictedAction{
         		current.setColor("Pink");
         		StateDrawer.STATE_COLOR = new Color(255,214,219);
         		StateDrawer.HIGHLIGHT_COLOR = new Color(250,173,178);
+				StateDrawer.BREAKPOINT_COLOR = new Color(238, 131, 121);
         		//247, 176, 219
         		TransitionTool.COLOR = new Color(116,120,128);
         		CurvedArrow.ARROW_COLOR = new Color(116,120,128);  

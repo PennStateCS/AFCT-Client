@@ -105,7 +105,7 @@ public class State implements Serializable {
 		this.isBreakpoint = val;
 	}
 
-	public boolean getBreakpoint() {
+	public boolean isBreakpoint() {
 		return this.isBreakpoint;
 	}
 
