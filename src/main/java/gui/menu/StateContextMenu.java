@@ -26,12 +26,13 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
     private State state;
     private Point myPoint;
 
-    protected final JCheckBoxMenuItem makeFinal, makeInitial;
+    protected final JCheckBoxMenuItem makeFinal, makeInitial, makeBreakpoint;
 
     private final JMenuItem changeLabel, deleteLabel, deleteAllLabels, editBlock, copyBlock, replaceSymbol, setName;
 
     private static final String makeFinal_DEFAULT = "Final";
     private static final String makeInitial_DEFAULT = "Initial";
+    private static final String makeBreakpoint_DEFAULT = "Make Breakpoint";
     private static final String changeLabel_DEFAULT = "Change Label";
     private static final String deleteLabel_DEFAULT = "Clear Label";
     private static final String deleteAllLabels_DEFAULT = "Clear All Labels";
@@ -41,6 +42,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
     private static final String replaceSymbol_DEFAULT = "Replace Symbol";
 
     private static final String makeFinal_MULTI = "Mark Selected as Final";
+    private static final String makeBreakpoint_MULTI = "Mark selected as Breakpoints";
     private static final String changeLabel_MULTI = "Change Selected Labels";
     private static final String deleteLabel_MULTI = "Clear Selected Labels";
     private static final String setName_MULTI = "Set Selected Names"; // TODO: maybe should be "Rename selected states"?
@@ -50,13 +52,14 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
 
         makeFinal = new JCheckBoxMenuItem(makeFinal_DEFAULT);
         makeInitial = new JCheckBoxMenuItem(makeInitial_DEFAULT);
+        makeBreakpoint = new JCheckBoxMenuItem(makeBreakpoint_DEFAULT);
         changeLabel = new JMenuItem(changeLabel_DEFAULT);
         deleteLabel = new JMenuItem(deleteLabel_DEFAULT);
-        deleteAllLabels = new JMenuItem("Clear All Labels");
+        deleteAllLabels = new JMenuItem(deleteAllLabels_DEFAULT);
         setName = new JMenuItem(setName_DEFAULT);
-        editBlock = new JMenuItem("Edit Block");
-        copyBlock = new JMenuItem("Duplicate Block");
-        replaceSymbol = new JMenuItem("Replace Symbol");
+        editBlock = new JMenuItem(editBlock_DEFAULT);
+        copyBlock = new JMenuItem(copyBlock_DEFAULT);
+        replaceSymbol = new JMenuItem(replaceSymbol_DEFAULT);
     }
 
     public void addMenuItems(MenuElement menu, boolean skipFinal, boolean isTurningBlock, boolean allowOnlyFinal) {
@@ -69,6 +72,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
             addMenuItemHelper(menu, makeFinal);
         }
         addMenuItemHelper(menu, makeInitial);
+        addMenuItemHelper(menu, makeBreakpoint);
         addMenuItemHelper(menu, changeLabel);
         addMenuItemHelper(menu, deleteLabel);
         addMenuItemHelper(menu, deleteAllLabels);
@@ -105,21 +109,25 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
 
         if (numSelectedStates == 1) {
             makeFinal.setText(makeFinal_DEFAULT);
+            makeFinal.setText(makeBreakpoint_DEFAULT);
             changeLabel.setText(changeLabel_DEFAULT);
             deleteLabel.setText(deleteLabel_DEFAULT);
             setName.setText(setName_DEFAULT);
 
             makeFinal.setSelected(drawer.getAutomaton().isFinalState(this.state));
             makeInitial.setSelected(drawer.getAutomaton().getInitialState() == this.state);
+            makeBreakpoint.setSelected(drawer.getAutomaton().isBreakpointState(this.state));
             makeInitial.setEnabled(true);
             deleteLabel.setEnabled(this.state.getLabel() != null);
         } else {
             makeFinal.setText(makeFinal_MULTI);
+            makeFinal.setText(makeBreakpoint_MULTI);
             changeLabel.setText(changeLabel_MULTI);
             deleteLabel.setText(deleteLabel_MULTI);
             setName.setText(setName_MULTI);
 
             makeFinal.setSelected(numSelectedStates == numSelectedFinalStates);
+            makeBreakpoint.setSelected(false);
             makeInitial.setSelected(false);
             makeInitial.setEnabled(false);
             deleteLabel.setEnabled(numSelectedLabeledStates > 0);

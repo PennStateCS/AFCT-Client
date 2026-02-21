@@ -20,28 +20,24 @@
 
 package gui.sim;
 
-import gui.viewer.SelectionDrawer;
-
 import java.awt.Component;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Stack;
 import java.util.List;
 
 import javax.swing.JOptionPane;
 import javax.swing.JSplitPane;
 
-import automata.Automaton;
 import automata.AutomatonSimulator;
-import automata.Configuration; import automata.State;
-import automata.turing.TMSimulator;
+import automata.Configuration;
 import automata.turing.TMConfiguration;
+import automata.turing.TMSimulator;
 import automata.turing.TMState;
-import automata.turing.TuringMachine;
-import automata.turing.TuringMachineBuildingBlocks;
+ import automata.turing.TuringMachine;
+import gui.viewer.SelectionDrawer;
 
 
 /**
@@ -128,11 +124,21 @@ public class ConfigurationController implements ConfigurationSelectionListener {
 	/**
 	 * The step method takes all configurations from the configuration pane, and
 	 * replaces them with "successor" transitions.
+	 * @ return true if there are no valid configurations
 	 * 
 	 * @param blockStep
 	 */
-	public void step(boolean blockStep) {
-		Configuration[] configs = configurations.getValidConfigurations();
+	public boolean step(boolean blockStep, boolean removeCompleted) {
+		Configuration[] configs = null;
+		if (removeCompleted) {
+			configs = configurations.getValidConfigurations();
+		} else {
+			configs = configurations.getConfigurations();
+			if (configurations.getValidConfigurations().length == 0) {
+				return true;
+			}
+		}
+		
 		ArrayList<Configuration> list = new ArrayList<>();
 		HashSet<Configuration> reject = new HashSet<>();
 
@@ -146,7 +152,7 @@ public class ConfigurationController implements ConfigurationSelectionListener {
                 //MERLIN MERLIN MERLIN MERLIN MERLIN//
                 if (next.size() == 0) { //crucial check for rejection
                     //System.out.println("Rejected");
-                    reject.add(configs[i]);
+					reject.add(configs[i]);
                     list.add(configs[i]);
                 } else
                     list.addAll(next);
@@ -203,6 +209,8 @@ public class ConfigurationController implements ConfigurationSelectionListener {
 		} catch (Throwable e) {
 
 		}
+
+		return false;
 		
 //		State current = null;
 //		Iterator iter = list.iterator();
