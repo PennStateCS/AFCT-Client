@@ -160,6 +160,11 @@ public abstract class TableTransitionCreator extends TransitionCreator {
 			System.err.println("Odd 'focusCycleRoot' exception thrown "
 					+ "from the depths of Java again.");
 		}
+		finally{
+			// re-enable the toolbar after editing
+			EditorPane ep = (EditorPane) transition.getAutomaton().getEnvironmentFrame().getEnvironment().getActive();
+			ep.getToolBar().setEnabled(true);
+		}
 		if (!cancel) {
 			TableModel oldModel = createModel(transition);
 			Transition t = modifyTransition(transition, editingTable.getModel());
@@ -216,6 +221,10 @@ public abstract class TableTransitionCreator extends TransitionCreator {
 	 *            a new transition yet to be added
 	 */
 	public void editTransition(Transition transition, Point point) {
+		// disable the toolbar
+		EditorPane ep = (EditorPane) transition.getAutomaton().getEnvironmentFrame().getEnvironment().getActive();
+		ep.getToolBar().setEnabled(false);
+
 		stopEditing(false); // Make sure...
 		this.transition = transition;
 		isNew = point == null;
