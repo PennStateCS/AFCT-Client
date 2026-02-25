@@ -33,6 +33,7 @@ import java.lang.reflect.*;
 import java.util.Arrays;
 import java.util.jar.*;
 
+import automata.fsa.FiniteStateAutomaton;
 import grammar.Grammar;
 import grammar.TuringChecker;
 import gui.environment.Environment;
@@ -96,6 +97,10 @@ public class MenuBarCreator {
 			bar.add(menu);
 		
 		menu = getHelpMenu(frame);
+		if (menu.getItemCount() > 0)
+			bar.add(menu);
+
+		menu = getDataGenerationMenu(frame);
 		if (menu.getItemCount() > 0)
 			bar.add(menu);
 
@@ -634,6 +639,25 @@ public class MenuBarCreator {
 		});
 		
 		addItem(menu, new AboutAction());
+
+		return menu;
+	}
+
+	/**
+	 * This is the menu for starting synthetic data generation for
+	 * training data for doing OCR on automata. This should never be put into a production build,
+	 * it is only meant for research purposes!
+	 *
+	 * @param frame
+	 *            the environment frame
+	 * @return the data generation menu
+	 */
+	private static JMenu getDataGenerationMenu(EnvironmentFrame frame) {
+		Environment environment = frame.getEnvironment();
+		JMenu menu = new JMenu("Generate OCR training Data");
+		Serializable object = environment.getObject();
+
+		addItem(menu, new GenerateOCRDataAction((FiniteStateAutomaton)object,environment));
 
 		return menu;
 	}
