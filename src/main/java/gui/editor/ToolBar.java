@@ -235,7 +235,7 @@ public class ToolBar extends JToolBar implements ActionListener {
 		toolbarEnabled = enabled;
 	}
 
-	private boolean toolbarEnabled = false;
+	private boolean toolbarEnabled = true;
 
     private JToggleButton undoButton = null;
     private JToggleButton redoButton = null;
