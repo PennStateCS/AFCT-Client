@@ -250,6 +250,9 @@ public class CurvedArrow {
 		for (int i = 0; i < label.length(); i += CHARS_PER_STEP) {
 			String sublabel = label.substring(i, Math.min(i + CHARS_PER_STEP,
 					label.length()));
+            if (sublabel.contains(" ")) {
+                sublabel = sublabel.replaceAll(" ", "␣");
+            }
 			g2.drawString(sublabel, -dx, dy);
 			dx -= (float) metrics.getStringBounds(sublabel, g2).getWidth();
 		}

@@ -316,7 +316,12 @@ public class Automaton implements Serializable, Cloneable {
 		}
 		if (transitions.contains(trans))
 			return;
-        if(trans.getToState() == null || trans.getFromState() == null) return;
+		// check that the transition's states exist in the automaton
+		State fromState = trans.getFromState();
+		State toState = trans.getToState();
+		if (fromState == null || toState == null) return;
+		if (!states.contains(fromState) || !states.contains(toState)) return;
+
 		transitions.add(trans);
         if(transitionFromStateMap == null) transitionFromStateMap = new HashMap<>();
 		List<Transition> list = (List<Transition>) transitionFromStateMap.get(trans.getFromState());
