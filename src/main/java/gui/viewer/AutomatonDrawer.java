@@ -249,13 +249,12 @@ public class AutomatonDrawer {
 	protected void drawState(Graphics g, State state) {
         if (!this.showConnected) {
             statedrawer.drawState(g, getAutomaton(), state);
+            if (drawLabels) {
+                statedrawer.drawStateLabel(g, state, state.getPoint(), StateDrawer.STATE_COLOR);
+            }
         } else {
-            statedrawer.drawConnectedView(g, getAutomaton(), state);
+            statedrawer.drawConnectedView(g, getAutomaton(), state, drawLabels);
         }
-		if (drawLabels) {
-			statedrawer.drawStateLabel(g, state, state.getPoint(),
-					StateDrawer.STATE_COLOR);
-		}
 	}
 
 	/**
