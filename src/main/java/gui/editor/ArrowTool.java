@@ -52,6 +52,7 @@ import automata.turing.TMState;
 import automata.turing.TuringMachineBuildingBlocks;
 import debug.EDebug;
 
+import static gui.editor.EditorKeyBindings.CTRL_CMD_SHORTCUT_MASK;
 import static gui.editor.IconKeeper.getArrowToolIcon;
 import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 
@@ -183,8 +184,6 @@ public class ArrowTool extends Tool {
 		lastClickedState = null;
 		lastClickedTransition = null;
 	}
-
-    private static int CTRL_CMD_SHORTCUT_MASK = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
 
     private boolean ctrlAndShiftUp(InputEvent event) {
         // Check currently pressed keys

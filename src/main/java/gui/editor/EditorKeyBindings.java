@@ -13,7 +13,16 @@ import java.awt.event.KeyEvent;
  * @author Jesse Burdick-Pless
  */
 public class EditorKeyBindings {
-    private static int CTRL_CMD_SHORTCUT_MASK = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+    public static final int CTRL_CMD_SHORTCUT_MASK;
+    // TODO: test that this still works for Windows, macOS, and Linux
+    static {
+        if (GraphicsEnvironment.isHeadless()) {
+            // choose a safe default for headless environments to avoid crashes
+            CTRL_CMD_SHORTCUT_MASK = InputEvent.CTRL_DOWN_MASK;
+        } else {
+            CTRL_CMD_SHORTCUT_MASK = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
+        }
+    }
 
     public static void SetUpKeyBindings(EnvironmentFrame environmentFrame) {
         Environment environment = environmentFrame.getEnvironment();
