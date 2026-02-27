@@ -150,7 +150,11 @@ public class ArrowTool extends Tool {
 
             lastClickedState = getDrawer().stateAtPoint(event.getPoint());
             if (lastClickedState != null) {
-                lastClickedState.setSelect(true);
+                if (!lastClickedState.getDelayDeselect()) {
+                    lastClickedState.setSelect(true);
+                } else {
+                    lastClickedState.setDelayDeselect(false);
+                }
             }
 
 			getView().repaint();
@@ -240,12 +244,15 @@ public class ArrowTool extends Tool {
             }
         }
 
+        boolean delayDeselect = false;
 		initialPointClick.setLocation(event.getPoint());
 		lastClickedState = getDrawer().stateAtPoint(event.getPoint());
 		if (lastClickedState == null) {
             lastClickedTransition = getDrawer().transitionAtPoint(
                     event.getPoint());
         } else {
+            delayDeselect = !ctrlAndShiftUp(event) && lastClickedState.isSelected();
+            lastClickedState.setDelayDeselect(delayDeselect);
             lastClickedState.setSelect(true);
             getAutomaton().deselectAllTransitions();
         }
@@ -264,6 +271,9 @@ public class ArrowTool extends Tool {
 				getView().getDrawer().setSelectionBounds(bounds);
 				lastClickedState.setSelect(true);
 			}
+            if (delayDeselect) {
+                lastClickedState.setSelect(false);
+            }
 			getView().repaint();
 		}
 		else if (lastClickedTransition != null) {
@@ -518,6 +528,7 @@ public class ArrowTool extends Tool {
                     getView().getDrawer().getAutomaton().selectStatesWithinBounds(bounds);
                 } else {
                     getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds);
+                    //getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds, true);
                 }
                 getView().getDrawer().setSelectionBounds(bounds);
             }

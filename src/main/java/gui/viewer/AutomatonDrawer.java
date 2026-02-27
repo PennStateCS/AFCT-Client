@@ -561,6 +561,8 @@ public class AutomatonDrawer {
 	public Transition transitionAtPoint(Point point) {
         int fudge = 2;
         fudge = 3; // TODO - change this based on zoom level so when zoomed out it is easier to click transitions
+        // Also maybe add a "cycle click" where if you click the same place multiple times, it will cycle through
+        //      overlapping transitions
 
 		if (!valid)
 			refreshArrowMap();
