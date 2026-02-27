@@ -6,7 +6,7 @@
 
     <groupId>edu.rit.cs</groupId>
     <artifactId>afct-client</artifactId>
-    <version>1.6.5</version>
+    <version>1.6.6</version>
 
     <properties>
         <maven.compiler.source>21</maven.compiler.source>
