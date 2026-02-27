@@ -20,22 +20,18 @@
 
 package automata.turing;
 
-import automata.Automaton;
-import automata.Transition;
-import automata.State;
-import automata.Note;
+import automata.*;
+
 import java.awt.Point;
 
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
-import java.util.Collection;
 
 import java.io.Serializable;
 import java.io.File;
 
 import gui.action.OpenAction;
-import gui.environment.EnvironmentFrame;
 
 import javax.swing.JButton;
 
@@ -71,6 +67,14 @@ public class TuringMachine extends Automaton {
 	public TuringMachine(int tapes) {
 		super();
 		this.tapes = tapes;
+
+		NondeterminismDetector d = NondeterminismDetectorFactory.getDetector(this);
+		State[] nd = d.getNondeterministicStates(this);
+		if(nd.length > 0) {
+			this.nondeterministic = true;
+		} else {
+			this.nondeterministic = false;
+		}
 	}
 
 	/**
@@ -113,6 +117,14 @@ public class TuringMachine extends Automaton {
 	 */
 	public int tapes() {
 		return tapes;
+	}
+
+	/**
+	 * If this is nondeterministic
+	 * @return true if it is nondeterministic
+	 */
+	public boolean isNondeterministic() {
+		return this.nondeterministic;
 	}
 
 	/**
@@ -336,6 +348,9 @@ public class TuringMachine extends Automaton {
 	public int tapes;
 
     public boolean isOuterMost;
+
+	// if this is nondeterministic
+	private boolean nondeterministic;
 
     //MERLIN MERLIN MERLIN MERLIN MERLIN//
     private TMState parent = null; //not going to force it with compiler, just make sure you set it WHERE it MATTERS

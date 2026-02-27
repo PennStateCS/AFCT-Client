@@ -29,7 +29,7 @@ import automata.State;
 import automata.Transition;
 
 /**
- * Converter for turing to unrestricted grammar
+ * Converter for Turing to unrestricted grammar
  * NEEDS to make abstraction (super class for both TuringToGrammar and PDAtoCFGconverter)
  * 
  * @author Kyung Min (Jason) Lee

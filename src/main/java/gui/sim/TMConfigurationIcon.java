@@ -90,6 +90,6 @@ public class TMConfigurationIcon extends ConfigurationIcon implements
 		position -= 8f;
 	}
 
-	/** The turing machine configuration. */
+	/** The Turing machine configuration. */
 	private TMConfiguration config;
 }

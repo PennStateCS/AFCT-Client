@@ -39,7 +39,7 @@ public class TMTransition extends Transition {
 	 */
 	private static final long serialVersionUID = 1L;
 
-	//added for turing to grammar conversion
+	//added for Turing to grammar conversion
 	private int tapes;
 	
 	/**
@@ -315,6 +315,10 @@ public class TMTransition extends Transition {
 
 	public void setBlockTransition(boolean block) {
 		blockTransition = block;
+	}
+
+	public boolean isReflexive() {
+		return this.getFromState().equals(this.getToState());
 	}
 
 	private boolean blockTransition = false;

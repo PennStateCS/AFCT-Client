@@ -24,6 +24,7 @@ package gui.menu;
 import javax.swing.*;
 import javax.swing.event.MenuEvent;
 import javax.swing.event.MenuListener;
+
 import java.awt.event.ActionEvent;
 import java.io.Serializable;
 import java.io.File;
@@ -43,6 +44,7 @@ import gui.action.*;
 import automata.Automaton;
 import automata.graph.LayoutAlgorithmFactory;
 import automata.graph.layout.VertexMover;
+import automata.turing.TuringMachine;
 
 /**
  * The <CODE>MenuBarCreator</CODE> is a creator of the menu bars for the FLAP
@@ -110,7 +112,7 @@ public class MenuBarCreator {
 	}
 	
 	/**
-	 * Special case to deal with turing converted grammar
+	 * Special case to deal with Turing converted grammar
 	 * @param frame
 	 * @param isTuring
 	 * @return
@@ -356,7 +358,7 @@ public class MenuBarCreator {
 	}
 
 	/**
-	 * Get input menu for turing converted grammar
+	 * Get input menu for Turing converted grammar
 	 * @param frame
 	 * @param specialCaseForTuringConverted
 	 * @return
@@ -455,6 +457,10 @@ public class MenuBarCreator {
 		if (DFAEqualityAction.isApplicable(object))
 			addItem(menu, new DFAEqualityAction(
 					(automata.fsa.FiniteStateAutomaton) object, environment));
+
+		if (TMEqualityAction.isApplicable(object)) {
+			addItem(menu, new TMEqualityAction((TuringMachine) object, environment));
+		}
 
 	      	// FAWitnessAction added by Daphne A. Norton
 		if (FAWitnessAction.isApplicable(object))

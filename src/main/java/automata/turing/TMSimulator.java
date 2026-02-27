@@ -25,14 +25,12 @@ import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
-import java.util.Stack;
 import java.util.Comparator;
 import java.util.Arrays;
 
 import automata.Automaton;
 import automata.AutomatonSimulator;
 import automata.Configuration;
-import automata.State;
 import automata.Transition;
 import gui.environment.Universe;
 
@@ -139,7 +137,7 @@ public class TMSimulator extends AutomatonSimulator {
     private boolean matches(Tape[] tapes, TMTransition tmt){
         assert tapes.length == tmt.tapes(); //make sure they address the same number of tapes
 
-        //for MULTITAPE turing Machine
+        //for MULTITAPE Turing Machine
         if (tapes.length > 1){
             for (int i = 0; i < tapes.length; i++){
                 char underHead = tapes[i].readChar();
@@ -152,7 +150,7 @@ public class TMSimulator extends AutomatonSimulator {
 //                }
                  if (underHead != toMatch && toMatch != '~')
                     return false;
-                //would like to get priorities right for each tape, because the ! parameter shoudl not introduce arbitrary nondeterminism unless we want it to
+                //would like to get priorities right for each tape, because the ! parameter should not introduce arbitrary nondeterminism unless we want it to
             }
             return true;
         }
@@ -280,8 +278,10 @@ outer:  while (true){
                 tmt = (TMTransition) trans[i];
 
                 if (matches(configuration.getTapes(), tmt)){
-                    success = true;
-                    break outer;
+                    if (!checkTransitionReflexiveLoop(tmt, configuration)) {
+                        success = true;
+                        break outer;
+                    }
                 }
                 //tilda means to read nothing or write nothing, and it seems to be explicitly written for turing machines, rather differently from other automata
             }
@@ -296,7 +296,6 @@ outer:  while (true){
             else{
                 break; //halting condition
             }
-            
         }
         
 
@@ -312,25 +311,24 @@ outer:  while (true){
             }
             else{ //only do variable assignments for the one-tape Turing machine...
 
-            //do necessary variable assignments
-            String st = tmt.getRead(0);
-            int assignIndex = st.indexOf('}');
-            
-            if (assignIndex != -1){
-                String s = "" + st.charAt(assignIndex+1);
-                varToChar.put(s, configuration.getTapes()[0].readChar()+"");
-            }
+                //do necessary variable assignments
+                String st = tmt.getRead(0);
+                int assignIndex = st.indexOf('}');
+                
+                if (assignIndex != -1){
+                    String s = "" + st.charAt(assignIndex+1);
+                    varToChar.put(s, configuration.getTapes()[0].readChar()+"");
+                }
 
-            //perform the operations on the tape, and return a new TMConfiguration that represents the new position
-            configuration.getTapes()[0].writeChar(tmt.getWrite(0).charAt(0) == '~'? 
-                    configuration.getTapes()[0].readChar():
-                    (varToChar.containsKey(tmt.getWrite(0).charAt(0)+"")?
-                     varToChar.get(tmt.getWrite(0).charAt(0)+"").charAt(0)
-                     :tmt.getWrite(0).charAt(0)));
+                //perform the operations on the tape, and return a new TMConfiguration that represents the new position
+                configuration.getTapes()[0].writeChar(tmt.getWrite(0).charAt(0) == '~'? 
+                        configuration.getTapes()[0].readChar():
+                        (varToChar.containsKey(tmt.getWrite(0).charAt(0)+"")?
+                        varToChar.get(tmt.getWrite(0).charAt(0)+"").charAt(0)
+                        :tmt.getWrite(0).charAt(0)));
 
-            configuration.getTapes()[0].moveHead(tmt.getDirection(0));
-            list.add(new TMConfiguration(tmt.getToState(), null, configuration.getTapes(), myFilters)); //no going back - we are in a deterministic world. If you freeze, then you will not go forward either.
-
+                configuration.getTapes()[0].moveHead(tmt.getDirection(0));
+                list.add(new TMConfiguration(tmt.getToState(), null, configuration.getTapes(), myFilters)); //no going back - we are in a deterministic world. If you freeze, then you will not go forward either.
             }
         }
         else{
@@ -345,6 +343,38 @@ outer:  while (true){
         }
 		return list;
 	}
+
+    /**
+     * Checks whether a specific transition is a reflexive self loop
+     */
+    private boolean checkTransitionReflexiveLoop(TMTransition tr, TMConfiguration tmconfig) {
+        if (!tr.isReflexive()) {
+            return false;
+        }
+        if (!matches(tmconfig.getTapes(), tr)) {
+            return false;
+        }
+        for (int tp = 0; tp < tmconfig.getTapes().length; tp++) {
+            // need to check that it moves left or right, 
+            if (tr.getDirection(tp).equals("L")) {
+                if (!tr.getRead(tp).equals(Character.toString(Tape.BLANK)) ||
+                    tmconfig.getTapes()[tp].getTapeHead() != 0) {
+                        return false;
+                }
+            } else if (tr.getDirection(tp).equals("R")) {
+                if (!tr.getRead(tp).equals(Character.toString(Tape.BLANK)) ||
+                    tmconfig.getTapes()[tp].getContents().length() != tmconfig.getTapes()[tp].getTapeHead() + 1) {
+                        return false;
+                }
+            } else { // S
+                if (!tr.getRead(tp).equals(tr.getWrite(tp))) {
+                    return false; // no loop, writes different than reads
+                }
+            }
+        }
+        // each tape is a loop
+        return true;
+    }
 
 	/**
 	 * Returns true if the simulation of the input string on the automaton left
@@ -366,7 +396,6 @@ outer:  while (true){
 	 */
 	public boolean simulateInput(String input) {
 		/** clear the configurations to begin new simulation. */
-        //System.out.println("In Simulate Input");
 		myConfigurations.clear();
 		Configuration[] initialConfigs = getInitialConfigurations(input);
 		for (int k = 0; k < initialConfigs.length; k++) {
@@ -374,7 +403,6 @@ outer:  while (true){
 			myConfigurations.add(initialConfiguration);
 		}
 		while (!myConfigurations.isEmpty()) {
-			//System.out.println("HERE!!!!!");
 			if (isAccepted())
 				return true;
 			ArrayList<Configuration> configurationsToAdd = new ArrayList<>();
