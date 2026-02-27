@@ -121,6 +121,7 @@ public class ArrowTool extends Tool {
 	 *            the mouse event
 	 */
 	public void mouseClicked(MouseEvent event) {
+        getView().getDrawer().showConnected = altKeyDown(event);
 		if (event.getClickCount() == 1){
             Transition trans = getDrawer().transitionAtPoint(event.getPoint());
             if (trans != null){
@@ -145,7 +146,7 @@ public class ArrowTool extends Tool {
             } else {
                 getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds);
             }
-            getView().getDrawer().showConnected = altKeyDown(event);
+            //getView().getDrawer().showConnected = altKeyDown(event);
 
             lastClickedState = getDrawer().stateAtPoint(event.getPoint());
             if (lastClickedState != null) {
@@ -227,6 +228,7 @@ public class ArrowTool extends Tool {
 		} else {
             EDebug.print("I cannot preserve what you ask");
 		}
+        getView().getDrawer().showConnected = altKeyDown(event);
 
         State newLastClickedState = getDrawer().stateAtPoint(event.getPoint());
         if (newLastClickedState != null) {
@@ -283,7 +285,7 @@ public class ArrowTool extends Tool {
                 getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds);
             }
 
-            getView().getDrawer().showConnected = altKeyDown(event);
+            //getView().getDrawer().showConnected = altKeyDown(event);
 
 			getView().getDrawer().setSelectionBounds(bounds);
 		}

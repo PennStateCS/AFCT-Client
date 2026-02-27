@@ -246,6 +246,14 @@ public class CurvedArrow {
         }
     }
 
+    public void drawConnectedViewHighlightSelected(Graphics2D g, Transition transition) {
+        if (transition.isSelected) {
+            drawAsColor(g, FROM_COLOR);
+        } else {
+            drawAsColor(g, NEITHER_COLOR);
+        }
+    }
+
 	/**
 	 * Draws the text on the high point of the arc. The text drawn is none other
 	 * than the label for this object, as retrieved from <CODE>getLabel</CODE>.

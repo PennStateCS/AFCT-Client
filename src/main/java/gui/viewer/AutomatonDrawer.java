@@ -116,9 +116,28 @@ public class AutomatonDrawer {
 				RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setFont(g.getFont().deriveFont(12.0f));
 
+        boolean transitionFocusDraw = false;
+        if (this.showConnected) {
+            boolean anySelected = false;
+            for (State state : automaton.getStates()) {
+                if (state.isSelected()) {
+                    anySelected = true;
+                    break;
+                }
+            }
+            if (!anySelected) {
+                transitionFocusDraw = true;
+            }
+        }
+
 		// Draw transitions between states.
 		g.setColor(Color.black);
-		drawTransitions(g);
+        if (!transitionFocusDraw) {
+            drawTransitions(g);
+        } else {
+            drawTransitionsHighlightSelected(g);
+        }
+
 
 
 //        int sh = automaton.hashCode();
@@ -139,17 +158,24 @@ public class AutomatonDrawer {
 //                }
 //            }
 //        }
-        
+
 
 //        //reverse again, to get the correct ordering for non-overlapping things
 //        for (int i = hs.size() - 1; i >= 0; i--)
 //			drawState(g, hs.get(i));
-        
+
         State[] states = automaton.getStates();
-        for (int i = 0; i < states.length; i++){
-            drawState(g, states[i]);
+        if (!transitionFocusDraw) {
+            for (State state : states) {
+                drawState(g, state);
+            }
+        } else {
+            for (State state : states) {
+                statedrawer.drawConnectedViewTransitionFocus(g, getAutomaton(), state, drawLabels);
+            }
         }
-		
+
+
 		
 		this.drawSelectionBox(g);
 		this.drawObjectSnappingIndicators(g);
@@ -282,6 +308,19 @@ public class AutomatonDrawer {
             }
         }
 	}
+
+    protected void drawTransitionsHighlightSelected(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g;
+        Set<CurvedArrow> arrows = arrowToTransitionMap.keySet();
+        if (!this.showConnected) {
+            drawTransitions(g);
+        } else {
+            for (CurvedArrow arrow : arrows) {
+                Transition transition = arrowToTransitionMap.get(arrow);
+                arrow.drawConnectedViewHighlightSelected(g2, transition);
+            }
+        }
+    }
 
 	
 

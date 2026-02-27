@@ -99,6 +99,42 @@ public class StateDrawer {
         }
     }
 
+    public void drawConnectedViewTransitionFocus(Graphics g, Automaton automaton, State state, boolean drawStateLabels) {
+        boolean fromSelected = false;
+        Transition[] from = automaton.getTransitionsFromState(state);
+        for (Transition t : from) {
+            if (t.isSelected) {
+                fromSelected = true;
+                break;
+            }
+        }
+
+        boolean toSelected = false;
+        if (!fromSelected) {
+            Transition[] to = automaton.getTransitionsToState(state);
+            for (Transition t : to) {
+                if (t.isSelected) {
+                    toSelected = true;
+                    break;
+                }
+            }
+        }
+
+        Color outlineColor;
+        if (toSelected) {
+            outlineColor = TO_COLOR;
+        } else if (fromSelected) {
+            outlineColor = FROM_COLOR;
+        } else {
+            outlineColor = NEITHER_COLOR;
+        }
+
+        drawState(g, automaton, state, outlineColor);
+        if (drawStateLabels) {
+            drawStateLabel(g, state, outlineColor);
+        }
+    }
+
 	/**
 	 * Draws an individual state with all the default modes.
 	 * 
