@@ -20,8 +20,7 @@
 
 package gui.viewer;
 
-import java.awt.Graphics2D;
-import java.awt.Point;
+import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.Area;
 import automata.Transition;
@@ -69,17 +68,13 @@ public class InvisibleCurvedArrow extends CurvedArrow {
 		super(start, end, curvy, t);
 	}
 
-	/**
-	 * Draws the arrow on the indicated graphics environment.
-	 * 
-	 * @param g
-	 *            the graphics to draw this arrow upon
-	 */
-	public void draw(Graphics2D g) {
-		if (needsRefresh)
-			refreshCurve();
-		drawText(g);
-	}
+
+    @Override
+    public void drawAsColor(Graphics2D g, Color color) {
+        if (needsRefresh)
+            refreshCurve();
+        drawText(g, color);
+    }
 
 	/**
 	 * Draws a highlight of the curve. This will only highlight the label.

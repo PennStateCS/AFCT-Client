@@ -22,10 +22,12 @@ package gui.viewer;
 
 import automata.State;
 import automata.Automaton;
-import java.awt.Graphics;
-import java.awt.Point;
-import java.awt.Color;
+import automata.Transition;
+
+import java.awt.*;
 import java.awt.geom.Rectangle2D;
+
+import static gui.Globals.*;
 
 
 /**
@@ -53,6 +55,44 @@ public class StateDrawer {
 	public StateDrawer(int radius) {
 		this.radius = radius;
 	}
+
+    public void drawConnectedView(Graphics g, Automaton automaton, State state) {
+        boolean toSelected = false;
+        Transition[] from = automaton.getTransitionsFromState(state);
+        for (Transition t : from) {
+            if (t.getToState().isSelected()) {
+                toSelected = true;
+                break;
+            }
+        }
+
+        boolean fromSelected = false;
+        Transition[] to = automaton.getTransitionsToState(state);
+        for (Transition t : to) {
+            if (t.getFromState().isSelected()) {
+                fromSelected = true;
+                break;
+            }
+        }
+
+        if(state.isSelected()) {
+            if (!toSelected && !fromSelected) {
+                drawState(g, automaton, state, FROM_COLOR);
+            } else {
+                drawState(g, automaton, state, BOTH_COLOR);
+            }
+        } else {
+            if (toSelected && fromSelected) {
+                drawState(g, automaton, state, BOTH_COLOR);
+            } else if (toSelected) {
+                drawState(g, automaton, state, TO_COLOR);
+            } else if (fromSelected) {
+                drawState(g, automaton, state, FROM_COLOR);
+            } else {
+                drawState(g, automaton, state, NEITHER_COLOR);
+            }
+        }
+    }
 
 	/**
 	 * Draws an individual state with all the default modes.
@@ -107,16 +147,31 @@ public class StateDrawer {
 		return;
 	}
 
+    /**
+     * Draws an individual state with the specified outline color.
+     *
+     * @param g
+     *            the graphics object to draw upon
+     * @param state
+     *            the state to draw
+     * @param automaton
+     *            the automaton this state is a part of
+     * @param outlineColor
+     *            the color of the outline of the state
+     */
+    public void drawState(Graphics g, Automaton automaton, State state, Color outlineColor) {
+        drawArea(g, automaton, state, state.getPoint(), STATE_COLOR, outlineColor);
+    }
+
 
     /**
 	 * @param state
 	 */
-	private void drawArea(Graphics g, Automaton automaton, State state,
-			Point point, Color color) {
+	private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor, Color outlineColor) {
 		// Draw the basic background of the state.
-		drawBackground(g, state, point, color);
+		drawBackground(g, state, point, fillColor);
 		// What about the text label?
-		g.setColor(Color.black);
+		g.setColor(outlineColor);
 
 		int dx = ((int) g.getFontMetrics().getStringBounds(state.getName(), g)
 				.getWidth()) >> 1;
@@ -141,7 +196,7 @@ public class StateDrawer {
 				int[] y = { point.y, point.y - radius, point.y + radius };
 				g.setColor(Color.white);
 				g.fillPolygon(x, y, 3);
-				g.setColor(Color.black);
+				g.setColor(outlineColor);
 				g.drawPolygon(x, y, 3);
 			}
 //		} else {
@@ -164,6 +219,10 @@ public class StateDrawer {
 //			}
 //		}
 	}
+
+    private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor) {
+        drawArea(g, automaton, state, point, fillColor, Color.black);
+    }
 
 	/**
 	 * Draws the state label for a given state.

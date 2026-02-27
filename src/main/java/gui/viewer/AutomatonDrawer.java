@@ -60,6 +60,10 @@ import java.util.HashSet;
 
 public class AutomatonDrawer {
     public ContextActions contextActions;
+
+    public boolean showConnected = false;
+
+
 	/**
 	 * Instantiates an object to draw an automaton.
 	 * 
@@ -243,7 +247,11 @@ public class AutomatonDrawer {
 	 *            the state to draw
 	 */
 	protected void drawState(Graphics g, State state) {
-		statedrawer.drawState(g, getAutomaton(), state);
+        if (!this.showConnected) {
+            statedrawer.drawState(g, getAutomaton(), state);
+        } else {
+            statedrawer.drawConnectedView(g, getAutomaton(), state);
+        }
 		if (drawLabels) {
 			statedrawer.drawStateLabel(g, state, state.getPoint(),
 					StateDrawer.STATE_COLOR);
@@ -259,16 +267,21 @@ public class AutomatonDrawer {
 	protected void drawTransitions(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;
 		Set<CurvedArrow> arrows = arrowToTransitionMap.keySet();
-		Iterator<CurvedArrow> it = arrows.iterator();
-		while (it.hasNext()) {
-			CurvedArrow arrow = (CurvedArrow) it.next();
-            if (arrow.myTransition.isSelected){
-                arrow.drawHighlight(g2);
-                arrow.drawControlPoint(g2);
+        if (!this.showConnected) {
+            for (CurvedArrow arrow : arrows) {
+                if (arrow.myTransition.isSelected) {
+                    arrow.drawHighlight(g2);
+                    arrow.drawControlPoint(g2);
+                } else {
+                    arrow.draw(g2);
+                }
             }
-            else 
-                arrow.draw(g2);
-		}
+        } else {
+            for (CurvedArrow arrow : arrows) {
+                Transition transition = arrowToTransitionMap.get(arrow);
+                arrow.drawConnectedView(g2, transition);
+            }
+        }
 	}
 
 	

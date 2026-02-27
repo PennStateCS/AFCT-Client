@@ -54,6 +54,7 @@ import debug.EDebug;
 
 import static gui.editor.EditorKeyBindings.CTRL_CMD_SHORTCUT_MASK;
 import static gui.editor.IconKeeper.getArrowToolIcon;
+import static java.awt.event.InputEvent.ALT_DOWN_MASK;
 import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 
 /**
@@ -144,6 +145,7 @@ public class ArrowTool extends Tool {
             } else {
                 getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds);
             }
+            getView().getDrawer().showConnected = altKeyDown(event);
 
             lastClickedState = getDrawer().stateAtPoint(event.getPoint());
             if (lastClickedState != null) {
@@ -204,6 +206,13 @@ public class ArrowTool extends Tool {
         return isShiftUp;
     }
 
+    private boolean altKeyDown(InputEvent event) {
+        // Check currently pressed keys
+        int modifiersEx = event.getModifiersEx();
+        // Check if ALT IS pressed
+        boolean isAltDown = (modifiersEx & ALT_DOWN_MASK) != 0;
+        return isAltDown;
+    }
 
     /**
 	 * On a mouse press, allows the state to be dragged about unless this is a
@@ -273,6 +282,9 @@ public class ArrowTool extends Tool {
             } else {
                 getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds);
             }
+
+            getView().getDrawer().showConnected = altKeyDown(event);
+
 			getView().getDrawer().setSelectionBounds(bounds);
 		}
 

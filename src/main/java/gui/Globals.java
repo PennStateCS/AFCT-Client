@@ -47,6 +47,14 @@ public class Globals {
     private static final String htmlProperty = "html.disable";
     public final static String UPDATE = "UPDATE";
 
+    public static final Color FROM_COLOR = new Color(37,99,235);
+    //public static Color TO_COLOR = new Color(84,132,234);
+    public static final Color BOTH_COLOR = new Color(84,132,234);
+    //public static Color TO_COLOR = new Color(178,255,255);
+    //public static final Color TO_COLOR = new Color(153,255,255);
+    public static final Color TO_COLOR = new Color(127,255,255);
+    public static final Color NEITHER_COLOR = new Color(216,216,216);
+
     private static int positioningFudgeFactor = 20;
 
     public final static Preferences preferences = Preferences.userNodeForPackage(Globals.class);
@@ -785,6 +793,7 @@ public class Globals {
                 dataFolderPath = Paths.get(homeDir, "AppData", "Local", AFCT_DATA_FOLDER_NAME);
                 break;
             case MAC:
+                // TODO This path seems to not work for macOS? Need to look into this later...
                 dataFolderPath = Paths.get(homeDir, "Library", "Application Support", AFCT_DATA_FOLDER_NAME);
                 break;
             case LINUX:
