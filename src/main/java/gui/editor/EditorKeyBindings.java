@@ -136,6 +136,10 @@ public class EditorKeyBindings {
         // Begin "Editing" section
         currentSection = editingSection;
 
+        // TEST ACTION
+        displayName = "TEST";
+        addMouseShortcut("test", MouseEvent.BUTTON3, KeyEvent.VK_T, displayName, CTRL_CMD_SHORTCUT_MASK, ALT_DOWN_MASK, SHIFT_DOWN_MASK);
+
         // ctrl+d action
         displayName = "Duplicate selected states (and connected transitions)";
         addCTRLAction("duplicate", KeyEvent.VK_D, displayName, inputMap, actionMap, new AbstractAction() {
