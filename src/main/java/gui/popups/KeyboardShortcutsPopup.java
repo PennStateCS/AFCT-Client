@@ -18,20 +18,29 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
     private boolean popupShown = false;
     private final JFrame frame;
     private final JPanel headerPane;
+    private final JPanel cards;
     private final JPanel contentPane;
     private final JScrollPane scrollPane;
     private final JTextField searchField;
     private final JPanel shortcutsPanel;
+    private final String base_noResultsLabelText = "No results for ";
+    private final JLabel noResultsLabel;
     private final Font monospacedFont;
+
     private ShortcutSection[] shortcutSections;
+
+    private static final String NORMAL = "NORMAL";
+    private static final String NO_RESULTS_PANEL = "NO_RESULTS_PANEL";
 
     public KeyboardShortcutsPopup() {
         popups.add(this);
 
         // create frame
         frame = new JFrame();
+        frame.setTitle("Keyboard Shortcuts");
 
         // Initialize GUI elements
+        cards = new JPanel(new CardLayout());
         headerPane = new JPanel();
         headerPane.setLayout(new BoxLayout(headerPane, BoxLayout.Y_AXIS));
         contentPane = new JPanel();
@@ -39,6 +48,7 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
         searchField = new JTextField();
         shortcutsPanel = new JPanel();
         shortcutsPanel.setLayout(new BoxLayout(shortcutsPanel, BoxLayout.PAGE_AXIS));
+        noResultsLabel = new JLabel();
         int fontSize = 14;
         fontSize = 16;
         monospacedFont = new Font("Monospaced", Font.PLAIN, fontSize);
@@ -55,7 +65,11 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
 
         headerPane.setBorder(new EmptyBorder(vrtInset, hozInset, vrtInset-5, hozInset));
         contentPane.add(headerPane);
-        contentPane.add(scrollPane);
+
+        cards.add(NORMAL, scrollPane);
+        cards.add(NO_RESULTS_PANEL, getNoResultsPanel(vrtInset, hozInset));
+
+        contentPane.add(cards);
 
 
         frame.getContentPane().add(contentPane);
@@ -214,7 +228,7 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
             }
         }
 
-        panel.text = text.toString();
+        panel.text = text.toString().toLowerCase();
 
         return panel;
     }
@@ -229,6 +243,27 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
 
         public void track(ShortcutPanel shortcutPanel) {
             trackedPanels.add(shortcutPanel);
+        }
+
+        public int filter(String text) {
+            int count = 0;
+            for (ShortcutPanel shortcutPanel : trackedPanels) {
+                if (shortcutPanel.text.contains(text)) {
+                    count++;
+                    shortcutPanel.setVisible(true);
+                } else {
+                    shortcutPanel.setVisible(false);
+                }
+            }
+            this.setVisible(count > 0);
+            return count;
+        }
+
+        public void enableAll() {
+            for (ShortcutPanel shortcutPanel : trackedPanels) {
+                shortcutPanel.setVisible(true);
+            }
+            this.setVisible(true);
         }
     }
 
@@ -293,6 +328,16 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
         return label;
     }
 
+    private JPanel getNoResultsPanel(int vrtInset, int hozInset) {
+        JPanel panel = new JPanel();
+
+        changeSize(noResultsLabel, 20);
+        noResultsLabel.setBorder(BorderFactory.createEmptyBorder(vrtInset * 2, hozInset, vrtInset * 2, hozInset));
+
+        panel.add(noResultsLabel);
+
+        return panel;
+    }
 
     /**
      * Sets action listeners for user inputs.
@@ -301,15 +346,39 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
         handlers_search();
     }
 
-    public void showPopup(JFrame window) {
-        popupShown = true;
-        // pack the frame
-        frame.pack();
 
-        positionFrameNearWindow(frame, Position.CENTER, window);
+    private void showNoResultsPanel(String text) {
+        CardLayout cl = (CardLayout)(cards.getLayout());
+        noResultsLabel.setText(base_noResultsLabelText + text + ".");
+        cl.show(cards, NO_RESULTS_PANEL);
+    }
 
-        // display the popup
-        frame.setVisible(true);
+    private void showNoResultsPanel() {
+        showNoResultsPanel(searchField.getText());
+    }
+
+    private void filterAndSetCard() {
+        int count = 0;
+        String text = searchField.getText();
+        String lowercase = text.toLowerCase();
+        if (lowercase.isEmpty()) {
+            for (ShortcutSection section : shortcutSections) {
+                section.enableAll();
+            }
+            count = 1;
+        } else {
+            for (ShortcutSection section : shortcutSections) {
+                count += section.filter(lowercase);
+            }
+        }
+        if (count > 0) {
+            CardLayout cl = (CardLayout) (cards.getLayout());
+            cl.show(cards, NORMAL);
+            cards.revalidate();
+            cards.repaint();
+        } else {
+            showNoResultsPanel(text);
+        }
     }
 
     public void handlers_search() {
@@ -317,9 +386,22 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
         searchField.addKeyListener(new KeyAdapter() {
             @Override
             public void keyReleased(KeyEvent e) {
-                e.getKeyCode();
+                filterAndSetCard();
             }
         });
+    }
+
+    public void showPopup(JFrame window) {
+        popupShown = true;
+        filterAndSetCard();
+
+        // pack the frame
+        frame.pack();
+
+        positionFrameNearWindow(frame, Position.CENTER, window);
+
+        // display the popup
+        frame.setVisible(true);
     }
 
     @Override
