@@ -20,29 +20,26 @@
 package gui.action;
 
 import java.awt.Component;
-import javax.swing.JComponent;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
-import java.awt.event.ActionEvent;
+import java.awt.Window;
 import java.awt.image.BufferedImage;
-import java.awt.image.ImageObserver;
 import java.io.File;
 import java.io.IOException;
 
 import javax.imageio.ImageIO;
+import javax.swing.JComponent;
 import javax.swing.JFileChooser;
 import javax.swing.JFrame;
-import javax.swing.JMenu;
 import javax.swing.JOptionPane;
-import javax.swing.JComponent;
+import javax.swing.SwingUtilities;
 import javax.swing.filechooser.FileFilter;
 
-import gui.editor.EditorPane;
-import gui.environment.AutomatonEnvironment;
 import gui.environment.Environment;
-import gui.viewer.AutomatonPane;
-import gui.viewer.SelectionDrawer;
+import org.apache.commons.io.FilenameUtils;
+
+import gui.editor.EditorPane;
 import gui.environment.Universe;
 
 
@@ -53,8 +50,7 @@ import gui.environment.Universe;
   */
 public class SaveGraphUtility{
 
-        public static void saveGraph(Component apane, JComponent c, String description,  String format){
-           
+        public static void saveGraph(Environment environment, Component apane, JComponent c, String description, String format){
            if (apane instanceof EditorPane){
                apane = ((EditorPane)apane).getAutomatonPane();
            }
@@ -63,20 +59,44 @@ public class SaveGraphUtility{
            Graphics imgG = canvasimage.getGraphics();
            apane.paint(imgG);
            BufferedImage bimg = new BufferedImage(canvasimage.getWidth(null), canvasimage.getHeight(null), BufferedImage.TYPE_INT_RGB);
+           
            Graphics2D g = bimg.createGraphics();
            g.drawImage(canvasimage, null, null);
-           
 
+            ImagePreviewer imgpreview = new ImagePreviewer(apane, environment);
+            boolean accepted_preview = imgpreview.display();
+            if (!accepted_preview) {
+                return;
+            }
 
            Universe.CHOOSER.resetChoosableFileFilters();
            Universe.CHOOSER.setAcceptAllFileFilterUsed(false);
-        
-           FileFilter spec = new FileNameExtensionFilter(description, format.split(","));
 
-           Universe.CHOOSER.addChoosableFileFilter(spec);
-           Universe.CHOOSER.addChoosableFileFilter(new AcceptAllFileFilter());
-           Universe.CHOOSER.setFileFilter(spec);
+           String[] formats = format.split(",");
+           FileFilter spec = new FileNameExtensionFilter(description, formats);
 
+            Universe.CHOOSER.addChoosableFileFilter(spec);
+            Universe.CHOOSER.addChoosableFileFilter(new AcceptAllFileFilter());
+            Universe.CHOOSER.setFileFilter(spec);
+
+            String title = "";
+            File currentFile = environment.getFile();
+            if (currentFile != null) {
+                title = currentFile.getName();
+            }
+
+            if (title.isEmpty()) {
+                Window window = SwingUtilities.getWindowAncestor(c);
+                if (window instanceof JFrame) {
+                    title = ((JFrame) window).getTitle();
+                }
+            }
+            if (title.startsWith("*")) {
+                // Remove "*" from beginning of name
+                title = title.substring(1);
+            }
+            title = FilenameUtils.removeExtension(title);
+            Universe.CHOOSER.setSelectedFile(new File(title + "." + formats[0]));
 
            int result = Universe.CHOOSER.showSaveDialog(c);
            while (result == JFileChooser.APPROVE_OPTION) {

@@ -19,14 +19,15 @@
 
 package gui.action;
 
-import gui.environment.Environment;
-
+import java.awt.Component;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Image;
 import java.awt.Rectangle;
 import java.awt.event.ActionEvent;
 import java.awt.event.KeyEvent;
 import java.awt.geom.Rectangle2D;
+import java.awt.image.BufferedImage;
 import java.awt.print.PageFormat;
 import java.awt.print.Paper;
 import java.awt.print.Printable;
@@ -35,6 +36,9 @@ import java.awt.print.PrinterJob;
 
 import javax.swing.JComponent;
 import javax.swing.KeyStroke;
+
+import gui.editor.EditorPane;
+import gui.environment.Environment;
 
 /**
  * This action handles printing. It will attempt to print the currently active
@@ -68,7 +72,8 @@ public class PrintAction extends RestrictedAction {
 	 */
 	public void actionPerformed(ActionEvent e) {
 		JComponent c = (JComponent) environment.getActive();
-		PrintUtilities.printComponent(c);
+		Component apane = environment.tabbed.getSelectedComponent();
+		PrintUtilities.printComponent(environment, c, apane);
 	}
 
 	/** The environment. */
@@ -80,12 +85,22 @@ public class PrintAction extends RestrictedAction {
 	 * advantage of some facilities of Swing.
 	 */
 	private static class PrintUtilities implements Printable {
-		public static void printComponent(JComponent c) {
-			new PrintUtilities(c).print();	
+        private Environment environment;
+		public static void printComponent(Environment environment, JComponent c, Component apane) {
+			new PrintUtilities(environment, c, apane).print();
 		}
 
-		public PrintUtilities(JComponent componentToBePrinted) {
-			this.componentToBePrinted = componentToBePrinted;
+        public static void printComponent(JComponent c, Component apane) {
+            new PrintUtilities(null, c, apane).print();
+        }
+
+		public PrintUtilities(Environment environment, JComponent componentToBePrinted, Component apane) {
+			this.environment = environment;
+            this.componentToBePrinted = componentToBePrinted;
+			if (apane instanceof EditorPane){
+				apane = ((EditorPane)apane).getAutomatonPane();
+			}
+			this.apane = apane;
 		}
 
 		public void print() {
@@ -96,6 +111,10 @@ public class PrintAction extends RestrictedAction {
 			}
 			else
 			{
+				boolean accepted_preview = showPreview();
+				if (!accepted_preview) {
+					return;
+				}
 				if (componentToBePrinted instanceof PrintAction.Bounds) {
 					PrintAction.Bounds b = (PrintAction.Bounds) componentToBePrinted;
 					Rectangle2D bounds = b.printerBounds();
@@ -119,6 +138,13 @@ public class PrintAction extends RestrictedAction {
 			}
 		}
 
+		// shows a preview of the image to print
+		private boolean showPreview() {
+			// preview image
+			ImagePreviewer imgpreview = new ImagePreviewer(apane, environment);
+			return imgpreview.display();
+		}
+
 		public int print(Graphics g, PageFormat pageFormat, int pageIndex) {
 			if (pageIndex > 0) {
 				return NO_SUCH_PAGE;
@@ -127,7 +153,7 @@ public class PrintAction extends RestrictedAction {
 				g2d.translate(pageFormat.getImageableX(), pageFormat
 						.getImageableY());
 				Rectangle2D clip = g2d.getClipBounds();
-				Rectangle2D size = new Rectangle(componentToBePrinted.getSize());
+				Rectangle2D size = new Rectangle(apane.getBounds());
 				double wratio = clip.getWidth() / size.getWidth();
 				double hratio = clip.getWidth() / size.getWidth();
 				if (wratio < hratio)
@@ -140,6 +166,7 @@ public class PrintAction extends RestrictedAction {
 		}
 
 		private JComponent componentToBePrinted;
+		private Component apane;
 	}
 
 	/**

@@ -84,7 +84,7 @@ public class SaveGraphGIFAction extends RestrictedAction{
 	public void actionPerformed(ActionEvent arg0)   {
            Component apane = environment.tabbed.getSelectedComponent();
            JComponent c=(JComponent)environment.getActive();
-           SaveGraphUtility.saveGraph(apane, c,"GIF files", "gif"); 
+           SaveGraphUtility.saveGraph(environment, apane, c,"GIF files", "gif");
     }
 
 }
