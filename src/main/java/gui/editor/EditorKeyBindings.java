@@ -196,6 +196,11 @@ public class EditorKeyBindings {
             }
         });
 
+        //TODO add the alt drag to disable object/state snapping
+
+        // Begin "General shortcuts" section
+        currentSection = generalShortcutsSection;
+
         // ctrl+z action
         displayName = "Undo";
         addCTRLAction("undo", KeyEvent.VK_Z, displayName, inputMap, actionMap, new AbstractAction() {

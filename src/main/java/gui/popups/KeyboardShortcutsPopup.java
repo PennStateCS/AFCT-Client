@@ -47,7 +47,7 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
         contentPane.setLayout(new BoxLayout(contentPane, BoxLayout.Y_AXIS));
         searchField = new JTextField();
         shortcutsPanel = new JPanel();
-        shortcutsPanel.setLayout(new BoxLayout(shortcutsPanel, BoxLayout.PAGE_AXIS));
+        shortcutsPanel.setLayout(new BoxLayout(shortcutsPanel, BoxLayout.Y_AXIS));
         noResultsLabel = new JLabel();
         int fontSize = 14;
         fontSize = 16;
@@ -59,18 +59,22 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
         setupEventHandlers();
 
         // Complete setup
+        //shortcutsPanel.add(Box.createVerticalGlue());
         shortcutsPanel.setBorder(new EmptyBorder(vrtInset, hozInset, vrtInset, hozInset));
         scrollPane = new JScrollPane(shortcutsPanel);
         scrollPane.getVerticalScrollBar().setUnitIncrement(16); // TODO: do this for the editor window too
 
         headerPane.setBorder(new EmptyBorder(vrtInset, hozInset, vrtInset-5, hozInset));
         contentPane.add(headerPane);
+        //contentPane.add(Box.createVerticalGlue());
 
         cards.add(NORMAL, scrollPane);
         cards.add(NO_RESULTS_PANEL, getNoResultsPanel(vrtInset, hozInset));
 
         contentPane.add(cards);
 
+        //contentPane.add(Box.createVerticalGlue());
+        //contentPane.add(new JPanel());
 
         frame.getContentPane().add(contentPane);
         frame.setVisible(false);
@@ -97,6 +101,7 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
 
         // Add searchField to headerPane
         searchField.setBorder(new EmptyBorder(12, 12, 12, 12));
+        searchField.setToolTipText("Search");
 //        searchField.setBorder(new CompoundBorder(
 //                BorderFactory.createLineBorder(Color.GRAY, 1),
 //                new EmptyBorder(12, 12, 12, 12)
@@ -107,6 +112,8 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
 //        ));
         changeSize(searchField, monospacedFont.getSize());
         headerPane.add(searchField);
+
+        //headerPane.add(Box.createVerticalGlue());
 
         populateGui(vrtInset, 0);
     }
@@ -315,7 +322,7 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
         hoz = -4;
         int vrt = -16;
         vrt = -18;
-        vrt = 0;
+        vrt = -7;
         label.setBorder(new CompoundBorder(
                 new RoundedBorder(radius),
                 new EmptyBorder(vrt, hoz, vrt, hoz)
@@ -335,6 +342,8 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
         noResultsLabel.setBorder(BorderFactory.createEmptyBorder(vrtInset * 2, hozInset, vrtInset * 2, hozInset));
 
         panel.add(noResultsLabel);
+        //panel.add(Box.createVerticalGlue());
+
 
         return panel;
     }
@@ -402,6 +411,11 @@ public class KeyboardShortcutsPopup implements ExtensionPopup {
 
         // display the popup
         frame.setVisible(true);
+
+//        SwingUtilities.invokeLater(() -> {
+//            Dimension pref = searchField.getPreferredSize();
+//            searchField.setMaximumSize(pref);
+//        });
     }
 
     @Override
