@@ -582,6 +582,8 @@ public class ArrowTool extends Tool {
 
         ObjectSnappingHandler objectSnappingHandler = getObjectSnappingHandler();
         objectSnappingHandler.clearSnappingIndicators(getView());
+		// Prevent newly created states from overlapping with existing states
+		StateOverlap.handleStateOverlap(getAutomaton());
         /*
         getView().getDrawer().setXSnappingIndicator(null);
         getView().getDrawer().setYSnappingIndicator(null);
