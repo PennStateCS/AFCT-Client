@@ -60,6 +60,10 @@ import java.util.HashSet;
 
 public class AutomatonDrawer {
     public ContextActions contextActions;
+
+    public boolean showConnected = false;
+
+
 	/**
 	 * Instantiates an object to draw an automaton.
 	 * 
@@ -112,9 +116,28 @@ public class AutomatonDrawer {
 				RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setFont(g.getFont().deriveFont(12.0f));
 
+        boolean transitionFocusDraw = false;
+        if (this.showConnected) {
+            boolean anySelected = false;
+            for (State state : automaton.getStates()) {
+                if (state.isSelected()) {
+                    anySelected = true;
+                    break;
+                }
+            }
+            if (!anySelected) {
+                transitionFocusDraw = true;
+            }
+        }
+
 		// Draw transitions between states.
 		g.setColor(Color.black);
-		drawTransitions(g);
+        if (!transitionFocusDraw) {
+            drawTransitions(g);
+        } else {
+            drawTransitionsHighlightSelected(g);
+        }
+
 
 
 //        int sh = automaton.hashCode();
@@ -135,17 +158,24 @@ public class AutomatonDrawer {
 //                }
 //            }
 //        }
-        
+
 
 //        //reverse again, to get the correct ordering for non-overlapping things
 //        for (int i = hs.size() - 1; i >= 0; i--)
 //			drawState(g, hs.get(i));
-        
+
         State[] states = automaton.getStates();
-        for (int i = 0; i < states.length; i++){
-            drawState(g, states[i]);
+        if (!transitionFocusDraw) {
+            for (State state : states) {
+                drawState(g, state);
+            }
+        } else {
+            for (State state : states) {
+                statedrawer.drawConnectedViewTransitionFocus(g, getAutomaton(), state, drawLabels);
+            }
         }
-		
+
+
 		
 		this.drawSelectionBox(g);
 		this.drawObjectSnappingIndicators(g);
@@ -243,11 +273,14 @@ public class AutomatonDrawer {
 	 *            the state to draw
 	 */
 	protected void drawState(Graphics g, State state) {
-		statedrawer.drawState(g, getAutomaton(), state);
-		if (drawLabels) {
-			statedrawer.drawStateLabel(g, state, state.getPoint(),
-					StateDrawer.STATE_COLOR);
-		}
+        if (!this.showConnected) {
+            statedrawer.drawState(g, getAutomaton(), state);
+            if (drawLabels) {
+                statedrawer.drawStateLabel(g, state, state.getPoint(), StateDrawer.STATE_COLOR);
+            }
+        } else {
+            statedrawer.drawConnectedView(g, getAutomaton(), state, drawLabels);
+        }
 	}
 
 	/**
@@ -259,17 +292,35 @@ public class AutomatonDrawer {
 	protected void drawTransitions(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;
 		Set<CurvedArrow> arrows = arrowToTransitionMap.keySet();
-		Iterator<CurvedArrow> it = arrows.iterator();
-		while (it.hasNext()) {
-			CurvedArrow arrow = (CurvedArrow) it.next();
-            if (arrow.myTransition.isSelected){
-                arrow.drawHighlight(g2);
-                arrow.drawControlPoint(g2);
+        if (!this.showConnected) {
+            for (CurvedArrow arrow : arrows) {
+                if (arrow.myTransition.isSelected) {
+                    arrow.drawHighlight(g2);
+                    arrow.drawControlPoint(g2);
+                } else {
+                    arrow.draw(g2);
+                }
             }
-            else 
-                arrow.draw(g2);
-		}
+        } else {
+            for (CurvedArrow arrow : arrows) {
+                Transition transition = arrowToTransitionMap.get(arrow);
+                arrow.drawConnectedView(g2, transition);
+            }
+        }
 	}
+
+    protected void drawTransitionsHighlightSelected(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g;
+        Set<CurvedArrow> arrows = arrowToTransitionMap.keySet();
+        if (!this.showConnected) {
+            drawTransitions(g);
+        } else {
+            for (CurvedArrow arrow : arrows) {
+                Transition transition = arrowToTransitionMap.get(arrow);
+                arrow.drawConnectedViewHighlightSelected(g2, transition);
+            }
+        }
+    }
 
 	
 
@@ -510,6 +561,8 @@ public class AutomatonDrawer {
 	public Transition transitionAtPoint(Point point) {
         int fudge = 2;
         fudge = 3; // TODO - change this based on zoom level so when zoomed out it is easier to click transitions
+        // Also maybe add a "cycle click" where if you click the same place multiple times, it will cycle through
+        //      overlapping transitions
 
 		if (!valid)
 			refreshArrowMap();

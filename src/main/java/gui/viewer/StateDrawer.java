@@ -22,10 +22,12 @@ package gui.viewer;
 
 import automata.State;
 import automata.Automaton;
-import java.awt.Graphics;
-import java.awt.Point;
-import java.awt.Color;
+import automata.Transition;
+
+import java.awt.*;
 import java.awt.geom.Rectangle2D;
+
+import static gui.Globals.*;
 
 
 /**
@@ -53,6 +55,85 @@ public class StateDrawer {
 	public StateDrawer(int radius) {
 		this.radius = radius;
 	}
+
+    public void drawConnectedView(Graphics g, Automaton automaton, State state, boolean drawStateLabels) {
+        boolean toSelected = false;
+        Transition[] from = automaton.getTransitionsFromState(state);
+        for (Transition t : from) {
+            if (t.getToState().isSelected()) {
+                toSelected = true;
+                break;
+            }
+        }
+
+        boolean fromSelected = false;
+        Transition[] to = automaton.getTransitionsToState(state);
+        for (Transition t : to) {
+            if (t.getFromState().isSelected()) {
+                fromSelected = true;
+                break;
+            }
+        }
+
+        Color outlineColor;
+        if(state.isSelected()) {
+            if (!toSelected && !fromSelected) {
+                outlineColor = FROM_COLOR;
+            } else {
+                outlineColor = BOTH_COLOR;
+            }
+        } else {
+            if (toSelected && fromSelected) {
+                outlineColor = BOTH_COLOR;
+            } else if (toSelected) {
+                outlineColor = TO_COLOR;
+            } else if (fromSelected) {
+                outlineColor = FROM_COLOR;
+            } else {
+                outlineColor = NEITHER_COLOR;
+            }
+        }
+        drawState(g, automaton, state, outlineColor);
+        if (drawStateLabels) {
+            drawStateLabel(g, state, outlineColor);
+        }
+    }
+
+    public void drawConnectedViewTransitionFocus(Graphics g, Automaton automaton, State state, boolean drawStateLabels) {
+        boolean fromSelected = false;
+        Transition[] from = automaton.getTransitionsFromState(state);
+        for (Transition t : from) {
+            if (t.isSelected) {
+                fromSelected = true;
+                break;
+            }
+        }
+
+        boolean toSelected = false;
+        if (!fromSelected) {
+            Transition[] to = automaton.getTransitionsToState(state);
+            for (Transition t : to) {
+                if (t.isSelected) {
+                    toSelected = true;
+                    break;
+                }
+            }
+        }
+
+        Color outlineColor;
+        if (toSelected) {
+            outlineColor = TO_COLOR;
+        } else if (fromSelected) {
+            outlineColor = FROM_COLOR;
+        } else {
+            outlineColor = NEITHER_COLOR;
+        }
+
+        drawState(g, automaton, state, outlineColor);
+        if (drawStateLabels) {
+            drawStateLabel(g, state, outlineColor);
+        }
+    }
 
 	/**
 	 * Draws an individual state with all the default modes.
@@ -107,16 +188,31 @@ public class StateDrawer {
 		return;
 	}
 
+    /**
+     * Draws an individual state with the specified outline color.
+     *
+     * @param g
+     *            the graphics object to draw upon
+     * @param state
+     *            the state to draw
+     * @param automaton
+     *            the automaton this state is a part of
+     * @param outlineColor
+     *            the color of the outline of the state
+     */
+    public void drawState(Graphics g, Automaton automaton, State state, Color outlineColor) {
+        drawArea(g, automaton, state, state.getPoint(), STATE_COLOR, outlineColor);
+    }
+
 
     /**
 	 * @param state
 	 */
-	private void drawArea(Graphics g, Automaton automaton, State state,
-			Point point, Color color) {
+	private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor, Color outlineColor) {
 		// Draw the basic background of the state.
-		drawBackground(g, state, point, color);
+		drawBackground(g, state, point, fillColor);
 		// What about the text label?
-		g.setColor(Color.black);
+		g.setColor(outlineColor);
 
 		int dx = ((int) g.getFontMetrics().getStringBounds(state.getName(), g)
 				.getWidth()) >> 1;
@@ -141,7 +237,7 @@ public class StateDrawer {
 				int[] y = { point.y, point.y - radius, point.y + radius };
 				g.setColor(Color.white);
 				g.fillPolygon(x, y, 3);
-				g.setColor(Color.black);
+				g.setColor(outlineColor);
 				g.drawPolygon(x, y, 3);
 			}
 //		} else {
@@ -165,6 +261,10 @@ public class StateDrawer {
 //		}
 	}
 
+    private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor) {
+        drawArea(g, automaton, state, point, fillColor, Color.black);
+    }
+
 	/**
 	 * Draws the state label for a given state.
 	 * 
@@ -173,10 +273,12 @@ public class StateDrawer {
 	 * @param point
 	 *            the point of the state, which is NOT the same thing as any
 	 *            point where the label gets drawn
-	 * @param color
+	 * @param fillColor
 	 *            the background color of the label
+     * @param outlineColor
+     *            the color of the outline of the label
 	 */
-	public void drawStateLabel(Graphics g, State state, Point point, Color color) {
+	public void drawStateLabel(Graphics g, State state, Point point, Color fillColor, Color outlineColor) {
 		String[] labels = state.getLabels();
 		if (labels.length == 0)
 			return;
@@ -202,15 +304,43 @@ public class StateDrawer {
 		// Where the y point of the baseline is.
 		int baseline = y;
 
-		g.setColor(color);
+		g.setColor(fillColor);
 		g.fillRect(x, y, width, height);
-		g.setColor(Color.black);
+		g.setColor(outlineColor);
 		for (int i = 0; i < labels.length; i++) {
 			baseline += ascent + STATE_LABEL_PAD;
 			g.drawString(labels[i], x + STATE_LABEL_PAD, baseline);
 		}
 		g.drawRect(x, y, width, height);
 	}
+
+    /**
+     * Draws the state label for a given state.
+     *
+     * @param state
+     *            the state whose label we must draw
+     * @param point
+     *            the point of the state, which is NOT the same thing as any
+     *            point where the label gets drawn
+     * @param fillColor
+     *            the background fillColor of the label
+     */
+    public void drawStateLabel(Graphics g, State state, Point point, Color fillColor) {
+        drawStateLabel(g, state, point, fillColor, Color.black);
+    }
+
+    /**
+     * Draws the state label for a given state.
+     *
+     * @param state
+     *            the state whose label we must draw
+     * @param outlineColor
+     *            the color of the outline of the label
+     */
+    public void drawStateLabel(Graphics g, State state, Color outlineColor) {
+        drawStateLabel(g, state, state.getPoint(), STATE_COLOR, outlineColor);
+    }
+
 
 	/**
 	 * Draws the background of the state.
@@ -223,7 +353,6 @@ public class StateDrawer {
 	 *            the point where the background should be centered
 	 * @param color
 	 *            the color of the background, if supported by this class
-	 * @param bool
 	 */
 	public void drawBackground(Graphics g, State state, Point point, Color color) {
 		g.setColor(color);

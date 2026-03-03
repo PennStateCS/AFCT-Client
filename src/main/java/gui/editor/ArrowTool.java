@@ -52,7 +52,9 @@ import automata.turing.TMState;
 import automata.turing.TuringMachineBuildingBlocks;
 import debug.EDebug;
 
+import static gui.editor.EditorKeyBindings.CTRL_CMD_SHORTCUT_MASK;
 import static gui.editor.IconKeeper.getArrowToolIcon;
+import static java.awt.event.InputEvent.ALT_DOWN_MASK;
 import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 
 /**
@@ -119,6 +121,7 @@ public class ArrowTool extends Tool {
 	 *            the mouse event
 	 */
 	public void mouseClicked(MouseEvent event) {
+        getView().getDrawer().showConnected = altKeyDown(event);
 		if (event.getClickCount() == 1){
             Transition trans = getDrawer().transitionAtPoint(event.getPoint());
             if (trans != null){
@@ -143,10 +146,15 @@ public class ArrowTool extends Tool {
             } else {
                 getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds);
             }
+            //getView().getDrawer().showConnected = altKeyDown(event);
 
             lastClickedState = getDrawer().stateAtPoint(event.getPoint());
             if (lastClickedState != null) {
-                lastClickedState.setSelect(true);
+                if (!lastClickedState.getDelayDeselect()) {
+                    lastClickedState.setSelect(true);
+                } else {
+                    lastClickedState.setDelayDeselect(false);
+                }
             }
 
 			getView().repaint();
@@ -184,8 +192,6 @@ public class ArrowTool extends Tool {
 		lastClickedTransition = null;
 	}
 
-    private static int CTRL_CMD_SHORTCUT_MASK = Toolkit.getDefaultToolkit().getMenuShortcutKeyMaskEx();
-
     private boolean ctrlAndShiftUp(InputEvent event) {
         // Check currently pressed keys
         int modifiersEx = event.getModifiersEx();
@@ -205,6 +211,13 @@ public class ArrowTool extends Tool {
         return isShiftUp;
     }
 
+    private boolean altKeyDown(InputEvent event) {
+        // Check currently pressed keys
+        int modifiersEx = event.getModifiersEx();
+        // Check if ALT IS pressed
+        boolean isAltDown = (modifiersEx & ALT_DOWN_MASK) != 0;
+        return isAltDown;
+    }
 
     /**
 	 * On a mouse press, allows the state to be dragged about unless this is a
@@ -219,6 +232,7 @@ public class ArrowTool extends Tool {
 		} else {
             EDebug.print("I cannot preserve what you ask");
 		}
+        getView().getDrawer().showConnected = altKeyDown(event);
 
         State newLastClickedState = getDrawer().stateAtPoint(event.getPoint());
         if (newLastClickedState != null) {
@@ -230,12 +244,15 @@ public class ArrowTool extends Tool {
             }
         }
 
+        boolean delayDeselect = false;
 		initialPointClick.setLocation(event.getPoint());
 		lastClickedState = getDrawer().stateAtPoint(event.getPoint());
 		if (lastClickedState == null) {
             lastClickedTransition = getDrawer().transitionAtPoint(
                     event.getPoint());
         } else {
+            delayDeselect = !ctrlAndShiftUp(event) && lastClickedState.isSelected();
+            lastClickedState.setDelayDeselect(delayDeselect);
             lastClickedState.setSelect(true);
             getAutomaton().deselectAllTransitions();
         }
@@ -254,6 +271,9 @@ public class ArrowTool extends Tool {
 				getView().getDrawer().setSelectionBounds(bounds);
 				lastClickedState.setSelect(true);
 			}
+            if (delayDeselect) {
+                lastClickedState.setSelect(false);
+            }
 			getView().repaint();
 		}
 		else if (lastClickedTransition != null) {
@@ -274,6 +294,9 @@ public class ArrowTool extends Tool {
             } else {
                 getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds);
             }
+
+            //getView().getDrawer().showConnected = altKeyDown(event);
+
 			getView().getDrawer().setSelectionBounds(bounds);
 		}
 
@@ -505,6 +528,7 @@ public class ArrowTool extends Tool {
                     getView().getDrawer().getAutomaton().selectStatesWithinBounds(bounds);
                 } else {
                     getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds);
+                    //getView().getDrawer().getAutomaton().addSelectToStatesWithinBounds(bounds, true);
                 }
                 getView().getDrawer().setSelectionBounds(bounds);
             }
