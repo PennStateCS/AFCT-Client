@@ -4,6 +4,10 @@ import automata.State;
 import automata.Transition;
 import automata.fsa.FSATransition;
 import automata.fsa.FiniteStateAutomaton;
+import automata.graph.AutomatonGraph;
+import automata.graph.LayoutAlgorithm;
+import automata.graph.LayoutAlgorithmFactory;
+import automata.graph.layout.RandomLayoutAlgorithm;
 import gui.environment.Environment;
 
 import javax.swing.*;
@@ -23,7 +27,9 @@ public class GenerateOCRDataAction extends RestrictedAction{
         GEM,
         THE_RANDOM_ALGORITHM,
         THE_RANDOM_ALGORITHM_THEN_GEM,
-        RANDOMLY_PICK_OTHER,
+        CIRCLE,
+        TWO_CIRCLE,
+        TREE_THEN_GEM,
     }
 
     private FiniteStateAutomaton automaton = null;
@@ -69,6 +75,9 @@ public class GenerateOCRDataAction extends RestrictedAction{
 
             // choose a layout algorithm
             layoutProcess algorithmCode = chooseLayoutProcess(numStatesForThisExample, numTransitions);
+
+            // apply the algorithm
+            applyLayoutAlgorithm(algorithmCode);
         }
     }
 
@@ -154,8 +163,105 @@ public class GenerateOCRDataAction extends RestrictedAction{
             return layoutProcess.THE_RANDOM_ALGORITHM;
         } else if (chance < 0.8) {
             return layoutProcess.THE_RANDOM_ALGORITHM_THEN_GEM;
+        } else if (chance < 0.87 ) {
+            return layoutProcess.CIRCLE;
+        } else if (chance < 0.94) {
+            return layoutProcess.TWO_CIRCLE;
         } else {
-            return layoutProcess.RANDOMLY_PICK_OTHER;
+            return layoutProcess.TREE_THEN_GEM;
+        }
+    }
+
+    private void applyLayoutAlgorithm(layoutProcess algorithm) {
+        LayoutAlgorithm layoutAlgorithm;
+        AutomatonGraph graph;
+
+        // These values are some magic numbers stolen from layoutAlgorithmAction.java
+        // do we really even need to take these into account?
+        int assumedUsedWidth = 25;
+        int assumedUsedHeight = 100;
+        Dimension psize = new Dimension(this.environment.getWidth()-assumedUsedWidth,
+                this.environment.getHeight()-assumedUsedHeight);
+        Dimension vertexDimension = new Dimension(30,30);
+        int vertexBuffer = 120;
+        switch (algorithm) {
+            case GEM:
+                graph = LayoutAlgorithmFactory.getAutomatonGraph(LayoutAlgorithmFactory.GEM, this.automaton);
+                layoutAlgorithm = LayoutAlgorithmFactory.getLayoutAlgorithm(
+                        LayoutAlgorithmFactory.GEM, psize,
+                        vertexDimension,
+                        vertexBuffer
+                );
+                layoutAlgorithm.layout(graph, null);
+                graph.moveAutomatonStates();
+                break;
+            case THE_RANDOM_ALGORITHM:
+                graph = LayoutAlgorithmFactory.getAutomatonGraph(LayoutAlgorithmFactory.RANDOM, this.automaton);
+                layoutAlgorithm = LayoutAlgorithmFactory.getLayoutAlgorithm(
+                        LayoutAlgorithmFactory.RANDOM, psize,
+                        vertexDimension,
+                        vertexBuffer
+                );
+                layoutAlgorithm.layout(graph, null);
+                graph.moveAutomatonStates();
+                break;
+            case THE_RANDOM_ALGORITHM_THEN_GEM:
+                graph = LayoutAlgorithmFactory.getAutomatonGraph(LayoutAlgorithmFactory.RANDOM, this.automaton);
+                // first do the random algorithm
+                layoutAlgorithm = LayoutAlgorithmFactory.getLayoutAlgorithm(
+                        LayoutAlgorithmFactory.RANDOM, psize,
+                        vertexDimension,
+                        vertexBuffer
+                );
+                layoutAlgorithm.layout(graph, null);
+                graph.moveAutomatonStates();
+
+                // then do GEM
+                layoutAlgorithm = LayoutAlgorithmFactory.getLayoutAlgorithm(
+                        LayoutAlgorithmFactory.GEM, psize,
+                        vertexDimension,
+                        vertexBuffer
+                );
+                layoutAlgorithm.layout(graph, null);
+                graph.moveAutomatonStates();
+                break;
+            case CIRCLE:
+                graph = LayoutAlgorithmFactory.getAutomatonGraph(LayoutAlgorithmFactory.CIRCLE, this.automaton);
+                layoutAlgorithm = LayoutAlgorithmFactory.getLayoutAlgorithm(
+                        LayoutAlgorithmFactory.CIRCLE, psize,
+                        vertexDimension,
+                        vertexBuffer
+                );
+                layoutAlgorithm.layout(graph, null);
+                graph.moveAutomatonStates();
+                break;
+            case TWO_CIRCLE:
+                graph = LayoutAlgorithmFactory.getAutomatonGraph(LayoutAlgorithmFactory.TWO_CIRCLE, this.automaton);
+                layoutAlgorithm = LayoutAlgorithmFactory.getLayoutAlgorithm(
+                        LayoutAlgorithmFactory.TWO_CIRCLE, psize,
+                        vertexDimension,
+                        vertexBuffer
+                );
+                layoutAlgorithm.layout(graph, null);
+                graph.moveAutomatonStates();
+                break;
+            case TREE_THEN_GEM:
+                graph = LayoutAlgorithmFactory.getAutomatonGraph(LayoutAlgorithmFactory.TREE_DEGREE, this.automaton);
+                layoutAlgorithm = LayoutAlgorithmFactory.getLayoutAlgorithm(
+                        LayoutAlgorithmFactory.TREE_DEGREE, psize,
+                        vertexDimension,
+                        vertexBuffer
+                );
+                layoutAlgorithm.layout(graph, null);
+
+                layoutAlgorithm = LayoutAlgorithmFactory.getLayoutAlgorithm(
+                        LayoutAlgorithmFactory.GEM, psize,
+                        vertexDimension,
+                        vertexBuffer
+                );
+                layoutAlgorithm.layout(graph, null);
+                graph.moveAutomatonStates();
+                break;
         }
     }
 }
