@@ -164,8 +164,9 @@ public abstract class Tool extends SuperMouseAdapter {
 	}
 
     protected ObjectSnappingHandler getObjectSnappingHandler() {
-        Automaton test = view.getCreator().getAutomaton();
-        return ((AutomatonEnvironment) view.getCreator().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
+        //Automaton test = view.getCreator().getAutomaton();
+        return ((AutomatonEnvironment) getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
+        //return ((AutomatonEnvironment) view.getCreator().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
     }
 
 	/** The view we receive events from. */

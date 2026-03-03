@@ -21,6 +21,7 @@
 package grammar.cfg;
 
 import grammar.*;
+import gui.DisableGUI;
 
 /**
  * The context free grammar object is a representation of a context free
@@ -56,8 +57,10 @@ public class ContextFreeGrammar extends Grammar {
 	 */
 	public void checkProduction(Production production) {
 		if (!ProductionChecker.isRestrictedOnLHS(production)){
-            javax.swing.JOptionPane.showMessageDialog(null,
-                    "Your production is unrestricted on the left hand side.");
+            if (DisableGUI.allowGUI) {
+                javax.swing.JOptionPane.showMessageDialog(null,
+                        "Your production is unrestricted on the left hand side.");
+            }
 			throw new IllegalArgumentException(
 					"The production is unrestricted on the left hand side.");
         }

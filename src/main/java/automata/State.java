@@ -375,4 +375,14 @@ public class State implements Serializable {
 		return selected;
 	}
 
+    private boolean delayDeselect = false;
+
+    public void setDelayDeselect(boolean delayDeselect) {
+        this.delayDeselect = delayDeselect;
+    }
+
+    public boolean getDelayDeselect(){
+        return delayDeselect;
+    }
+
 }

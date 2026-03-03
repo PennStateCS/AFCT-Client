@@ -37,7 +37,9 @@ public class DetailsPanel2 extends JPanel {
 
     private void doDetailsTextUpdate() {
         SwingUtilities.invokeLater(() -> {
-            this.detailsText.setText(currentDetailsText);
+            if (this.detailsPanel.isVisible()) {
+                this.detailsText.setText(currentDetailsText);
+            }
             //detailsText.setCaretPosition(0);
             // Important for layout recalculation in Swing
 //            detailsPanel.revalidate();

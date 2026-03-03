@@ -87,6 +87,7 @@ public abstract class AutomatonTransducer extends AbstractTransducer {
 	 */
 	protected Map<Integer, State> readStates(Node node, Automaton automaton, Set<Object> locatedStates,
 			Document document) {
+        automaton.setSkipAutoInitialState(true);
 		Map<Integer, State> i2s = new java.util.HashMap<Integer, State>();
         if(node == null) return i2s;
 		NodeList allNodes = node.getChildNodes();
@@ -113,6 +114,7 @@ public abstract class AutomatonTransducer extends AbstractTransducer {
 		createState(stateNodes, i2sn, automaton, locatedStates, i2s, false,
 				document);
 		// i2s = addBlocks(document, automaton, locatedStates, i2s);
+        automaton.setSkipAutoInitialState(false);
 		return i2s;
 	}
 	

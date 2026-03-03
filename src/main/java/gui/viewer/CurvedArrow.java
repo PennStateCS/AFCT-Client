@@ -26,6 +26,8 @@ import java.awt.image.BufferedImage;
 
 import automata.Transition;
 
+import static gui.Globals.*;
+
 /**
  * This is a simple class for storing and drawing a curved line with possible
  * arrow heads on it.
@@ -143,6 +145,15 @@ public class CurvedArrow {
 		needsRefresh = true;
 	}
 
+    public void drawAsColor(Graphics2D g, Color color) {
+        if (needsRefresh)
+            refreshCurve();
+        g.setColor(color);
+        g.draw(curve); // Draws the main part of the arrow.
+        drawArrow(g, end, control); // Draws the arrow head.
+        drawText(g, color);
+    }
+
 	/**
 	 * Draws the arrow on the indicated graphics environment.
 	 * 
@@ -150,12 +161,7 @@ public class CurvedArrow {
 	 *            the graphics to draw this arrow upon
 	 */
 	public void draw(Graphics2D g) {
-		if (needsRefresh)
-			refreshCurve();
-		g.setColor(ARROW_COLOR);
-		g.draw(curve); // Draws the main part of the arrow.
-		drawArrow(g, end, control); // Draws the arrow head.
-		drawText(g);
+        drawAsColor(g, ARROW_COLOR);
 	}
 
     public void drawControlPoint(Graphics2D g){ //adjust later to center of circle = focus point
@@ -221,6 +227,33 @@ public class CurvedArrow {
         }
 	}
 
+    public enum CONNECTION_TYPE {
+        FROM,
+        TO,
+        BOTH,
+        NEITHER,
+    }
+
+    public void drawConnectedView(Graphics2D g, Transition transition) {
+        if (transition.getFromState().isSelected() && transition.getToState().isSelected()) {
+            drawAsColor(g, BOTH_COLOR);
+        } else if (transition.getFromState().isSelected()) {
+            drawAsColor(g, FROM_COLOR);
+        } else if (transition.getToState().isSelected()) {
+            drawAsColor(g, TO_COLOR);
+        } else {
+            drawAsColor(g, NEITHER_COLOR);
+        }
+    }
+
+    public void drawConnectedViewHighlightSelected(Graphics2D g, Transition transition) {
+        if (transition.isSelected) {
+            drawAsColor(g, FROM_COLOR);
+        } else {
+            drawAsColor(g, NEITHER_COLOR);
+        }
+    }
+
 	/**
 	 * Draws the text on the high point of the arc. The text drawn is none other
 	 * than the label for this object, as retrieved from <CODE>getLabel</CODE>.
@@ -228,7 +261,7 @@ public class CurvedArrow {
 	 * @param g
 	 *            the graphics object to draw the text upon
 	 */
-	public void drawText(Graphics2D g) {
+	public void drawText(Graphics2D g, Color color) {
 		// We don't want to corrupt the graphics environs with our
 		// affine transforms!
 		Graphics2D g2 = (Graphics2D) g.create();
@@ -246,10 +279,13 @@ public class CurvedArrow {
 				.getDescent();
 		bounds.setRect(bounds.getX() - dx, bounds.getY() + dy, bounds
 				.getWidth(), bounds.getHeight());
-		g2.setColor(new Color(0,0,0));
+		g2.setColor(color);
 		for (int i = 0; i < label.length(); i += CHARS_PER_STEP) {
 			String sublabel = label.substring(i, Math.min(i + CHARS_PER_STEP,
 					label.length()));
+            if (sublabel.contains(" ")) {
+                sublabel = sublabel.replaceAll(" ", "␣");
+            }
 			g2.drawString(sublabel, -dx, dy);
 			dx -= (float) metrics.getStringBounds(sublabel, g2).getWidth();
 		}
@@ -260,6 +296,17 @@ public class CurvedArrow {
 		 * GRAPHICS.getFontMetrics(); }
 		 */
 	}
+
+    /**
+     * Draws the text on the high point of the arc. The text drawn is none other
+     * than the label for this object, as retrieved from <CODE>getLabel</CODE>.
+     *
+     * @param g
+     *            the graphics object to draw the text upon
+     */
+    public void drawText(Graphics2D g) {
+        drawText(g, Color.black);
+    }
 
 	/**
 	 * Sets the label that will be drawn on the high arc point.

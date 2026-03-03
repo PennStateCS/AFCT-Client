@@ -74,6 +74,8 @@ public class Automaton implements Serializable, Cloneable {
 
     private HashMap<State, Point> savedStatePoints;
 
+    private boolean skipAutoInitialState = false;
+
 	/**
 	 * Creates an instance of <CODE>Automaton</CODE>. The created instance
 	 * has no states and no transitions.
@@ -108,6 +110,7 @@ public class Automaton implements Serializable, Cloneable {
 			System.err.println("Warning: clone of automaton failed!");
 			return null;
 		}
+        a.setSkipAutoInitialState(true);
 		a.setEnvironmentFrame(this.getEnvironmentFrame());
 		
 		
@@ -165,6 +168,7 @@ public class Automaton implements Serializable, Cloneable {
 
 		}
 
+        a.setSkipAutoInitialState(false);
 		// Should be done now!
 		return a;
 	}
@@ -316,7 +320,12 @@ public class Automaton implements Serializable, Cloneable {
 		}
 		if (transitions.contains(trans))
 			return;
-        if(trans.getToState() == null || trans.getFromState() == null) return;
+		// check that the transition's states exist in the automaton
+		State fromState = trans.getFromState();
+		State toState = trans.getToState();
+		if (fromState == null || toState == null) return;
+		if (!states.contains(fromState) || !states.contains(toState)) return;
+
 		transitions.add(trans);
         if(transitionFromStateMap == null) transitionFromStateMap = new HashMap<>();
 		List<Transition> list = (List<Transition>) transitionFromStateMap.get(trans.getFromState());
@@ -448,7 +457,7 @@ public class Automaton implements Serializable, Cloneable {
 
         // check if this is the first state that has been placed down in this environment
         // if so, mark it automatically as the initial state for quality of life reasons
-        if (Universe.curProfile.getAutoInitialState()) {
+        if (!this.skipAutoInitialState && Universe.curProfile.getAutoInitialState()) {
             if (this.states.size() == 1) {
                 setInitialState(state);
             }
@@ -456,6 +465,10 @@ public class Automaton implements Serializable, Cloneable {
 
 		distributeStateEvent(new AutomataStateEvent(this, state, true, false, false));
 	}
+
+    public void setSkipAutoInitialState(boolean skip) {
+        this.skipAutoInitialState = skip;
+    }
 
 	/**
 	 * Removes a state from the automaton. This will also remove all transitions
@@ -623,6 +636,19 @@ public class Automaton implements Serializable, Cloneable {
 			}
         }
     }
+
+//    public void addSelectToStatesWithinBounds(Rectangle bounds, boolean doNotDeselect) {
+//        State[] states = getStates();
+//        for (State state : states) {
+//            if (bounds.contains(state.getPoint())) {
+//                state.setSelect(doNotDeselect || !state.isSelected());
+//            }
+//        }
+//    }
+//
+//    public void addSelectToStatesWithinBounds(Rectangle bounds){
+//        addSelectToStatesWithinBounds(bounds, false);
+//    }
 
     public void deselectStatesAndTransitions() {
         deselectAllStates();
@@ -1401,6 +1427,7 @@ public class Automaton implements Serializable, Cloneable {
     private static int duplicateOffset = 15;
 
     private static void copyStatesAndTransitions(Automaton from, Automaton to, boolean overwriteInitialState, boolean onlyCopySelected, boolean copyStateNames) {
+        to.setSkipAutoInitialState(true);
         State[] states;
         if (onlyCopySelected) {
             states = from.getSelectedStates();
@@ -1468,6 +1495,7 @@ public class Automaton implements Serializable, Cloneable {
         if (to.view != null) {
             to.view.repaint();
         }
+        to.setSkipAutoInitialState(false);
     }
 
     public void duplicateSelected(boolean copyStateNames) {

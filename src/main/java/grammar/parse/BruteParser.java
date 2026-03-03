@@ -363,6 +363,10 @@ public abstract class BruteParser {
 			((BruteParserListener) it.next()).bruteParserStateChange(event);
 	}
 
+    public Thread getParseThread() {
+        return parseThread;
+    }
+
 	/** The set of listeners. */
 	protected Set<BruteParserListener> listeners = new HashSet<>();
 
