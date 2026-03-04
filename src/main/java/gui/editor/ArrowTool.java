@@ -130,8 +130,6 @@ public class ArrowTool extends Tool {
                     trans.isSelected = false;
                     selectedTransition = null;
                 } else {
-					// Disallow selection of overlapped transitions with an invisible arrow
-					if (getDrawer().transitionToArrowMap.get(trans) instanceof InvisibleCurvedArrow) return;
 					// Deselect the prior selected transition and select the clicked transition
                     if (selectedTransition != null) selectedTransition.isSelected = false;
                     trans.isSelected = true;
