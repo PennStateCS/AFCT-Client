@@ -60,7 +60,7 @@ public class GenerateOCRDataAction extends RestrictedAction{
             numExamples = Integer.parseInt(
                     JOptionPane.showInputDialog("How many examples would you like to generate?", "enter a number")
             );
-        } catch (Error err) {
+        } catch (Exception err) {
             JOptionPane.showMessageDialog(null, "Error: please enter a number");
         }
 
@@ -81,29 +81,20 @@ public class GenerateOCRDataAction extends RestrictedAction{
             applyLayoutAlgorithm(algorithmCode);
 
             // save the automaton as a .jff file
-            String folderYouWantToSaveTo = null;
-
-            Universe.CHOOSER.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
-            int response = Universe.CHOOSER.showOpenDialog(null);
-            if (response == JFileChooser.APPROVE_OPTION) {
-                // 4. Get the file and save the path to a String variable
-                File selectedFile = Universe.CHOOSER.getSelectedFile();
-                folderYouWantToSaveTo = selectedFile.getAbsolutePath();
-            } else {
-                return;
+            File savedFilePath = null;
+            try {
+                savedFilePath = saveToFile(i, numStatesForThisExample, numTransitions, algorithmCode);
+            } catch (Exception ex) {
+                String errorMessage = "Error: " + ex;
+                JOptionPane.showMessageDialog(null, errorMessage);
             }
-            String completeFilePath = String.format("%s%sSample%d_S%d_T%d-%s.jff",
-                    folderYouWantToSaveTo,
-                    File.separator,
-                    i,
-                    numStatesForThisExample,
-                    numTransitions,
-                    algorithmCode
-                    );
-            File fileToSaveTo = new File(completeFilePath);
-            Universe.CHOOSER.setFileSelectionMode(JFileChooser.FILES_ONLY);
-            Universe.frameForEnvironment(this.environment).saveForOCRData(fileToSaveTo);
 
+            // screenshot the diagram and save it as a png
+            // we will assume if we made it here the filepath is good
+            saveAutomatonAsPNG(savedFilePath);
+
+            // reset the automata to be empty for the next run
+            this.automaton.clear();
         }
     }
 
@@ -279,6 +270,41 @@ public class GenerateOCRDataAction extends RestrictedAction{
                 graph.moveAutomatonStates();
                 break;
         }
+    }
+
+    // save the automaton as a .jff file
+    private File saveToFile(int index,
+                            int numStatesForThisExample,
+                            int numTransitions,
+                            layoutProcess algorithmCode) throws Exception {
+        String folderYouWantToSaveTo = null;
+
+        Universe.CHOOSER.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+        int response = Universe.CHOOSER.showOpenDialog(null);
+        if (response == JFileChooser.APPROVE_OPTION) {
+            // 4. Get the file and save the path to a String variable
+            File selectedFile = Universe.CHOOSER.getSelectedFile();
+            folderYouWantToSaveTo = selectedFile.getAbsolutePath();
+        } else {
+            throw new Exception("No folder location selected");
+        }
+
+        String completeFilePath = String.format("%s%sSample%d_S%d_T%d-%s",
+                folderYouWantToSaveTo,
+                File.separator,
+                index,
+                numStatesForThisExample,
+                numTransitions,
+                algorithmCode
+        );
+        File fileToSaveTo = new File(completeFilePath);
+        Universe.CHOOSER.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        return Universe.frameForEnvironment(this.environment).saveForOCRData(fileToSaveTo);
+    }
+
+    private void saveAutomatonAsPNG(File file) {
+        Component somePane = environment.tabbed.getSelectedComponent();
+        SaveGraphUtility.saveGraphUsingExistingFile(somePane, file);
     }
 
 }

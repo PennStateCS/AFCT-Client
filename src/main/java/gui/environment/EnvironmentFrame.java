@@ -331,7 +331,6 @@ public class EnvironmentFrame extends JFrame {
 			object = newPane.getAutomaton();
 			blockEdit = true;
 		}
-		boolean badname = false;
 
 		// Set the file filters.
 		FileFilter[] filters = Universe.CHOOSER.getChoosableFileFilters();
@@ -351,60 +350,12 @@ public class EnvironmentFrame extends JFrame {
 			codec = (Codec) Universe.CHOOSER.getFileFilter();
 		}
 
-		if (fileToSave == null) {
-			Universe.CHOOSER.setDialogTitle("Save As");
-		}
-
-		// Check the name.
-		if (fileToSave != null && codec != null) {
-			// Get the suggested file name.
-			String filename = fileToSave.getName();
-			String newname = codec.proposeFilename(filename, object);
-			if (!filename.equals(newname)) {
-				int result = JOptionPane.showConfirmDialog(this,
-						"To save as a " + codec.getDescription() + ",\n"
-								+ "JFLAP wants to save " + filename
-								+ " to a new file\n" + "named " + newname
-								+ ".  Is that OK?");
-				switch (result) {
-					case JOptionPane.CANCEL_OPTION:
-						// They cancelled. Get out of here.
-						return null;
-					case JOptionPane.NO_OPTION:
-						// No, it's not OK! Use the original name.
-						break;
-					case JOptionPane.YES_OPTION:
-						// Yes, we want the new name! Change the file.
-						fileToSave = new File(fileToSave.getParent(), newname);
-						badname = true;
-				}
-			}
-		}
-		// The save as loop.
-		while (badname || fileToSave == null) {
-			if (!badname) {
-				int result = Universe.CHOOSER.showSaveDialog(this);
-				if (result != JFileChooser.APPROVE_OPTION)
-					return null;
-				fileToSave = Universe.CHOOSER.getSelectedFile();
-				if(fileToSave != null){
-//                  Get the suggested file name.
-					String filename = fileToSave.getName();
-					codec = (Codec) Universe.CHOOSER.getFileFilter();
-					fileToSave = new File(Universe.CHOOSER.getCurrentDirectory(), codec.proposeFilename(
-							filename, object));
-					// Check for the existing file.
-				}
-				else{
-					JOptionPane.showMessageDialog(null, "JFLAP could not determine the selected file name.  Try again.", "Error", JOptionPane.ERROR_MESSAGE);
-					fileToSave = null;
-					continue;
-				}
-			}
-			badname = false;
-		}
-		//System.out.println(CODEC: "+codec.getDescription());
 		Universe.CHOOSER.resetChoosableFileFilters();
+
+		// set the name
+		File fileNameWithoutExtension = fileToSave;
+		String newname = codec.proposeFilename(fileToSave.getName(), object);
+		fileToSave = new File(fileToSave.getParent(), newname);
 
 		// Is this encoder valid?
 		if (fileToSave != null && (codec == null || !codec.canEncode(object))) {
@@ -428,7 +379,7 @@ public class EnvironmentFrame extends JFrame {
 			if (environment instanceof AutomatonEnvironment) {
 				((AutomatonEnvironment) environment).getUndoKeeper().updateInitialState();
 			}
-			return fileToSave;
+			return fileNameWithoutExtension;
 		} catch (ParseException | EncodeException e) {
 			JOptionPane.showMessageDialog(this, e.getMessage(), "Write Error",
 					JOptionPane.ERROR_MESSAGE);

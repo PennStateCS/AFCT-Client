@@ -108,6 +108,32 @@ public class SaveGraphUtility{
 		}
         }
 
+        public static void saveGraphUsingExistingFile(Component somePane, File file) {
+            if (somePane instanceof EditorPane){
+                somePane = ((EditorPane)somePane).getAutomatonPane();
+            }
+
+            Image canvasimage = somePane.createImage(somePane.getWidth(),somePane.getHeight());
+            Graphics imgG = canvasimage.getGraphics();
+            somePane.paint(imgG);
+            BufferedImage bimg = new BufferedImage(canvasimage.getWidth(null), canvasimage.getHeight(null), BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = bimg.createGraphics();
+            g.drawImage(canvasimage, null, null);
+
+            try
+            {
+                file = new File(file.getPath() + ".png");
+                ImageIO.write(bimg, "png", file);
+            }
+            catch (IOException ioe)
+            {
+                JOptionPane.showMessageDialog(null,
+                        "Save failed with error:\n"+ioe.getMessage(),
+                        "Save failed", JOptionPane.ERROR_MESSAGE);
+
+            }
+        }
+
 }
 /**
   
