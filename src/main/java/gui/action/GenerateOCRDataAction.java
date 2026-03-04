@@ -9,10 +9,12 @@ import automata.graph.LayoutAlgorithm;
 import automata.graph.LayoutAlgorithmFactory;
 import automata.graph.layout.RandomLayoutAlgorithm;
 import gui.environment.Environment;
+import gui.environment.Universe;
 
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
+import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Random;
@@ -48,7 +50,7 @@ public class GenerateOCRDataAction extends RestrictedAction{
     }
 
     /**
-     * Begin the data generation process where a specified number
+     * Main loop the data generation process where a specified number
      * of automata are generated, screenshotted, and paired up with their XML descriptions.
      *
      * @param e the action event
@@ -78,12 +80,16 @@ public class GenerateOCRDataAction extends RestrictedAction{
 
             // apply the algorithm
             applyLayoutAlgorithm(algorithmCode);
+
+            // save the automaton as a .jff file
+            File savedAutomaton = Universe.frameForEnvironment(this.environment).saveForOCRData(null);
+            System.out.println(savedAutomaton.toString());
         }
     }
 
     private int initializeStates() {
         // create from 3 to 11 states
-        int numStatesForThisExample = (int) (Math.random()*(MAX_NUMBER_STATES-MIN_NUMBER_STATES))+MIN_NUMBER_STATES;
+        int numStatesForThisExample = (int) (Math.random()*(MAX_NUMBER_STATES+1-MIN_NUMBER_STATES))+MIN_NUMBER_STATES;
         for (int k = 0; k < numStatesForThisExample; k++) {
             // we will use the layout algorithms later to move the states around
             // to be in a more logical position
@@ -264,4 +270,5 @@ public class GenerateOCRDataAction extends RestrictedAction{
                 break;
         }
     }
+
 }
