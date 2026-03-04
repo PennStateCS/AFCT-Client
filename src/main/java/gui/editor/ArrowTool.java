@@ -51,6 +51,7 @@ import automata.turing.TMTransition;
 import automata.turing.TMState;
 import automata.turing.TuringMachineBuildingBlocks;
 import debug.EDebug;
+import gui.viewer.InvisibleCurvedArrow;
 
 import static gui.editor.EditorKeyBindings.CTRL_CMD_SHORTCUT_MASK;
 import static gui.editor.IconKeeper.getArrowToolIcon;
@@ -129,9 +130,16 @@ public class ArrowTool extends Tool {
                     trans.isSelected = false;
                     selectedTransition = null;
                 } else {
+					// Disallow selection of overlapped transitions with an invisible arrow
+					if (getDrawer().transitionToArrowMap.get(trans) instanceof InvisibleCurvedArrow) return;
+					// Deselect the prior selected transition and select the clicked transition
                     if (selectedTransition != null) selectedTransition.isSelected = false;
                     trans.isSelected = true;
                     selectedTransition = trans;
+					// Also select overlapping invisible transitions with the main/clicked transition
+					for (Transition otherTrans : getDrawer().getOverlappingTransitions(selectedTransition)){
+						otherTrans.isSelected = true;
+					}
                 }
                 return;
             } else {

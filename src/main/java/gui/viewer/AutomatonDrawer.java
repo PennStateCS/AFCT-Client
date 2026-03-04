@@ -314,7 +314,8 @@ public class AutomatonDrawer {
             for (CurvedArrow arrow : arrows) {
                 if (arrow.myTransition.isSelected) {
                     arrow.drawHighlight(g2);
-                    arrow.drawControlPoint(g2);
+					// Don't render control points for invisible arrows
+					if (!(arrow instanceof InvisibleCurvedArrow)) arrow.drawControlPoint(g2);
                 } else {
                     arrow.draw(g2);
                 }
