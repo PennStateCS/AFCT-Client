@@ -26,7 +26,6 @@ public class GenerateOCRDataAction extends RestrictedAction{
     final int MAX_NUMBER_TRANSITIONS = 11;
 
     enum layoutProcess {
-        GEM,
         THE_RANDOM_ALGORITHM,
         THE_RANDOM_ALGORITHM_THEN_GEM,
         CIRCLE,
@@ -82,8 +81,29 @@ public class GenerateOCRDataAction extends RestrictedAction{
             applyLayoutAlgorithm(algorithmCode);
 
             // save the automaton as a .jff file
-            File savedAutomaton = Universe.frameForEnvironment(this.environment).saveForOCRData(null);
-            System.out.println(savedAutomaton.toString());
+            String folderYouWantToSaveTo = null;
+
+            Universe.CHOOSER.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
+            int response = Universe.CHOOSER.showOpenDialog(null);
+            if (response == JFileChooser.APPROVE_OPTION) {
+                // 4. Get the file and save the path to a String variable
+                File selectedFile = Universe.CHOOSER.getSelectedFile();
+                folderYouWantToSaveTo = selectedFile.getAbsolutePath();
+            } else {
+                return;
+            }
+            String completeFilePath = String.format("%s%sSample%d_S%d_T%d-%s.jff",
+                    folderYouWantToSaveTo,
+                    File.separator,
+                    i,
+                    numStatesForThisExample,
+                    numTransitions,
+                    algorithmCode
+                    );
+            File fileToSaveTo = new File(completeFilePath);
+            Universe.CHOOSER.setFileSelectionMode(JFileChooser.FILES_ONLY);
+            Universe.frameForEnvironment(this.environment).saveForOCRData(fileToSaveTo);
+
         }
     }
 
@@ -158,7 +178,7 @@ public class GenerateOCRDataAction extends RestrictedAction{
     private layoutProcess chooseLayoutProcess(int numStatesForThisExample, int numTransitions) {
         // first see if we should just use GEM if we have a high number of states/transitions
         if (numStatesForThisExample > 5 || numTransitions > 8) {
-            return layoutProcess.GEM;
+            return layoutProcess.THE_RANDOM_ALGORITHM_THEN_GEM;
         }
 
         // otherwise pick between doing the random algorithm, the random algorithm then
@@ -191,16 +211,6 @@ public class GenerateOCRDataAction extends RestrictedAction{
         Dimension vertexDimension = new Dimension(30,30);
         int vertexBuffer = 120;
         switch (algorithm) {
-            case GEM:
-                graph = LayoutAlgorithmFactory.getAutomatonGraph(LayoutAlgorithmFactory.GEM, this.automaton);
-                layoutAlgorithm = LayoutAlgorithmFactory.getLayoutAlgorithm(
-                        LayoutAlgorithmFactory.GEM, psize,
-                        vertexDimension,
-                        vertexBuffer
-                );
-                layoutAlgorithm.layout(graph, null);
-                graph.moveAutomatonStates();
-                break;
             case THE_RANDOM_ALGORITHM:
                 graph = LayoutAlgorithmFactory.getAutomatonGraph(LayoutAlgorithmFactory.RANDOM, this.automaton);
                 layoutAlgorithm = LayoutAlgorithmFactory.getLayoutAlgorithm(

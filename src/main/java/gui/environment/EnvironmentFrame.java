@@ -332,16 +332,6 @@ public class EnvironmentFrame extends JFrame {
 			blockEdit = true;
 		}
 		boolean badname = false;
-		// Is this encoder valid?
-		if (fileToSave != null && (codec == null || !codec.canEncode(object))) {
-			JOptionPane
-					.showMessageDialog(
-							this,
-							"We cannot write this structure in the same format\n"
-									+ "it was read as!  Use Save As to select a new format.",
-							"IO Error", JOptionPane.ERROR_MESSAGE);
-			return null;
-		}
 
 		// Set the file filters.
 		FileFilter[] filters = Universe.CHOOSER.getChoosableFileFilters();
@@ -356,6 +346,11 @@ public class EnvironmentFrame extends JFrame {
 		} else {
 			Universe.CHOOSER.setFileFilter((FileFilter) encoders.get(0));
 		}
+
+		if (codec == null) {
+			codec = (Codec) Universe.CHOOSER.getFileFilter();
+		}
+
 		if (fileToSave == null) {
 			Universe.CHOOSER.setDialogTitle("Save As");
 		}
@@ -410,6 +405,17 @@ public class EnvironmentFrame extends JFrame {
 		}
 		//System.out.println(CODEC: "+codec.getDescription());
 		Universe.CHOOSER.resetChoosableFileFilters();
+
+		// Is this encoder valid?
+		if (fileToSave != null && (codec == null || !codec.canEncode(object))) {
+			JOptionPane
+					.showMessageDialog(
+							this,
+							"We cannot write this structure in the same format\n"
+									+ "it was read as!  Use Save As to select a new format.",
+							"IO Error", JOptionPane.ERROR_MESSAGE);
+			return null;
+		}
 
 		// Use the codec to save the file.
 		try {
