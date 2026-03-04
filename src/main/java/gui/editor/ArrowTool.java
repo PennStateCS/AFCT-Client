@@ -136,10 +136,6 @@ public class ArrowTool extends Tool {
                     if (selectedTransition != null) selectedTransition.isSelected = false;
                     trans.isSelected = true;
                     selectedTransition = trans;
-					// Also select overlapping invisible transitions with the main/clicked transition
-					for (Transition otherTrans : getDrawer().getOverlappingTransitions(selectedTransition)){
-						otherTrans.isSelected = true;
-					}
                 }
                 return;
             } else {
