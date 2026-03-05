@@ -1,3 +1,20 @@
+/*
+ *  JFLAP - Formal Languages and Automata Package
+ *
+ *
+ *  Susan H. Rodger
+ *  Computer Science Department
+ *  Duke University
+ *  August 27, 2009
+
+ *  Copyright (c) 2002-2009
+ *  All rights reserved.
+
+ *  JFLAP is open source software. Please see the LICENSE for terms.
+ *
+ */
+
+
 package automata.gnfa;
 
 import automata.Automaton;
@@ -18,9 +35,6 @@ import java.awt.*;
  *
  */
 public class GNFA extends Automaton {
-    /**
-     * This seems to be in every Automaton subclass, so I added it here as well
-     */
     private static final long serialVersionUID = 1L;
 
     /**
@@ -31,13 +45,9 @@ public class GNFA extends Automaton {
 
         // In accordance with the definition of a GNFA:
         // start by initializing one start state and one accept state
-        Rectangle bounds = getEnvironmentFrame().getBounds();
-        System.out.println("bounds::"+bounds);
-        double width = bounds.getWidth();
-        double height = bounds.getHeight();
-        State initialState = createState(new Point((int)width/3, (int)height/2));
+        State initialState = createState(new Point(100, 200));
         setInitialState(initialState);
-        State finalState = createState(new Point((int)(2 * width/3), (int)height/2));
+        State finalState = createState(new Point(400, 200));
         addFinalState(finalState);
     }
 
