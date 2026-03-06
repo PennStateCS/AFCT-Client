@@ -352,6 +352,10 @@ public class MenuBarCreator {
 			addItem(menu, new LSystemDisplay(
 					(gui.environment.LSystemEnvironment) environment));
 
+		if (TestREInput.isApplicable(object))
+			addItem(menu, new TestREInput(
+					(gui.environment.RegularEnvironment) environment));
+
 		return menu;
 	}
 
@@ -484,10 +488,6 @@ public class MenuBarCreator {
 
 		if (GrammarTypeTestAction.isApplicable(object))
 			addItem(menu, new GrammarTypeTestAction ((gui.environment.GrammarEnvironment) environment));
-
-		if (TestREInput.isApplicable(object))
-			addItem(menu, new TestREInput(
-					(gui.environment.RegularEnvironment) environment));
 		return menu;
 	}
 	

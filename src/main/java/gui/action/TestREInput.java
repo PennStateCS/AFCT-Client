@@ -20,11 +20,11 @@
 
 package gui.action;
 
+import automata.Automaton;
 import gui.environment.RegularEnvironment;
-import gui.environment.tag.CriticalTag;
-import gui.regular.ConvertToAutomatonPane;
+
+import java.awt.*;
 import java.awt.event.*;
-import javax.swing.JOptionPane;
 
 /**
  * This class initiates the validation/testing of an input string
@@ -56,18 +56,11 @@ public class TestREInput extends RegularAction {
 	 *            the event to process
 	 */
 	public void actionPerformed(ActionEvent event) {
-		// JFrame frame = Universe.frameForEnvironment(environment);
-//		try {
-//			getExpression().asCheckedString();
-//		} catch (UnsupportedOperationException e) {
-//			JOptionPane.showMessageDialog(getEnvironment(), e.getMessage(),
-//					"Illegal Expression", JOptionPane.ERROR_MESSAGE);
-//			return;
-//		}
-//		ConvertToAutomatonPane pane = new ConvertToAutomatonPane(
-//				getEnvironment());
-//		getEnvironment().add(pane, "Convert RE to NFA", new CriticalTag() {
-//		});
-//		getEnvironment().setActive(pane);
+		// prompt the input string to test against the regular expression
+		SimulateAction action = new SimulateAction((Automaton) null, (RegularEnvironment) getEnvironment());
+		Object input = action.initialInput((Component) getEnvironment().getActive(), "testdebuig");
+		// "cancel" was selected in the input menu
+		if (input == null) return;
+
 	}
 }
