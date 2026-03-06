@@ -122,14 +122,14 @@ public class ConvertToAutomatonPane extends JPanel {
 	 */
 	RegularEnvironment environment;
 
+	/** The controller object. */
+	public REToFSAController controller;
+
 	/**
 	 * The automaton being built, which will be modified throughout this
 	 * process.
 	 */
 	private FiniteStateAutomaton automaton = new FiniteStateAutomaton();
-
-	/** The controller object. */
-	private REToFSAController controller;
 
 	/** The frame that holds the environment. */
 	JFrame frame;

@@ -22,6 +22,8 @@ package gui.action;
 
 import automata.Automaton;
 import gui.environment.RegularEnvironment;
+import gui.regular.ConvertToAutomatonPane;
+import gui.regular.REToFSAController;
 
 import java.awt.*;
 import java.awt.event.*;
@@ -46,7 +48,7 @@ public class TestREInput extends RegularAction {
 	 *
 	 */
 	public TestREInput(RegularEnvironment environment) {
-		super("Test Input (DEBUG)", null, environment);
+		super("Test Input", null, environment);
 	}
 
 	/**
@@ -58,9 +60,15 @@ public class TestREInput extends RegularAction {
 	public void actionPerformed(ActionEvent event) {
 		// prompt the input string to test against the regular expression
 		SimulateAction action = new SimulateAction((Automaton) null, (RegularEnvironment) getEnvironment());
-		Object input = action.initialInput((Component) getEnvironment().getActive(), "testdebuig");
+		Object input = action.initialInput((Component) getEnvironment().getActive(), "Input test string:");
 		// "cancel" was selected in the input menu
 		if (input == null) return;
-
+		// Convert the regular expression to an NFA
+		ConvertToAutomatonPane pane = new ConvertToAutomatonPane(
+				(RegularEnvironment) getEnvironment());
+		REToFSAController controller = pane.controller;
+		// Complete the RegEx -> FSA (NFA) conversion
+		controller.completeAll();
+		Automaton automaton = controller.automaton;
 	}
 }
