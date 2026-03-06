@@ -45,11 +45,19 @@ public class GNFA extends Automaton {
 
         // In accordance with the definition of a GNFA:
         // start by initializing one start state and one accept state
-        State initialState = createState(new Point(100, 200));
+        double editorPaneWidth = 500;
+        double editorPaneHeight = 400;
+        State initialState = createState(
+            new Point((int) editorPaneWidth/5, (int)editorPaneHeight/2)
+        );
+
         setInitialState(initialState);
-        State finalState = createState(new Point(400, 200));
+        State finalState = createState(
+            new Point((int) (editorPaneWidth * 4)/5, (int)editorPaneHeight/2)
+        );
         addFinalState(finalState);
     }
+
 
     /**
      * Returns the class of <CODE>Transition</CODE> this automaton must
