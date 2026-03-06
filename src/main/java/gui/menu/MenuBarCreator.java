@@ -484,6 +484,10 @@ public class MenuBarCreator {
 
 		if (GrammarTypeTestAction.isApplicable(object))
 			addItem(menu, new GrammarTypeTestAction ((gui.environment.GrammarEnvironment) environment));
+
+		if (TestREInput.isApplicable(object))
+			addItem(menu, new TestREInput(
+					(gui.environment.RegularEnvironment) environment));
 		return menu;
 	}
 	
