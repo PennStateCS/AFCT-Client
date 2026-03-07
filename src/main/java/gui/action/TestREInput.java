@@ -15,17 +15,12 @@
  */
 
 
-
-
-
 package gui.action;
 
 import automata.Automaton;
-import automata.fsa.FSAStepWithClosureSimulator;
 import gui.environment.RegularEnvironment;
 import gui.environment.Universe;
-import gui.regular.ConvertToAutomatonPane;
-import gui.regular.REToFSAController;
+import regular.RegularExpressionValidator;
 
 import javax.swing.*;
 import java.awt.*;
@@ -66,17 +61,10 @@ public class TestREInput extends RegularAction {
 		Object input = action.initialInput((Component) getEnvironment().getActive(), "Input String");
 		// "cancel" was selected in the input menu
 		if (input == null) return;
-		// Convert the regular expression to an NFA
-		ConvertToAutomatonPane pane = new ConvertToAutomatonPane(
-				(RegularEnvironment) getEnvironment());
-		REToFSAController controller = pane.controller;
-		// Complete the RegEx -> FSA (NFA) conversion
-		controller.completeAll();
-		Automaton automaton = controller.automaton;
-		// Identify an accepting configuration for validation
-		// If there are none, reject
-		FSAStepWithClosureSimulator simulator = new FSAStepWithClosureSimulator(automaton);
-		boolean isAccepted = simulator.simulateInput(input.toString());
+		// Test the input string on the regular expression
+		boolean isAccepted = RegularExpressionValidator.testInputString(
+			(RegularEnvironment) getEnvironment(), input.toString()
+		);
 		// Notify the user if the inputted string was accepted/rejected
 		JFrame frame = Universe.frameForEnvironment(getEnvironment());
 		JOptionPane.showMessageDialog(frame, "The input was " + (isAccepted ? "accepted" : "rejected") + ".");
