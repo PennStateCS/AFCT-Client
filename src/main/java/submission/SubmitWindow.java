@@ -513,6 +513,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         return inputPanel;
     }
+
     private void populateGui() {
         // Visuals for combo boxes
         courseBox.setBackground(Color.WHITE);
@@ -912,6 +913,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                                 }
                             }
                         } catch (IOException ex) {
+                            // TODO: print the response from the server to stderr
                             publish(colorHTMLErrorMessage("Submission failed: " + ex.getMessage()));
                         }
                         //publish("");
