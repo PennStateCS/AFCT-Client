@@ -266,6 +266,7 @@ public class CNFConverter {
 			// Create the map of LHSes to RHSes.
 			for (int i = 0; i < p.length; i++) {
 				String lhs = p[i].getLHS(), rhs = p[i].getRHS();
+                // TODO: maybe try to replace "(" and ")" with other (unused) characters to automatically avoid this...
 				if (rhs.indexOf('(') != -1)
 					throw new IllegalArgumentException(
 							"Grammar has the ( character, which is reserved.");

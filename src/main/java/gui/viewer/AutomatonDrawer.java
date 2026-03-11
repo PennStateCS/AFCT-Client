@@ -317,7 +317,7 @@ public class AutomatonDrawer {
         } else {
             for (CurvedArrow arrow : arrows) {
                 Transition transition = arrowToTransitionMap.get(arrow);
-                arrow.drawConnectedViewHighlightSelected(g2, transition);
+                arrow.drawConnectedViewHighlightSelected(g2, transition, false);
             }
         }
     }

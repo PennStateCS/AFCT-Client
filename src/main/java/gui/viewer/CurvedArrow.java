@@ -235,6 +235,8 @@ public class CurvedArrow {
     }
 
     public void drawConnectedView(Graphics2D g, Transition transition) {
+		// TODO: ALSO change text color for invisible arrows that are connected to the selected transition
+		//  currently for transitions on multiple things, on the selected one will be highlighted if selecting a transition (states work fine)
         if (transition.getFromState().isSelected() && transition.getToState().isSelected()) {
             drawAsColor(g, BOTH_COLOR);
         } else if (transition.getFromState().isSelected()) {
@@ -246,8 +248,8 @@ public class CurvedArrow {
         }
     }
 
-    public void drawConnectedViewHighlightSelected(Graphics2D g, Transition transition) {
-        if (transition.isSelected) {
+    public void drawConnectedViewHighlightSelected(Graphics2D g, Transition transition, boolean forceDrawAsSelected) {
+        if (transition.isSelected || forceDrawAsSelected) {
             drawAsColor(g, FROM_COLOR);
         } else {
             drawAsColor(g, NEITHER_COLOR);
