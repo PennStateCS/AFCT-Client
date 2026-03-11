@@ -42,24 +42,6 @@ public class GNFA extends Automaton {
      */
     public GNFA() {
         super();
-
-        initGNFA();
-    }
-
-    /**
-     * Initializes the GNFA by adding one start and one final state.
-     */
-    public void initGNFA(){
-        double halfwayHeight = 150;
-        double fullWidth = 556;
-
-        Point initialStatePoint = new Point((int) (fullWidth / 5) , (int) halfwayHeight);
-        State initialState = createState(initialStatePoint);
-        setInitialState(initialState);
-
-        Point finalStatePoint = new Point(((int) (4 * (fullWidth / 5))), (int) halfwayHeight);
-        State finalState = createState(finalStatePoint);
-        addFinalState(finalState);
     }
 
     /**
