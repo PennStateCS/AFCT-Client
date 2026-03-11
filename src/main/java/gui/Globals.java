@@ -24,6 +24,7 @@ import java.util.Objects;
 import java.util.prefs.Preferences;
 
 import static gui.editor.IconKeeper.getRefreshIcon;
+import static gui.viewer.StateDrawer.HIGHLIGHT_COLOR;
 import static java.lang.Math.abs;
 import static java.lang.Math.floor;
 
@@ -52,7 +53,10 @@ public class Globals {
     public static final Color BOTH_COLOR = new Color(84,132,234);
     //public static Color TO_COLOR = new Color(178,255,255);
     //public static final Color TO_COLOR = new Color(153,255,255);
-    public static final Color TO_COLOR = new Color(127,255,255);
+    //public static final Color TO_COLOR = new Color(127,255,255);
+    //public static final Color TO_COLOR = new Color(69,129,142);
+    //public static final Color TO_COLOR = new Color(32,178,204);
+    public static final Color TO_COLOR = HIGHLIGHT_COLOR;
     public static final Color NEITHER_COLOR = new Color(216,216,216);
 
     private static int positioningFudgeFactor = 20;
