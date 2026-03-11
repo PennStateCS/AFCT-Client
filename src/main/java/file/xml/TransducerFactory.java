@@ -194,7 +194,7 @@ public class TransducerFactory {
 	static {
 		typeToTransducer = new HashMap<>();
 		classToTransducer = new HashMap<>();
-		add(null, automata.gnfa.GNFA.class, new FSATransducer());
+		add(null, automata.gnfa.GNFA.class, new GNFATransducer());
 		add(null, automata.fsa.FiniteStateAutomaton.class, new FSATransducer());
 		add(null, automata.pda.PushdownAutomaton.class, new PDATransducer());
 		add(null, automata.turing.TuringMachine.class, new TMTransducer());
