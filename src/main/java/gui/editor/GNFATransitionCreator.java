@@ -18,7 +18,6 @@ package gui.editor;
 
 import automata.State;
 import automata.Transition;
-import automata.fsa.FSATransition;
 import automata.gnfa.GNFATransition;
 import gui.viewer.AutomatonPane;
 
@@ -74,7 +73,7 @@ public class GNFATransitionCreator extends TableTransitionCreator {
         //EDebug.print("ModifyTransitionCalled");
         String s = (String) model.getValueAt(0, 0);
         try {
-            return new FSATransition(t.getFromState(), t.getToState(), s);
+            return new GNFATransition(t.getFromState(), t.getToState(), s);
         } catch (IllegalArgumentException e) {
             reportException(e);
             return null;

@@ -43,21 +43,24 @@ public class GNFA extends Automaton {
     public GNFA() {
         super();
 
-        // In accordance with the definition of a GNFA:
-        // start by initializing one start state and one accept state
-        double editorPaneWidth = 500;
-        double editorPaneHeight = 400;
-        State initialState = createState(
-            new Point((int) editorPaneWidth/5, (int)editorPaneHeight/2)
-        );
-
-        setInitialState(initialState);
-        State finalState = createState(
-            new Point((int) (editorPaneWidth * 4)/5, (int)editorPaneHeight/2)
-        );
-        addFinalState(finalState);
+        initGNFA();
     }
 
+    /**
+     * Initializes the GNFA by adding one start and one final state.
+     */
+    public void initGNFA(){
+        double halfwayHeight = 150;
+        double fullWidth = 556;
+
+        Point initialStatePoint = new Point((int) (fullWidth / 5) , (int) halfwayHeight);
+        State initialState = createState(initialStatePoint);
+        setInitialState(initialState);
+
+        Point finalStatePoint = new Point(((int) (4 * (fullWidth / 5))), (int) halfwayHeight);
+        State finalState = createState(finalStatePoint);
+        addFinalState(finalState);
+    }
 
     /**
      * Returns the class of <CODE>Transition</CODE> this automaton must
@@ -66,7 +69,7 @@ public class GNFA extends Automaton {
      * @return the <CODE>Class</CODE> object for <CODE>automata.gnfa.GNFATransition</CODE>
      */
     protected Class getTransitionClass() {
-        return automata.fsa.FSATransition.class;
+        return automata.gnfa.GNFATransition.class;
     }
 
 }
