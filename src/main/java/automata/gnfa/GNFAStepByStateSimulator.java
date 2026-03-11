@@ -19,22 +19,46 @@
 package automata.gnfa;
 
 import automata.*;
-import debug.EDebug;
+import regular.RegularExpression;
+import regular.RegularExpressionValidator;
 
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.Iterator;
 
 public class GNFAStepByStateSimulator extends AutomatonSimulator {
+    /**
+     * Creates a GNFA step by state simulator for the given automaton.
+     *
+     * @param automaton
+     *            the machine to simulate
+     */
     public GNFAStepByStateSimulator(Automaton automaton){
         super(automaton);
     }
+
+    /**
+     * Returns an GNFAConfiguration object that represents the initial
+     * configuration of the GNFA, before any input has been processed. This
+     * method returns an array of length one, since the closure of the initial
+     * state is not taken.
+     *
+     * @param input
+     *            the input string.
+     */
     public Configuration[] getInitialConfigurations(String input){
         Configuration[] configs = new Configuration[1];
         configs[0] = new GNFAConfiguration(myAutomaton.getInitialState(), null,
                 input, input);
         return configs;
     }
+
+    /**
+     * Simulates one step for a particular configuration, adding all possible
+     * configurations reachable in one step to set of possible configurations.
+     *
+     * @param config
+     *            the configuration to simulate the one step on.
+     */
     public ArrayList<Configuration> stepConfiguration(Configuration config){
         ArrayList<Configuration> list = new ArrayList<>();
         GNFAConfiguration configuration = (GNFAConfiguration) config;
@@ -48,50 +72,70 @@ public class GNFAStepByStateSimulator extends AutomatonSimulator {
             GNFATransition transition = (GNFATransition) transitions[k];
             /** get all information from transition. */
             String transLabel = transition.getLabel();
-            HashSet<String> trange = new HashSet<String>();
-            if (transLabel.contains("[")){
-                for(int i=transLabel.charAt(transLabel.indexOf("[")+1); i<=transLabel.charAt(transLabel.indexOf("[")+3); i++){
-                    trange.add(Character.toString((char)i));
-                    EDebug.print(Character.toString((char)i));
+            State toState = transition.getToState();
+            /** identify unprocessed input string prefixes that match the transition's regular expression */
+            ArrayList<String> matchingPrefixes = getMatchingPrefixes(transLabel, unprocessedInput);
+            // Enumerate each regular expression-matching prefix into a new configuration
+            for (String matchingPrefix : matchingPrefixes){
+                String nextUnprocessedInput = "";
+                if (matchingPrefix.length() < unprocessedInput.length()){
+                    nextUnprocessedInput = unprocessedInput.substring(matchingPrefix.length());
                 }
-                for(String element : trange){
-                    if (unprocessedInput.startsWith(element)) {
-                        String input = "";
-                        if (element.length() < unprocessedInput.length()) {
-                            input = unprocessedInput.substring(element.length());
-                        }
-                        State toState = transition.getToState();
-                        GNFAConfiguration configurationToAdd = new GNFAConfiguration(
-                                toState, configuration, totalInput, input);
-                        list.add(configurationToAdd);
-                    }
-                }
-            }
-            else if (unprocessedInput.startsWith(transLabel)) {
-                String input = "";
-                if (transLabel.length() < unprocessedInput.length()) {
-                    input = unprocessedInput.substring(transLabel.length());
-                }
-                State toState = transition.getToState();
-                GNFAConfiguration configurationToAdd = new GNFAConfiguration(
-                        toState, configuration, totalInput, input);
-                list.add(configurationToAdd);
+                list.add(
+                    new GNFAConfiguration(toState, configuration, totalInput, nextUnprocessedInput)
+                );
             }
         }
         return list;
     }
+
+    /**
+     * Finds prefixes of an input string that match a regular expression passed as a string (i.e. a+b*).
+     * If no such prefixes exist, an empty ArrayList is returned.
+     * @param regex the regular expression in string form
+     * @param input the input string
+     * @return an arraylist of prefixes of the input string that match a given regular expression
+     */
+    public ArrayList<String> getMatchingPrefixes(String regex, String input){
+        ArrayList<String> matchingPrefixes = new ArrayList<>();
+        RegularExpression regularExpression = new RegularExpression(regex);
+        for (int i=1; i<input.length()+1; i++){
+            String prefix = input.substring(0,i);
+            if (RegularExpressionValidator.testInputString(regularExpression, prefix)){
+                matchingPrefixes.add(prefix);
+            }
+        }
+        return matchingPrefixes;
+    }
+
+    /**
+     * Returns true if the simulation of the input string on the automaton left
+     * the machine in a final state. If the entire input string is processed and
+     * the machine is in a final state, return true.
+     *
+     * @return true if the simulation of the input string on the automaton left
+     *         the machine in a final state.
+     */
     public boolean isAccepted() {
         Iterator<Configuration> it = myConfigurations.iterator();
         while (it.hasNext()) {
             GNFAConfiguration configuration = (GNFAConfiguration) it.next();
             State currentState = configuration.getCurrentState();
-            if (configuration.getUnprocessedInput().equals("")
+            if (configuration.getUnprocessedInput().isEmpty()
                     && myAutomaton.isFinalState(currentState)) {
                 return true;
             }
         }
         return false;
     }
+
+    /**
+     * Runs the automaton on the input string.
+     *
+     * @param input
+     *            the input string to be run on the automaton
+     * @return true if the automaton accepts the input
+     */
     public boolean simulateInput(String input) {
         /** clear the configurations to begin new simulation. */
         myConfigurations.clear();

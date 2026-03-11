@@ -30,7 +30,6 @@ import gui.regular.REToFSAController;
  * @author Teddy FitzPatrick
  */
 public class RegularExpressionValidator {
-
     /**
      * Tests an input string on a regular expression contained within the expression
      * field of a RegularEnvironment.
@@ -50,5 +49,13 @@ public class RegularExpressionValidator {
         // If there are none, reject
         FSAStepWithClosureSimulator simulator = new FSAStepWithClosureSimulator(automaton);
         return simulator.simulateInput(input);
+    }
+
+    /**
+     * Identical functionality to {@link RegularExpressionValidator#testInputString(RegularEnvironment, String)},
+     * except a RegularExpression is passed as a parameter instead of a RegularEnvironment.
+     */
+    public static boolean testInputString(RegularExpression regex, String input){
+        return testInputString(new RegularEnvironment(regex), input);
     }
 }
