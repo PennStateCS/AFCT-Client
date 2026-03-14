@@ -8,6 +8,7 @@ import automata.graph.AutomatonGraph;
 import automata.graph.LayoutAlgorithm;
 import automata.graph.LayoutAlgorithmFactory;
 import automata.graph.layout.RandomLayoutAlgorithm;
+import automata.graph.layout.VertexMover;
 import gui.environment.Environment;
 import gui.environment.Universe;
 
@@ -20,10 +21,24 @@ import java.util.HashSet;
 import java.util.Random;
 import java.util.StringJoiner;
 
+/**
+ * This class is an experimental addon to the main JFLAP application intended for research purposes. The class
+ * houses all the logic and methods needed to automatically generate automata and then screenshot and save
+ * them to a corresponding .jff file. The functionality is exposed as one of the toolbar options, where the
+ * user can specify how many training examples they want and where they wish the examples to be saved.
+ *
+ * @author Chang you Yu
+ */
+
 public class GenerateOCRDataAction extends RestrictedAction{
     final int MIN_NUMBER_STATES = 3;
     final int MAX_NUMBER_STATES = 9;
     final int MAX_NUMBER_TRANSITIONS = 11;
+
+    // These values are some magic numbers stolen from layoutAlgorithmAction.java
+    // Do we really even need to take these into account?
+    private final int assumedUsedWidth = 25;
+    private final int assumedUsedHeight = 100;
 
     enum layoutProcess {
         THE_RANDOM_ALGORITHM,
@@ -31,6 +46,7 @@ public class GenerateOCRDataAction extends RestrictedAction{
         CIRCLE,
         TWO_CIRCLE,
         TREE_THEN_GEM,
+        FLIP_OVER_VERTICAL
     }
 
     private FiniteStateAutomaton automaton = null;
@@ -52,9 +68,9 @@ public class GenerateOCRDataAction extends RestrictedAction{
      * Main loop the data generation process where a specified number
      * of automata are generated, screenshotted, and paired up with their XML descriptions.
      *
-     * @param e the action event
+     * @param event the action event
      */
-    public void actionPerformed(ActionEvent e) {
+    public void actionPerformed(ActionEvent event) {
         int numExamples = 0;
         try {
             numExamples = Integer.parseInt(
@@ -63,6 +79,14 @@ public class GenerateOCRDataAction extends RestrictedAction{
         } catch (Exception err) {
             JOptionPane.showMessageDialog(null, "Error: please enter a number");
         }
+        String folderPath;
+        try {
+            folderPath = getFolderToSaveTo();
+        } catch (Exception err) {
+            JOptionPane.showMessageDialog(null, err.getMessage());
+            return;
+        }
+
 
         for (int i = 0; i < numExamples; i++) {
             // add some random number of states
@@ -83,18 +107,28 @@ public class GenerateOCRDataAction extends RestrictedAction{
             // save the automaton as a .jff file
             File savedFilePath = null;
             try {
-                savedFilePath = saveToFile(i, numStatesForThisExample, numTransitions, algorithmCode);
+                savedFilePath = saveToFile(i, numStatesForThisExample, numTransitions, algorithmCode, folderPath);
             } catch (Exception ex) {
                 String errorMessage = "Error: " + ex;
                 JOptionPane.showMessageDialog(null, errorMessage);
             }
 
+            // In the case that the initial state is more on the right side mirror the automaton
+            // across the vertical axis because real life people probably don't put the initial
+            // state to the right.
+            ensureInitialStateOnLeftSide(this.automaton);
+
+            // Move the automaton to be more in the center of frame
+            moveToCenter(this.automaton);
+
             // screenshot the diagram and save it as a png
             // we will assume if we made it here the filepath is good
             saveAutomatonAsPNG(savedFilePath);
 
-            // reset the automata to be empty for the next run
-            this.automaton.clear();
+            // reset the automata to be empty for the next run unless we are at the end of the loop
+            if (i != numExamples-1) {
+                this.automaton.clear();
+            }
         }
     }
 
@@ -193,10 +227,6 @@ public class GenerateOCRDataAction extends RestrictedAction{
         LayoutAlgorithm layoutAlgorithm;
         AutomatonGraph graph;
 
-        // These values are some magic numbers stolen from layoutAlgorithmAction.java
-        // do we really even need to take these into account?
-        int assumedUsedWidth = 25;
-        int assumedUsedHeight = 100;
         Dimension psize = new Dimension(this.environment.getWidth()-assumedUsedWidth,
                 this.environment.getHeight()-assumedUsedHeight);
         Dimension vertexDimension = new Dimension(30,30);
@@ -269,26 +299,41 @@ public class GenerateOCRDataAction extends RestrictedAction{
                 layoutAlgorithm.layout(graph, null);
                 graph.moveAutomatonStates();
                 break;
+            case FLIP_OVER_VERTICAL:
+                graph = LayoutAlgorithmFactory.getAutomatonGraph(VertexMover.VERTICAL_CENTER, this.automaton);
+                layoutAlgorithm = LayoutAlgorithmFactory.getLayoutAlgorithm(
+                        VertexMover.VERTICAL_CENTER,
+                        psize,
+                        vertexDimension,
+                        vertexBuffer
+                );
+                layoutAlgorithm.layout(graph, null);
+                graph.moveAutomatonStates();
+                break;
         }
     }
 
-    // save the automaton as a .jff file
-    private File saveToFile(int index,
-                            int numStatesForThisExample,
-                            int numTransitions,
-                            layoutProcess algorithmCode) throws Exception {
+    private String getFolderToSaveTo() throws Exception{
         String folderYouWantToSaveTo = null;
-
         Universe.CHOOSER.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
         int response = Universe.CHOOSER.showOpenDialog(null);
         if (response == JFileChooser.APPROVE_OPTION) {
-            // 4. Get the file and save the path to a String variable
+            // Get the file and save the path to a String variable
             File selectedFile = Universe.CHOOSER.getSelectedFile();
             folderYouWantToSaveTo = selectedFile.getAbsolutePath();
         } else {
             throw new Exception("No folder location selected");
         }
 
+        return folderYouWantToSaveTo;
+    }
+
+    // save the automaton as a .jff file
+    private File saveToFile(int index,
+                            int numStatesForThisExample,
+                            int numTransitions,
+                            layoutProcess algorithmCode,
+                            String folderYouWantToSaveTo) {
         String completeFilePath = String.format("%s%sSample%d_S%d_T%d-%s",
                 folderYouWantToSaveTo,
                 File.separator,
@@ -304,7 +349,36 @@ public class GenerateOCRDataAction extends RestrictedAction{
 
     private void saveAutomatonAsPNG(File file) {
         Component somePane = environment.tabbed.getSelectedComponent();
+        // assumedUsedWidth is how much extra space the UI takes up
         SaveGraphUtility.saveGraphUsingExistingFile(somePane, file);
     }
 
+    private void moveToCenter(FiniteStateAutomaton automaton) {
+        State[] states = automaton.getStates();
+
+        for (State s : states) {
+            Point point = s.getPoint();
+            Point newPoint = new Point(point.x+200, point.y);
+            s.setPoint(newPoint);
+        }
+    }
+
+    private void ensureInitialStateOnLeftSide(FiniteStateAutomaton automaton) {
+        int averageX = 0;
+        State[] states = automaton.getStates();
+        for (State s : states) {
+            averageX += s.getPoint().x;
+        }
+
+        // yes we are doing integer division, but we don't need that much precision
+        averageX /= states.length;
+        State initial = automaton.getInitialState();
+
+        // if the initial state is over the average X, flip the automaton so that
+        // the initial state is more on the left side
+        if (initial.getPoint().x > averageX) {
+            applyLayoutAlgorithm(layoutProcess.FLIP_OVER_VERTICAL);
+        }
+    }
 }
+

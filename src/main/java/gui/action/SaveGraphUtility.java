@@ -113,7 +113,7 @@ public class SaveGraphUtility{
                 somePane = ((EditorPane)somePane).getAutomatonPane();
             }
 
-            Image canvasimage = somePane.createImage(somePane.getWidth(),somePane.getHeight());
+            Image canvasimage = somePane.createImage(somePane.getWidth(), somePane.getHeight());
             Graphics imgG = canvasimage.getGraphics();
             somePane.paint(imgG);
             BufferedImage bimg = new BufferedImage(canvasimage.getWidth(null), canvasimage.getHeight(null), BufferedImage.TYPE_INT_RGB);
