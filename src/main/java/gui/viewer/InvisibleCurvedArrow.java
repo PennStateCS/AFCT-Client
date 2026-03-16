@@ -25,6 +25,9 @@ import java.awt.geom.Rectangle2D;
 import java.awt.geom.Area;
 import automata.Transition;
 
+import static gui.Globals.*;
+import static gui.Globals.NEITHER_COLOR;
+
 /**
  * An invisible curved arrow is a curved arrow where the actual line and arrow
  * are not displayed, only the label. This is used for transitions where there
@@ -74,6 +77,18 @@ public class InvisibleCurvedArrow extends CurvedArrow {
         if (needsRefresh)
             refreshCurve();
         drawText(g, color);
+    }
+
+    @Override
+    public void drawAsGradient(Graphics2D g, Color startColor, Color endColor, CONNECTION_TYPE connectionType) {
+        if (needsRefresh)
+            refreshCurve();
+        switch (connectionType) {
+            case FROM -> drawText(g, FROM_COLOR);
+            case TO -> drawText(g, TO_COLOR);
+            case BOTH -> drawText(g, BOTH_COLOR);
+            case NEITHER -> drawText(g, NEITHER_COLOR);
+        }
     }
 
 	/**
