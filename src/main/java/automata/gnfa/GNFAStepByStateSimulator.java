@@ -99,7 +99,7 @@ public class GNFAStepByStateSimulator extends AutomatonSimulator {
     public ArrayList<String> getMatchingPrefixes(String regex, String input){
         ArrayList<String> matchingPrefixes = new ArrayList<>();
         RegularExpression regularExpression = new RegularExpression(regex);
-        for (int i=1; i<input.length()+1; i++){
+        for (int i=0; i<input.length()+1; i++){
             String prefix = input.substring(0,i);
             if (RegularExpressionValidator.testInputString(regularExpression, prefix)){
                 matchingPrefixes.add(prefix);
