@@ -154,6 +154,23 @@ public class CurvedArrow {
         drawText(g, color);
     }
 
+    public void drawAsGradient(Graphics2D g, Color startColor, Color endColor, CONNECTION_TYPE connectionType) {
+        if (needsRefresh)
+            refreshCurve();
+        LinearGradientPaint gradientPaint = new LinearGradientPaint(this.start, this.end, new float[]{0.0f, 1.0f}, new Color[]{startColor, endColor});
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setPaint(gradientPaint);
+        g2.draw(curve); // Draws the main part of the arrow.
+        drawArrow(g2, end, control); // Draws the arrow head.
+        switch (connectionType) {
+            case FROM -> drawText(g, FROM_COLOR);
+            case TO -> drawText(g, TO_COLOR);
+            case BOTH -> drawText(g, BOTH_COLOR);
+            case NEITHER -> drawText(g, NEITHER_COLOR);
+        }
+        g2.dispose();
+    }
+
 	/**
 	 * Draws the arrow on the indicated graphics environment.
 	 * 
@@ -173,6 +190,7 @@ public class CurvedArrow {
         g2.fillOval((int)curve.getCtrlX() - 5, (int)curve.getCtrlY() - 5, controlPointDiameter, controlPointDiameter);
         g2.setColor(CONTROL_POINT_OUTER_COLOR);
         g2.drawOval((int)curve.getCtrlX() - 5, (int)curve.getCtrlY() - 5, controlPointDiameter, controlPointDiameter);
+        g2.dispose();
     }
 
     protected void drawGlowHighlight(Graphics2D g, boolean drawCurve) {
@@ -241,8 +259,10 @@ public class CurvedArrow {
             drawAsColor(g, BOTH_COLOR);
         } else if (transition.getFromState().isSelected()) {
             drawAsColor(g, FROM_COLOR);
+            //drawAsGradient(g, FROM_COLOR, TO_COLOR, CONNECTION_TYPE.FROM);
         } else if (transition.getToState().isSelected()) {
             drawAsColor(g, TO_COLOR);
+            //drawAsGradient(g, TO_COLOR, FROM_COLOR, CONNECTION_TYPE.TO);
         } else {
             drawAsColor(g, NEITHER_COLOR);
         }
