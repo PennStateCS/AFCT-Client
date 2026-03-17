@@ -10,6 +10,7 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.awt.event.MouseEvent;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
 
@@ -52,7 +53,7 @@ public class EditorKeyBindings {
         public Integer mouseButton = null;
         public Shortcut alternateShortcut = null;
 
-        public Shortcut(String displayName, String actionName, int keyEvent, int[] modifiers, Modifiers modifierType) {
+        public Shortcut(String displayName, String actionName, Integer keyEvent, int[] modifiers, Modifiers modifierType) {
             this.displayName = displayName;
             this.actionName = actionName;
             this.keyEvent = keyEvent;
@@ -60,7 +61,7 @@ public class EditorKeyBindings {
             this.modifierType = modifierType;
         }
 
-        public Shortcut(String displayName, String actionName, int keyEvent, int[] modifiers) {
+        public Shortcut(String displayName, String actionName, Integer keyEvent, int[] modifiers) {
             this.displayName = displayName;
             this.actionName = actionName;
             this.keyEvent = keyEvent;
@@ -87,6 +88,29 @@ public class EditorKeyBindings {
 
         public static Shortcut mouseShortcut(String displayName, String actionName, int mouseButton, int[] modifiers, Modifiers modifierType) {
             return new Shortcut(displayName, actionName, null, mouseButton, modifiers, modifierType);
+        }
+
+        @Override
+        public String toString() {
+            StringBuilder temp = new StringBuilder();
+            for (int VK_modifier : modifiers) {
+                temp.append(KeyEvent.getModifiersExText(VK_modifier)).append(" ");
+            }
+            if (keyEvent != null) {
+                temp.append(KeyEvent.getKeyText(keyEvent)).append(" ");
+            }
+
+            if (mouseButton != null) {
+                String text = switch(mouseButton) {
+                    case MouseEvent.BUTTON1 -> "Click";
+                    case MouseEvent.BUTTON2 -> "Middle-Click";
+                    case MouseEvent.BUTTON3 -> "Right-Click";
+                    default -> "Click";
+                };
+                temp.append(text);
+            }
+
+            return "Shortcut{" + displayName + " - " + temp.toString().strip() + "}";
         }
     }
 
@@ -137,8 +161,8 @@ public class EditorKeyBindings {
         currentSection = editingSection;
 
         // TEST ACTION
-        displayName = "TEST";
-        addMouseShortcut("test", MouseEvent.BUTTON3, KeyEvent.VK_T, displayName, CTRL_CMD_SHORTCUT_MASK, ALT_DOWN_MASK, SHIFT_DOWN_MASK);
+        //displayName = "TEST";
+        //addMouseShortcut("test", MouseEvent.BUTTON3, KeyEvent.VK_T, displayName, CTRL_CMD_SHORTCUT_MASK, ALT_DOWN_MASK, SHIFT_DOWN_MASK);
 
         // ctrl+d action
         displayName = "Duplicate selected states (and connected transitions)";
@@ -196,7 +220,10 @@ public class EditorKeyBindings {
             }
         });
 
-        //TODO add the alt drag to disable object/state snapping
+        // hold alt while moving a state to disable object/state snapping
+        displayName = "Hold Alt while moving a state to disable object snapping";
+        addShortcutNoKeyEvent("holdaltwhilemovingastate", displayName, ALT_DOWN_MASK);
+
 
         // Begin "General shortcuts" section
         currentSection = generalShortcutsSection;
@@ -259,9 +286,10 @@ public class EditorKeyBindings {
 
         // ctrl+shift+n to create a new instance of the currently selected type of editor window
         displayName = "New instance of the current type";
+        //TODO
+        
 
-
-
+        // TODO: this seems to be showing up as "Slash" not "/"
         // ctrl+/ action
         displayName = "Show keyboard shortcuts";
         addCTRLAction("showkeyboardshortcuts", KeyEvent.VK_SLASH, displayName, inputMap, actionMap, new AbstractAction() {
@@ -299,6 +327,11 @@ public class EditorKeyBindings {
 
     private static void addShortcut(String actionName, int keyEvent, String displayName, int... modifiers) {
         Shortcut shortcut = new Shortcut(displayName, actionName, keyEvent, modifiers);
+        addShortcut(shortcut);
+    }
+
+    private static void addShortcutNoKeyEvent(String actionName, String displayName, int... modifiers) {
+        Shortcut shortcut = new Shortcut(displayName, actionName, null, modifiers);
         addShortcut(shortcut);
     }
 
