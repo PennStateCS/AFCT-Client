@@ -25,6 +25,8 @@ import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 
 import automata.Transition;
+import automata.pda.PDATransition;
+import automata.turing.Tape;
 
 import static gui.Globals.*;
 
@@ -302,12 +304,28 @@ public class CurvedArrow {
 		bounds.setRect(bounds.getX() - dx, bounds.getY() + dy, bounds
 				.getWidth(), bounds.getHeight());
 		g2.setColor(color);
-		for (int i = 0; i < label.length(); i += CHARS_PER_STEP) {
-			String sublabel = label.substring(i, Math.min(i + CHARS_PER_STEP,
-					label.length()));
-            if (sublabel.contains(" ")) {
-                sublabel = sublabel.replaceAll(" ", "␣");
-            }
+
+		// Handle spaces in transition
+		String tempLabel;
+		if (myTransition instanceof PDATransition temp) {
+            String input = temp.getInputToRead().replaceAll(" ", "␣");
+			if (input.isEmpty()) input = String.valueOf(Tape.BLANK);
+			String toPop = temp.getStringToPop().replaceAll(" ", "␣");
+			if (toPop.isEmpty()) toPop = String.valueOf(Tape.BLANK);
+			String toPush = temp.getStringToPush().replaceAll(" ", "␣");
+			if (toPush.isEmpty()) toPush = String.valueOf(Tape.BLANK);
+
+			tempLabel = input + " , " + toPop + " → " + toPush;
+		} else {
+			tempLabel = label.replaceAll(" ", "␣");
+		}
+
+		for (int i = 0; i < tempLabel.length(); i += CHARS_PER_STEP) {
+			String sublabel = tempLabel.substring(i, Math.min(i + CHARS_PER_STEP,
+					tempLabel.length()));
+//            if (sublabel.contains(" ")) {
+//                sublabel = sublabel.replaceAll(" ", "␣");
+//            }
 			g2.drawString(sublabel, -dx, dy);
 			dx -= (float) metrics.getStringBounds(sublabel, g2).getWidth();
 		}
