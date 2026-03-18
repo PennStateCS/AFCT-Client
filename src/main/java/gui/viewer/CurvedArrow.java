@@ -298,23 +298,11 @@ public class CurvedArrow {
 				RenderingHints.VALUE_ANTIALIAS_ON);
 		g2.transform(affineToText);
 
-		// What about the text label?
-		FontMetrics metrics = g2.getFontMetrics();
-		bounds = metrics.getStringBounds(getLabel(), g2);
-		// Will the label appear to be upside down?
-		boolean upsideDown = end.x < start.x;
-		float dx = (float) bounds.getWidth() / 2.0f;
-		float dy = (curvy < 0.0f) ^ upsideDown ? metrics.getAscent() : -metrics
-				.getDescent();
-		bounds.setRect(bounds.getX() - dx, bounds.getY() + dy, bounds
-				.getWidth(), bounds.getHeight());
-		g2.setColor(color);
-
 		// Handle spaces in transition
 		String tempLabel;
 		if (myTransition instanceof PDATransition temp) {
 			String empty = Universe.curProfile.getEmptyString();
-            String input = temp.getInputToRead().replaceAll(" ", "␣");
+			String input = temp.getInputToRead().replaceAll(" ", "␣");
 			if (input.isEmpty()) input = String.valueOf(empty);
 			String toPop = temp.getStringToPop().replaceAll(" ", "␣");
 			if (toPop.isEmpty()) toPop = String.valueOf(empty);
@@ -325,6 +313,18 @@ public class CurvedArrow {
 		} else {
 			tempLabel = label.replaceAll(" ", "␣");
 		}
+
+		// What about the text label?
+		FontMetrics metrics = g2.getFontMetrics();
+		bounds = metrics.getStringBounds(tempLabel, g2);
+		// Will the label appear to be upside down?
+		boolean upsideDown = end.x < start.x;
+		float dx = (float) bounds.getWidth() / 2.0f;
+		float dy = (curvy < 0.0f) ^ upsideDown ? metrics.getAscent() : -metrics
+				.getDescent();
+		bounds.setRect(bounds.getX() - dx, bounds.getY() + dy, bounds
+				.getWidth(), bounds.getHeight());
+		g2.setColor(color);
 
 		for (int i = 0; i < tempLabel.length(); i += CHARS_PER_STEP) {
 			String sublabel = tempLabel.substring(i, Math.min(i + CHARS_PER_STEP,
