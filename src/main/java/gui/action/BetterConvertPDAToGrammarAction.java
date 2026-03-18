@@ -172,8 +172,7 @@ public class BetterConvertPDAToGrammarAction extends ConvertAutomatonToGrammarAc
      * @return the convert controller to handle the conversion of the automaton
      *         to a grammar
      */
-    protected ConvertController initializeController(ConvertPane pane,
-                                                     SelectionDrawer drawer, Automaton automaton) {
+    protected ConvertController initializeController(ConvertPane pane, SelectionDrawer drawer, Automaton automaton) {
         return new PDAConvertController(pane, drawer, this.automaton);
     }
 
