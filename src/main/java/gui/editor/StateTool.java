@@ -75,6 +75,7 @@ public class StateTool extends Tool {
 	 *            the mouse event
 	 */
 	public void mousePressed(MouseEvent event) {
+		getView().getDrawer().showConnected = false;
 		if (getDrawer().getAutomaton().getEnvironmentFrame() !=null)
     		((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
         getAutomaton().deselectStatesAndTransitions();

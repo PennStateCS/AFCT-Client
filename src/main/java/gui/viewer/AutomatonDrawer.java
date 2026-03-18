@@ -119,16 +119,9 @@ public class AutomatonDrawer {
 
         boolean transitionFocusDraw = false;
         if (this.showConnected) {
-            boolean anySelected = false;
-            for (State state : automaton.getStates()) {
-                if (state.isSelected()) {
-                    anySelected = true;
-                    break;
-                }
-            }
-            if (!anySelected) {
-                transitionFocusDraw = true;
-            }
+			// no states selected and at least one transition selected
+			transitionFocusDraw = !automaton.anyStatesSelected() && automaton.anyTransitionsSelected();
+
         }
 
 		// Draw transitions between states.
@@ -316,13 +309,11 @@ public class AutomatonDrawer {
         if (!this.showConnected) {
             drawTransitions(g);
         } else {
-			// Find selected transition(s) and save endpoint states
+			// Get selected transition(s) and save endpoint states
 			HashSet<StatePair> statePairs = new HashSet<>();
-			for (CurvedArrow arrow : arrows) {
-				Transition transition = arrowToTransitionMap.get(arrow);
-				if (transition.isSelected) {
-					statePairs.add(new StatePair(transition.getFromState(), transition.getToState()));
-				}
+			Transition[] selectedTransitions = automaton.getSelectedTransitions();
+			for (Transition transition : selectedTransitions) {
+				statePairs.add(new StatePair(transition.getFromState(), transition.getToState()));
 			}
 
 			// Draw transitions
