@@ -150,8 +150,8 @@ public class StateDrawer {
 	 * @param state
 	 *            the state to draw
 	 */
-	public void drawState(Graphics g, Automaton automaton, State state) {
-		this.drawState(g, automaton, state, state.getPoint());
+	public void drawState(Graphics g, Automaton automaton, State state, boolean ignoreSelected) {
+		this.drawState(g, automaton, state, state.getPoint(), ignoreSelected);
 	}
 
 	/**
@@ -170,6 +170,12 @@ public class StateDrawer {
 	public void drawState(Graphics g, Automaton automaton, State state,
 			Point point) {
 		drawState(g, automaton, state, point, STATE_COLOR);
+	}
+
+	public void drawState(Graphics g, Automaton automaton, State state,
+			Point point, boolean ignoreSelected) {
+
+		drawState(g, automaton, state, point, STATE_COLOR, ignoreSelected);
 	}
 
 	/**
@@ -191,6 +197,11 @@ public class StateDrawer {
 			Point point, Color color) {
 		drawArea(g, automaton, state, point, color);
 		return;
+	}
+
+	public void drawState(Graphics g, Automaton automaton, State state,
+			Point point, Color color, boolean ignoreSelected) {
+		drawArea(g, automaton, state, point, color, ignoreSelected);
 	}
 
     /**
@@ -224,16 +235,16 @@ public class StateDrawer {
 	 *           the color of the state name text
 	 */
 	public void drawState(Graphics g, Automaton automaton, State state, Color outlineColor, Color textColor) {
-		drawArea(g, automaton, state, state.getPoint(), STATE_COLOR, outlineColor, textColor);
+		drawArea(g, automaton, state, state.getPoint(), STATE_COLOR, outlineColor, textColor, false);
 	}
 
 
     /**
 	 * @param state
 	 */
-	private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor, Color outlineColor, Color textColor) {
+	private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor, Color outlineColor, Color textColor, boolean ignoreSelected) {
 		// Draw the basic background of the state.
-		drawBackground(g, state, point, fillColor);
+		drawBackground(g, state, point, fillColor, ignoreSelected);
 		// What about the text label?
 		g.setColor(textColor);
 
@@ -286,12 +297,17 @@ public class StateDrawer {
 	}
 
 	private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor, Color outlineColor) {
-		drawArea(g, automaton, state, point, fillColor, outlineColor, outlineColor);
+		drawArea(g, automaton, state, point, fillColor, outlineColor, outlineColor, false);
 	}
 
     private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor) {
         drawArea(g, automaton, state, point, fillColor, Color.black);
+		drawArea(g, automaton, state, point, fillColor, Color.black, Color.black, true);
     }
+
+	private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor, boolean ignoreSelected) {
+		drawArea(g, automaton, state, point, fillColor, Color.black, Color.black, ignoreSelected);
+	}
 
 	/**
 	 * Draws the state label for a given state.
@@ -412,9 +428,9 @@ public class StateDrawer {
 	 * @param color
 	 *            the color of the background, if supported by this class
 	 */
-	public void drawBackground(Graphics g, State state, Point point, Color color) {
+	public void drawBackground(Graphics g, State state, Point point, Color color, boolean ignoreSelected) {
 		g.setColor(color);
-		if(state.isSelected()) g.setColor(HIGHLIGHT_COLOR);
+		if(state.isSelected() && !ignoreSelected) g.setColor(HIGHLIGHT_COLOR);
 //		if (state.getInternalName() == null)
 			g.fillOval(point.x - radius, point.y - radius, 2 * radius,
 					2 * radius);

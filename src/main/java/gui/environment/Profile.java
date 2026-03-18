@@ -54,13 +54,18 @@ import org.xml.sax.SAXException;
 import static gui.Globals.getPreferencesFilePath;
 
 public class Profile {
-    public static String LAMBDA = "\u03BB";     // Jinghui Lim added stuff
-    public static String EPSILON = "\u03B5";    // see MultipleSimulateAction
-	public String lambda = "\u03BB";
-	public String epsilon = "\u03B5";
-	public String lambdaText = "u03BB";
-	public String epsilonText = "u03B5";
-	private String emptyString = lambda;
+    // TODO: combine LAMBDA with lambda, and EPSILON with epsilon
+    public static final String LAMBDA = "\u03BB";     // Jinghui Lim added stuff
+    public static final String EPSILON = "\u03B5";    // see MultipleSimulateAction
+	public static final String lambda = "\u03BB";
+	public static final String epsilon = "\u03B5";
+	public static final String lambdaText = "u03BB";
+	public static final String epsilonText = "u03B5";
+	private String emptyString = epsilon;
+    public static final String Z_PDA_STACK_BOTTOM_MARKER = "Z";
+    public static final String DOLLAR_SIGN_PDA_STACK_BOTTOM_MARKER = "$";
+    public static String PDA_STACK_BOTTOM_MARKER = DOLLAR_SIGN_PDA_STACK_BOTTOM_MARKER;
+
 	public String Color = "Original";
 	//public int undo_num = 50;
 	public int undo_num = -1;

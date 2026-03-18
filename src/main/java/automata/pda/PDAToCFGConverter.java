@@ -34,6 +34,8 @@ import automata.Automaton;
 import automata.State;
 import automata.Transition;
 
+import static gui.environment.Profile.PDA_STACK_BOTTOM_MARKER;
+
 /**
  * The PDA to context free grammar converter can be used to convert a pushdown
  * automaton into an equivalent context free grammar. The pda and grammar will
@@ -90,7 +92,7 @@ public class PDAToCFGConverter {
 		for (int k = 0; k < transitions.length; k++) {
 			PDATransition trans = (PDATransition) transitions[k];
 			String toPop = trans.getStringToPop();
-			if (!(toPop.substring(toPop.length() - 1)).equals(BOTTOM_OF_STACK)) {
+			if (!(toPop.substring(toPop.length() - 1)).equals(PDA_STACK_BOTTOM_MARKER)) {
 				// System.err.println("Bad transition to final state! "+trans);
 				// System.err.println(toPop.substring(toPop.length()-1));
 				return false;
@@ -227,7 +229,7 @@ public class PDAToCFGConverter {
 		}
 		State finalState = finalStates[0];
 		String startSymbol = LEFT_PAREN.concat(startState.getName().concat(
-				BOTTOM_OF_STACK
+				PDA_STACK_BOTTOM_MARKER
 						.concat(finalState.getName().concat(RIGHT_PAREN))));
 		if (variable.equals(startSymbol))
 			return true;
@@ -437,7 +439,7 @@ public class PDAToCFGConverter {
 	 * the left-hand side to determine whether each production should be accepted
 	 * 
 	 * @param lhs 
-	 		     the variable on the left-hand side.  The initial variable is the initial state + 'Z' +
+	 		     the variable on the left-hand side.  The initial variable is the initial state + {@link gui.environment.Profile#PDA_STACK_BOTTOM_MARKER} +
 	 * 			 the final state.
 	 * @param productions
 	 * 			 the current list of productions.
@@ -524,7 +526,7 @@ public class PDAToCFGConverter {
 		} while (updated);
 		
 		//Then, trace a path from the initial variable to all terminals that it can reach.
-		String initVar = LEFT_PAREN + automaton.getInitialState().getName() + BOTTOM_OF_STACK + 
+		String initVar = LEFT_PAREN + automaton.getInitialState().getName() + PDA_STACK_BOTTOM_MARKER +
 					automaton.getFinalStates()[0].getName() + RIGHT_PAREN;
 		purgeProductionsHelper(initVar, productions, valid, validProductions);
 		
@@ -541,7 +543,7 @@ public class PDAToCFGConverter {
 			else {
 				key = productions[i].getLHS();
 				newMap.put(key, MAP.get(key));
-				if (((String)MAP.get(key)).charAt(0) <= 'Z')
+				if (((String)MAP.get(key)).charAt(0) <= PDA_STACK_BOTTOM_MARKER.charAt(0))
 					freeValues.remove((String)MAP.get(key));
 			}
 		
@@ -554,7 +556,7 @@ public class PDAToCFGConverter {
 		
 		while (mapIter.hasNext()) {			
 			key = (String) mapIter.next();
-			if (((String)MAP.get(key)).charAt(0) > 'Z')
+			if (((String)MAP.get(key)).charAt(0) > PDA_STACK_BOTTOM_MARKER.charAt(0))
 				MAP.put(key, (String)freeIter.next());
 		}
 	}
@@ -568,6 +570,4 @@ public class PDAToCFGConverter {
 	protected static final String LEFT_PAREN = "(";
 
 	protected static final String RIGHT_PAREN = ")";
-
-	protected static final String BOTTOM_OF_STACK = "Z";
 }

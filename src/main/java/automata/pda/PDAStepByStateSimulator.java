@@ -33,6 +33,8 @@ import automata.Configuration;
 import automata.State;
 import automata.Transition;
 
+import static gui.environment.Profile.PDA_STACK_BOTTOM_MARKER;
+
 /**
  * The PDA simulator object simulates the behavior of a pushdown automaton.
  * Given a PDA object and an input string, it can determine whether the machine
@@ -80,7 +82,7 @@ public class PDAStepByStateSimulator extends AutomatonSimulator {
 		/** The stack should contain the bottom of stack marker. */
 		Configuration[] configs = new Configuration[1];
 		CharacterStack stack = new CharacterStack();
-		stack.push("Z");
+		stack.push(PDA_STACK_BOTTOM_MARKER);
 		configs[0] = new PDAConfiguration(myAutomaton.getInitialState(), null,
 				input, input, stack, myAcceptance);
 		return configs;

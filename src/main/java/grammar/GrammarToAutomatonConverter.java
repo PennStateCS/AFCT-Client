@@ -133,6 +133,4 @@ public abstract class GrammarToAutomatonConverter {
 			Automaton automaton);
 
 	protected HashMap<String, State> MAP;
-
-	protected String BOTTOM_OF_STACK = "Z";
 }

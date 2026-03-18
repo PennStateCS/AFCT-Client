@@ -101,6 +101,15 @@ public class AutomatonDrawer {
     int specHash = Integer.MIN_VALUE;
     //
 
+	/**
+	 * Draws our automaton.
+	 *
+	 * @param g2
+	 *            the Graphics object to draw the automaton on
+	 */
+	public void drawAutomaton(Graphics g2) {
+		drawAutomaton(g2, false);
+	}
 
 	/**
 	 * Draws our automaton.
@@ -108,7 +117,7 @@ public class AutomatonDrawer {
 	 * @param g2
 	 *            the Graphics object to draw the automaton on
 	 */
-	public void drawAutomaton(Graphics g2) {
+	public void drawAutomaton(Graphics g2, boolean ignoreSelected) {
 		if (!valid)
 			refreshArrowMap();
 
@@ -161,7 +170,7 @@ public class AutomatonDrawer {
         State[] states = automaton.getStates();
         if (!transitionFocusDraw) {
             for (State state : states) {
-                drawState(g, state);
+                drawState(g, state, ignoreSelected);
             }
         } else {
             for (State state : states) {
@@ -266,15 +275,27 @@ public class AutomatonDrawer {
 	 * @param state
 	 *            the state to draw
 	 */
-	protected void drawState(Graphics g, State state) {
+	protected void drawState(Graphics g, State state, boolean ignoreSelected) {
         if (!this.showConnected) {
-            statedrawer.drawState(g, getAutomaton(), state);
+            statedrawer.drawState(g, getAutomaton(), state, ignoreSelected);
             if (drawLabels) {
                 statedrawer.drawStateLabel(g, state, state.getPoint(), StateDrawer.STATE_COLOR);
             }
         } else {
             statedrawer.drawConnectedView(g, getAutomaton(), state, drawLabels);
         }
+	}
+
+	/**
+	 * Draws a state on the automaton.
+	 *
+	 * @param g
+	 *            the graphics object to draw upon
+	 * @param state
+	 *            the state to draw
+	 */
+	protected void drawState(Graphics g, State state) {
+		drawState(g, state, false);
 	}
 
 	/**

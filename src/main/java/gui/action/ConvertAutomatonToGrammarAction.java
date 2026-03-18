@@ -62,6 +62,12 @@ public abstract class ConvertAutomatonToGrammarAction extends AutomatonAction {
 		this.environment = environment;
 		this.automaton = environment.getAutomaton();
 	}
+
+	public ConvertAutomatonToGrammarAction(AutomatonEnvironment environment, String string) {
+		super(string, null);
+		this.environment = environment;
+		this.automaton = environment.getAutomaton();
+	}
 	
 	/**
 	 * Modified for 6.3
