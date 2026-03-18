@@ -20,6 +20,7 @@
 
 package gui.editor;
 
+import automata.State;
 import gui.environment.AutomatonEnvironment;
 import gui.environment.EnvironmentFrame;
 import gui.viewer.AutomatonDrawer;
@@ -117,7 +118,9 @@ public class StateTool extends Tool {
     public void mouseReleased(MouseEvent event) {
         ObjectSnappingHandler objectSnappingHandler = getObjectSnappingHandler();
         objectSnappingHandler.clearSnappingIndicators(getView());
-        //state.setSelect(false);
+		// Prevent newly created states from overlapping with existing states
+		StateOverlap.handleStateOverlap(getAutomaton());
+		//state.setSelect(false);
         getView().repaint();
     }
 

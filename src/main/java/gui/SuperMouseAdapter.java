@@ -59,7 +59,7 @@ import java.awt.event.*;
 /**
  * The SuperMouseAdapter takes on the responsibilities we see both in the
  * MouseAdapter and the MouseMotionAdapter, because we unfortunately cannot be a
- * subclass of two classes. This is a convinience class so that when we want to
+ * subclass of two classes. This is a convenience class so that when we want to
  * have something that is clickable or dragable or something, we don't have to
  * define all the methods when we just want to do, say, two things.
  * 
