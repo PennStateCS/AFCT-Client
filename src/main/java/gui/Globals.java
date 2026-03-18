@@ -50,7 +50,13 @@ public class Globals {
 
     public static final Color FROM_COLOR = new Color(37,99,235);
     //public static Color TO_COLOR = new Color(84,132,234);
-    public static final Color BOTH_COLOR = new Color(84,132,234);
+    //public static final Color BOTH_COLOR = new Color(84,132,234);
+    //public static final Color BOTH_COLOR = new Color(71,154,188);
+    //public static final Color BOTH_COLOR = new Color(54,128,211);
+    //public static final Color BOTH_COLOR = new Color(68,135,134);
+    //public static final Color BOTH_COLOR = new Color(108,69,247);
+    public static final Color BOTH_COLOR = new Color(116, 49, 255);
+    //public static final Color BOTH_COLOR = new Color(84,116,229);
     public static final Color TEST_COLOR = new Color(84,255,132);
     //public static Color TO_COLOR = new Color(178,255,255);
     //public static final Color TO_COLOR = new Color(153,255,255);
