@@ -45,6 +45,7 @@ import automata.event.AutomataStateEvent;
 import automata.event.AutomataStateListener;
 import automata.event.AutomataTransitionEvent;
 import automata.event.AutomataTransitionListener;
+import equivalence.StatePair;
 import gui.menu.ContextActions;
 
 import java.util.HashSet;
@@ -315,9 +316,23 @@ public class AutomatonDrawer {
         if (!this.showConnected) {
             drawTransitions(g);
         } else {
+			// Find selected transition(s) and save endpoint states
+			HashSet<StatePair> statePairs = new HashSet<>();
+			for (CurvedArrow arrow : arrows) {
+				Transition transition = arrowToTransitionMap.get(arrow);
+				if (transition.isSelected) {
+					statePairs.add(new StatePair(transition.getFromState(), transition.getToState()));
+				}
+			}
+
+			// Draw transitions
+			StatePair temp;
+			boolean forceDrawAsSelected;
             for (CurvedArrow arrow : arrows) {
                 Transition transition = arrowToTransitionMap.get(arrow);
-                arrow.drawConnectedViewHighlightSelected(g2, transition, false);
+				temp = new StatePair(transition.getFromState(), transition.getToState());
+				forceDrawAsSelected = statePairs.contains(temp);
+                arrow.drawConnectedViewHighlightSelected(g2, transition, forceDrawAsSelected);
             }
         }
     }

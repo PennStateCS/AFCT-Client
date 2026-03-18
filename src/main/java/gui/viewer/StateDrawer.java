@@ -114,18 +114,19 @@ public class StateDrawer {
         }
 
         boolean toSelected = false;
-        if (!fromSelected) {
-            Transition[] to = automaton.getTransitionsToState(state);
-            for (Transition t : to) {
-                if (t.isSelected) {
-                    toSelected = true;
-                    break;
-                }
-            }
-        }
+		Transition[] to = automaton.getTransitionsToState(state);
+		for (Transition t : to) {
+			if (t.isSelected) {
+				toSelected = true;
+				break;
+			}
+		}
+
 
         Color outlineColor;
-        if (toSelected) {
+		if (fromSelected && toSelected) {
+			outlineColor = BOTH_COLOR;
+		} else if (toSelected) {
             outlineColor = TO_COLOR;
         } else if (fromSelected) {
             outlineColor = FROM_COLOR;

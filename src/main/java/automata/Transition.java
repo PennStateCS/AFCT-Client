@@ -133,6 +133,15 @@ public abstract class Transition implements Serializable, Cloneable {
 	}
 
 	/**
+	 * Returns if this transition is a self-loop (i.e. the from state = the to state).
+	 *
+	 * @return <CODE>true</CODE> if this transition is a self-loop, <CODE>false</CODE> otherwise
+	 */
+	public boolean isSelfLoop() {
+		return getFromState() == getToState();
+	}
+
+	/**
 	 * Returns a string representation of this object. The string returned is
 	 * the string representation of the first state, and the string
 	 * representation of the second state.

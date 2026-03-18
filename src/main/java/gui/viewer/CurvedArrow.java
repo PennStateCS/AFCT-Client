@@ -272,7 +272,11 @@ public class CurvedArrow {
 
     public void drawConnectedViewHighlightSelected(Graphics2D g, Transition transition, boolean forceDrawAsSelected) {
         if (transition.isSelected || forceDrawAsSelected) {
-            drawAsColor(g, FROM_COLOR);
+			if (transition.isSelfLoop()){
+				drawAsColor(g, BOTH_COLOR);
+			} else {
+				drawAsColor(g, FROM_COLOR);
+			}
         } else {
             drawAsColor(g, NEITHER_COLOR);
         }
