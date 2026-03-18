@@ -172,7 +172,7 @@ public class PDATransition extends Transition {
 		if (toPush.length() == 0)
 			toPush = Universe.curProfile.getEmptyString();
 		//return input + " , " + toPop + " ; " + toPush;
-		return input + " , " + toPop + " → " + toPush;
+		return input + ", " + toPop + " → " + toPush;
 	}
 
 	/**

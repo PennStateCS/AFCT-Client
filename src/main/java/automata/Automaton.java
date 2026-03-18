@@ -679,6 +679,7 @@ public class Automaton implements Serializable, Cloneable {
 			return anyTransitionsSelected();
 		}
 
+		// This should only be used if, in the future, multiple transitions can be selected at once
 //		// Check size to determine order to check for selected in to try to reduce time taken
 //		if (states.size() < transitions.size()) {
 //			if (anyStatesSelected()) {

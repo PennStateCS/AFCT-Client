@@ -27,6 +27,7 @@ import java.awt.image.BufferedImage;
 import automata.Transition;
 import automata.pda.PDATransition;
 import automata.turing.Tape;
+import gui.environment.Universe;
 
 import static gui.Globals.*;
 
@@ -312,14 +313,15 @@ public class CurvedArrow {
 		// Handle spaces in transition
 		String tempLabel;
 		if (myTransition instanceof PDATransition temp) {
+			String empty = Universe.curProfile.getEmptyString();
             String input = temp.getInputToRead().replaceAll(" ", "␣");
-			if (input.isEmpty()) input = String.valueOf(Tape.BLANK);
+			if (input.isEmpty()) input = String.valueOf(empty);
 			String toPop = temp.getStringToPop().replaceAll(" ", "␣");
-			if (toPop.isEmpty()) toPop = String.valueOf(Tape.BLANK);
+			if (toPop.isEmpty()) toPop = String.valueOf(empty);
 			String toPush = temp.getStringToPush().replaceAll(" ", "␣");
-			if (toPush.isEmpty()) toPush = String.valueOf(Tape.BLANK);
+			if (toPush.isEmpty()) toPush = String.valueOf(empty);
 
-			tempLabel = input + " , " + toPop + " → " + toPush;
+			tempLabel = input + ", " + toPop + " → " + toPush;
 		} else {
 			tempLabel = label.replaceAll(" ", "␣");
 		}
