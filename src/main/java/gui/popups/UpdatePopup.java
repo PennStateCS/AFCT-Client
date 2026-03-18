@@ -17,6 +17,7 @@ import java.util.*;
 import java.util.regex.Matcher;
 import java.util.stream.Collectors;
 
+import gui.components.TextButton;
 import org.jsoup.Jsoup;
 import org.jsoup.nodes.Document;
 import org.jsoup.nodes.Element;
@@ -34,10 +35,16 @@ public class UpdatePopup implements ExtensionPopup {
     private String latestVersion;
     private String latestFile;
     private LinkLabel releaseLink;
+    private JPanel versionAndReleasePanel = null;
+    private JLabel downloadingUpdateLabel;
+    private JProgressBar progressBar;
+    private ProgressMonitor progressMonitor;
+
     private final JPanel cards;
     private static final String LOADING = "LOADING";
     private static final String UPDATE_AVAILABLE_PANEL = "UPDATE_AVAILABLE_PANEL";
     private static final String NO_UPDATES_PANEL = "NO_UPDATES_PANEL";
+    private static final String DOWNLOADING_UPDATE_PANEL = "DOWNLOADING_UPDATE_PANEL";
 
     enum UpdateStatus {
         LOADING, AVAILABLE, NO_UPDATES, REMIND_LATER
@@ -75,26 +82,18 @@ public class UpdatePopup implements ExtensionPopup {
         return contentPane;
     }
 
-    private JPanel setupUpdateAvailablePanel() {
-        JPanel contentPane = new JPanel();
-        contentPane.setLayout(new GridBagLayout());
+    private JPanel getVersionAndReleasePanel() {
+        if (versionAndReleasePanel != null) {
+            return versionAndReleasePanel;
+        }
+
         GridBagConstraints c;
-        int y = 0;
-
-        // create updateAvailableLabel
-        JLabel updateAvailableLabel = new JLabel("An update for AFCT is available.");
-        changeSize(updateAvailableLabel, 20);
-
-        // add updateAvailableLabel to contentPane
-        c = setConstraints(0, 0, 0, y++, GridBagConstraints.FIRST_LINE_START);
-        c.insets = new Insets(10, 10, 10, 10);
-        contentPane.add(updateAvailableLabel, c);
-
 
         // create topPanel
         JPanel topPanel = new JPanel(new GridBagLayout());
         int topY = 0;
 
+        // TODO: maybe have AFCT v1.3.4 → v1.6.6 (but with current and most recent version number)
         // add versionTextLabel
         JLabel versionTextLabel = new JLabel("Version:");
         c = setConstraints(0, 0, 0, topY, GridBagConstraints.FIRST_LINE_START);
@@ -116,6 +115,29 @@ public class UpdatePopup implements ExtensionPopup {
         releaseLink = new LinkLabel("", "");
         c = setConstraints(0.5, 0, 1, topY++, GridBagConstraints.FIRST_LINE_START);
         topPanel.add(releaseLink,c);
+
+        versionAndReleasePanel = topPanel;
+        return topPanel;
+    }
+
+    private JPanel setupUpdateAvailablePanel() {
+        JPanel contentPane = new JPanel();
+        contentPane.setLayout(new GridBagLayout());
+        GridBagConstraints c;
+        int y = 0;
+
+        // create updateAvailableLabel
+        JLabel updateAvailableLabel = new JLabel("An update for AFCT is available.");
+        changeSize(updateAvailableLabel, 20);
+
+        // add updateAvailableLabel to contentPane
+        c = setConstraints(0, 0, 0, y++, GridBagConstraints.FIRST_LINE_START);
+        c.insets = new Insets(10, 10, 10, 10);
+        contentPane.add(updateAvailableLabel, c);
+
+
+        // create topPanel
+        JPanel topPanel = getVersionAndReleasePanel();
 
         // add topPanel to contentPane
         c = setConstraints(0.5, 0, 0, y++, GridBagConstraints.FIRST_LINE_START);
@@ -282,6 +304,51 @@ public class UpdatePopup implements ExtensionPopup {
         versionLabel.setBorder(BorderFactory.createEmptyBorder(10, 10, 10, 10));
 
         contentPane.add(versionLabel);
+
+        return contentPane;
+    }
+
+    private JPanel setupDownloadingUpdatePanel() {
+        JPanel contentPane = new JPanel();
+        contentPane.setLayout(new GridBagLayout());
+        GridBagConstraints c;
+        int y = 0;
+
+        // create downloadingUpdateLabel
+        JLabel downloadingUpdateLabel = new JLabel("Downloading AFCT...");
+        changeSize(downloadingUpdateLabel, 20);
+
+        // add downloadingUpdateLabel to contentPane
+        c = setConstraints(0, 0, 0, y++, GridBagConstraints.FIRST_LINE_START);
+        c.insets = new Insets(10, 10, 10, 10);
+        contentPane.add(downloadingUpdateLabel, c);
+
+        // create topPanel
+        JPanel topPanel = getVersionAndReleasePanel();
+
+        // add topPanel to contentPane
+        c = setConstraints(0.5, 0, 0, y++, GridBagConstraints.FIRST_LINE_START);
+        c.insets = new Insets(5, 15, 0, 15);
+        contentPane.add(topPanel, c);
+
+        // create bottomPanel
+        JPanel bottomPanel = new JPanel(new GridBagLayout());
+        int botY = 0;
+
+        // add textDownloadingLabel
+        JLabel textDownloadingLabel = new JLabel("Downloading...");
+        c = setConstraints(0, 0, 0, botY, GridBagConstraints.FIRST_LINE_START);
+        c.insets = new Insets(10, 0, 10, 10);
+        bottomPanel.add(textDownloadingLabel, c);
+
+        // add cancelButton
+        TextButton cancelButton = new TextButton("Cancel", () -> {
+
+        });
+
+        // add progressBar
+        progressBar = new JProgressBar();
+
 
         return contentPane;
     }

@@ -93,6 +93,33 @@ public class Updater {
         }
     }
 
+    private void dummyTestDownloadFile(HttpURLConnection connection, Path targetPath) throws IOException {
+        //TODO add a loading bar that displays download progress
+        Component parent = updatePopup.getComponent();
+        int contentLength = 1000;
+
+        // Creating a ProgressMonitor for feedback
+        ProgressMonitor progressMonitor = new ProgressMonitor(parent,
+                "Downloading " + targetPath.getFileName().toString(),
+                "", 0, contentLength);
+
+        progressMonitor.setMillisToPopup(10); // Time to wait before the popup appears
+
+        for (int i = 0; i < contentLength + 1; i++) {
+            progressMonitor.setProgress(i);
+            try {
+                // Pause the thread for 100 milliseconds (0.1 seconds)
+                Thread.sleep(100);
+            } catch (InterruptedException e) {
+                // Handle the exception if the thread is interrupted during sleep
+                System.out.println("The thread was interrupted!");
+                // Restore the interrupt flag if needed
+                Thread.currentThread().interrupt();
+            }
+        }
+        progressMonitor.close();
+    }
+
 
     public Result downloadApp(JFrame frame, String latestFile) throws IOException {
         String url = APP_URL + LATEST_RELEASE_PATH + latestFile;
@@ -108,7 +135,14 @@ public class Updater {
                 File currentJar = new File(Updater.class.getProtectionDomain().getCodeSource().getLocation().toURI());
 
                 Path targetPath = (new File(currentJar.getParent() + File.separator + latestFile)).toPath();
-                downloadFile(connection, targetPath);
+                // TODO: revert this
+                boolean dummyTestDownload = true;
+                if (!dummyTestDownload) {
+                    downloadFile(connection, targetPath);
+                } else {
+                    dummyTestDownloadFile(connection, targetPath);
+                    return new Result(Status.ERROR);
+                }
 
                 /* Construct command: java -jar application.jar */
                 ArrayList<String> command = new ArrayList<>();
