@@ -287,18 +287,19 @@ public class EditorKeyBindings {
         // ctrl+shift+n to create a new instance of the currently selected type of editor window
         displayName = "New instance of the current type";
         //TODO
-        
+
 
         // TODO: this seems to be showing up as "Slash" not "/"
         // ctrl+/ action
         displayName = "Show keyboard shortcuts";
-        addCTRLAction("showkeyboardshortcuts", KeyEvent.VK_SLASH, displayName, inputMap, actionMap, new AbstractAction() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                // TODO show the keyboard shortcuts popup (maybe have one instance globally?)
-                environmentFrame.showKeyboardShortcutsPopup();
-            }
-        });
+//        addCTRLAction("showkeyboardshortcuts", KeyEvent.VK_SLASH, displayName, inputMap, actionMap, new AbstractAction() {
+//            @Override
+//            public void actionPerformed(ActionEvent e) {
+//                // TODO show the keyboard shortcuts popup (maybe have one instance globally?)
+//                environmentFrame.showKeyboardShortcutsPopup();
+//            }
+//        });
+        addShortcut("showkeyboardshortcuts", KeyEvent.VK_SLASH, displayName, CTRL_CMD_SHORTCUT_MASK);
 
         setupComplete = true;
     }

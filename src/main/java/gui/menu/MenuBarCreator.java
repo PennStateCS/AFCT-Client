@@ -646,6 +646,8 @@ public class MenuBarCreator {
 		
 		addItem(menu, new AboutAction());
 
+		addItem(menu, new KeyboardShortcutsAction(frame));
+
 		return menu;
 	}
 }

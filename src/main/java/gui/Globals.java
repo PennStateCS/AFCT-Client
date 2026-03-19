@@ -5,9 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
-import com.sun.tools.javac.Main;
 import gui.popups.ExtensionPopup;
-import submission.AFCTClient;
 import submission.SessionHandler;
 
 import javax.swing.*;
@@ -656,8 +654,12 @@ public class Globals {
         positionFrameNearWindow(frame, targetPosition, window, false);
     }
 
-    public static void changeSize(Component component, int fontSize) {
-        component.setFont(component.getFont().deriveFont((float) fontSize));
+    public static void changeSize(Component component, float fontSize) {
+        component.setFont(component.getFont().deriveFont(fontSize));
+    }
+
+    public static void changeFontSize(Component component, float fontSize) {
+        changeSize(component, fontSize);
     }
 
     public static void unBoldFont(Component component) {

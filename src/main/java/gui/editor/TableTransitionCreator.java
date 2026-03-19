@@ -44,6 +44,9 @@ import automata.Transition;
 import automata.turing.TMTransition;
 import automata.turing.Tape;
 import debug.EDebug;
+
+import static gui.Globals.changeFontSize;
+
 /**
  * This allows the user to create transition creators that have tables directly
  * in the editing window with a minimum of effort.
@@ -124,6 +127,9 @@ public abstract class TableTransitionCreator extends TransitionCreator {
 				return super.processKeyBinding(ks, e, condition, pressed);
 			}
 		};
+
+		// TODO: determine a better way to do this, that also scales the size of the table
+		//changeFontSize(table, (float) (getParent().getScale() / 20.0));
 
 		table.setGridColor(Color.gray);
 		table.setBorder(new javax.swing.border.EtchedBorder());
