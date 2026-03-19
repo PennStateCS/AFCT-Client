@@ -220,7 +220,8 @@ public class ToolBar extends JToolBar implements ActionListener {
 		}
 
 		public void actionPerformed(ActionEvent e) {
-			button.doClick();
+			// only click the button when the toolbar's enabled
+			if (toolbarEnabled) button.doClick();
 		}
 
 		AbstractButton button;
@@ -237,6 +238,12 @@ public class ToolBar extends JToolBar implements ActionListener {
             redoButton.setEnabled(enable);
         }
     }
+
+	public void setEnabled(boolean enabled){
+		toolbarEnabled = enabled;
+	}
+
+	private boolean toolbarEnabled = true;
 
     private JToggleButton undoButton = null;
     private JToggleButton redoButton = null;
