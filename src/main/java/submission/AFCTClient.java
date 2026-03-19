@@ -202,6 +202,11 @@ public class AFCTClient {
         String pretty = tryPretty(body);
         System.err.println("HTTP ERROR " + status + " on " + label);
         System.err.println("Body:\n" + pretty);
+
+        if (body == null || body.isEmpty()) {
+            return new IOException("HTTP " + status + " on " + label);
+        }
+
         try {
             JsonObject jsonBody = stringToJson(body);
             if (jsonBody.has("error")) {
