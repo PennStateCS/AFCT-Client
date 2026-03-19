@@ -517,12 +517,12 @@ public class MenuBarCreator {
 			addItem(menu, new ConvertFSAToGrammarAction(
 					(gui.environment.AutomatonEnvironment) environment));
 
-		if (BetterConvertPDAToGrammarAction.isApplicable(object))
-			addItem(menu, new BetterConvertPDAToGrammarAction(
-					(gui.environment.AutomatonEnvironment) environment));
-
 		if (ConvertPDAToGrammarAction.isApplicable(object))
 			addItem(menu, new ConvertPDAToGrammarAction(
+					(gui.environment.AutomatonEnvironment) environment));
+
+		if (BetterConvertPDAToGrammarAction.isApplicable(object))
+			addItem(menu, new BetterConvertPDAToGrammarAction(
 					(gui.environment.AutomatonEnvironment) environment));
 
 		if (ConvertFSAToREAction.isApplicable(object))

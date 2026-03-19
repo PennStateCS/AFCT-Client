@@ -70,7 +70,8 @@ public class BetterConvertPDAToGrammarAction extends ConvertAutomatonToGrammarAc
      *            the environment
      */
     public BetterConvertPDAToGrammarAction(AutomatonEnvironment environment) {
-        super(environment, "Better Convert to Grammar");
+//        super(environment, "Better Convert to Grammar");
+        super(environment, "Quick Convert to Grammar");
     }
 
     /**
