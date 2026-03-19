@@ -286,7 +286,7 @@ public class EditorKeyBindings {
 
         // ctrl+shift+n to create a new instance of the currently selected type of editor window
         displayName = "New instance of the current type";
-        //TODO
+        //addShortcut("newinstanceofthecurrenttype", KeyEvent.VK_N, displayName, CTRL_CMD_SHORTCUT_MASK | SHIFT_DOWN_MASK);
 
 
         // TODO: this seems to be showing up as "Slash" not "/"
@@ -321,9 +321,9 @@ public class EditorKeyBindings {
     }
 
     private static void addCTRLShiftAction(String actionName, int keyEvent, String displayName, InputMap inputMap, ActionMap actionMap, AbstractAction action) {
-        inputMap.put(KeyStroke.getKeyStroke(keyEvent, CTRL_CMD_SHORTCUT_MASK | InputEvent.SHIFT_DOWN_MASK), actionName);
+        inputMap.put(KeyStroke.getKeyStroke(keyEvent, CTRL_CMD_SHORTCUT_MASK | SHIFT_DOWN_MASK), actionName);
         actionMap.put(actionName, action);
-        addShortcut(actionName, keyEvent, displayName, CTRL_CMD_SHORTCUT_MASK, InputEvent.SHIFT_DOWN_MASK);
+        addShortcut(actionName, keyEvent, displayName, CTRL_CMD_SHORTCUT_MASK, SHIFT_DOWN_MASK);
     }
 
     private static void addShortcut(String actionName, int keyEvent, String displayName, int... modifiers) {

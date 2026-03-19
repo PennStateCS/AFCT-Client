@@ -190,7 +190,10 @@ public class MenuBarCreator {
 	private static JMenu getFileMenu(EnvironmentFrame frame) {
 		Environment environment = frame.getEnvironment();
 		JMenu menu = new JMenu("File");
+
 		addItem(menu, new NewAction());
+		addItem(menu, NewInstanceOfCurrentAction.getActionInstance(frame));
+
 		SecurityManager sm = System.getSecurityManager();
 		if (Universe.CHOOSER != null) {
 			// Can't open and save files.
