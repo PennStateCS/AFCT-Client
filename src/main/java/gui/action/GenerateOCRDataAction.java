@@ -98,11 +98,22 @@ public class GenerateOCRDataAction extends RestrictedAction{
             // add transitions
             int numTransitions = createTransitions(numStatesForThisExample, states);
 
+            // remove orphaned states
+            removeOrphanedStates(this.automaton);
+
             // choose a layout algorithm
             layoutProcess algorithmCode = chooseLayoutProcess(numStatesForThisExample, numTransitions);
 
             // apply the algorithm
             applyLayoutAlgorithm(algorithmCode);
+
+            // In the case that the initial state is more on the right side mirror the automaton
+            // across the vertical axis because real life people probably don't put the initial
+            // state to the right.
+            ensureInitialStateOnLeftSide(this.automaton);
+
+            // Move the automaton to be more in the center of frame
+            moveToCenter(this.automaton);
 
             // save the automaton as a .jff file
             File savedFilePath = null;
@@ -112,14 +123,6 @@ public class GenerateOCRDataAction extends RestrictedAction{
                 String errorMessage = "Error: " + ex;
                 JOptionPane.showMessageDialog(null, errorMessage);
             }
-
-            // In the case that the initial state is more on the right side mirror the automaton
-            // across the vertical axis because real life people probably don't put the initial
-            // state to the right.
-            ensureInitialStateOnLeftSide(this.automaton);
-
-            // Move the automaton to be more in the center of frame
-            moveToCenter(this.automaton);
 
             // screenshot the diagram and save it as a png
             // we will assume if we made it here the filepath is good
@@ -174,9 +177,12 @@ public class GenerateOCRDataAction extends RestrictedAction{
                 // we will make a transition roughly 33% of the time
                 if (chance < 0.33 && numTransitions < MAX_NUMBER_TRANSITIONS) {
                     String label = getRandomAlphaString();
-                    Transition t = new FSATransition(states[k],states[j], label);
-                    this.automaton.addTransition(t);
-                    numTransitions++;
+                    // TODO: change how transition rendering looks for OCR data generation
+                    for (int i = 0; i < 1; i++) {
+                        Transition t = new FSATransition(states[k],states[j], Character.toString(label.charAt(i)));
+                        this.automaton.addTransition(t);
+                        numTransitions++;
+                    }
                 }
             }
         }
@@ -185,24 +191,22 @@ public class GenerateOCRDataAction extends RestrictedAction{
 
     private String getRandomAlphaString() {
         Random random = new Random();
+        StringBuilder result = new StringBuilder();
         String alphaPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
         int numSymbols = random.nextInt(3) + 1;
 
-        // Use StringJoiner for easy comma delineation
-        StringJoiner joiner = new StringJoiner(",");
-
         for (int i = 0; i < numSymbols; i++) {
             int index = random.nextInt(alphaPool.length());
-            joiner.add(String.valueOf(alphaPool.charAt(index)));
+            result.append(alphaPool.charAt(index));
         }
 
-        return joiner.toString();
+        return result.toString();
     }
 
     private layoutProcess chooseLayoutProcess(int numStatesForThisExample, int numTransitions) {
         // first see if we should just use GEM if we have a high number of states/transitions
-        if (numStatesForThisExample > 5 || numTransitions > 8) {
+        if (numStatesForThisExample > 4 || numTransitions > 8) {
             return layoutProcess.THE_RANDOM_ALGORITHM_THEN_GEM;
         }
 
@@ -349,7 +353,6 @@ public class GenerateOCRDataAction extends RestrictedAction{
 
     private void saveAutomatonAsPNG(File file) {
         Component somePane = environment.tabbed.getSelectedComponent();
-        // assumedUsedWidth is how much extra space the UI takes up
         SaveGraphUtility.saveGraphUsingExistingFile(somePane, file);
     }
 
@@ -358,7 +361,8 @@ public class GenerateOCRDataAction extends RestrictedAction{
 
         for (State s : states) {
             Point point = s.getPoint();
-            Point newPoint = new Point(point.x+200, point.y);
+            // these are just magic numbers that subjectivly give good results
+            Point newPoint = new Point(point.x+200, point.y+100);
             s.setPoint(newPoint);
         }
     }
@@ -378,6 +382,30 @@ public class GenerateOCRDataAction extends RestrictedAction{
         // the initial state is more on the left side
         if (initial.getPoint().x > averageX) {
             applyLayoutAlgorithm(layoutProcess.FLIP_OVER_VERTICAL);
+        }
+    }
+
+    private void removeOrphanedStates(FiniteStateAutomaton automaton) {
+        State[] states = automaton.getStates();
+        boolean haveToChooseInitialState = false;
+        for (State s : states) {
+            int inDegree = automaton.getTransitionsToState(s).length;
+            int outDegree = automaton.getTransitionsFromState(s).length;
+            int degree = inDegree + outDegree;
+
+            // if this is an orphaned state
+            if (degree < 1) {
+                if (automaton.isInitialState(s)) {
+                    haveToChooseInitialState = true;
+                }
+                automaton.removeState(s);
+            }
+        }
+
+        states = automaton.getStates();
+        if (haveToChooseInitialState) {
+            int rand = (int)(Math.random() * states.length);
+            automaton.setInitialState(states[rand]);
         }
     }
 }

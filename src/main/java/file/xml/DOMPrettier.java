@@ -76,8 +76,7 @@ public class DOMPrettier {
 	 *            the DOM document to make pretty
 	 */
 	public static void makePretty(Document dom) {
-		String newline = System.getProperty("line.separator");
-		makePretty(dom, newline, dom.getDocumentElement());
+		makePretty(dom, "\n", dom.getDocumentElement());
 	}
 
 	/**
