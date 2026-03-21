@@ -26,6 +26,7 @@ import java.awt.image.BufferedImage;
 
 import automata.Transition;
 import automata.pda.PDATransition;
+import automata.turing.TMTransition;
 import automata.turing.Tape;
 import gui.environment.Universe;
 
@@ -310,6 +311,16 @@ public class CurvedArrow {
 			if (toPush.isEmpty()) toPush = String.valueOf(empty);
 
 			tempLabel = input + ", " + toPop + " → " + toPush;
+		} else if (myTransition instanceof TMTransition temp) {
+			StringBuilder sb = new StringBuilder();
+			int t = temp.tapes();
+			for (int i = 0; i < t; i++) {
+				if (i != 0) {
+					sb.append(" | ");
+				}
+				sb.append(temp.getRead(i)).append(" → ").append(temp.getWrite(i)).append(", ").append(temp.getDirection(i));
+			}
+			tempLabel = sb.toString();
 		} else {
 			tempLabel = label.replaceAll(" ", "␣");
 		}
