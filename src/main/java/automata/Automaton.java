@@ -1678,11 +1678,12 @@ public class Automaton implements Serializable, Cloneable {
         // Try to create a new object.
         try {
             // I am a bad person for writing this hack.
-//			if (this instanceof TuringMachine)
-//				a = new TuringMachine(((TuringMachine) this).tapes());
-//			else
-            //a = (Automaton) getClass().newInstance();
-            automaton = (Automaton) getClass().getDeclaredConstructor().newInstance();
+			if (this instanceof TuringMachine) {
+				automaton = new TuringMachine(((TuringMachine) this).tapes());
+			} else {
+				//a = (Automaton) getClass().newInstance();
+				automaton = (Automaton) getClass().getDeclaredConstructor().newInstance();
+			}
         } catch (Throwable e) {
             // Well golly, we're sure screwed now!
             System.err.println("Warning: clone of automaton failed!");
