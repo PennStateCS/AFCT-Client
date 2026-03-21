@@ -77,8 +77,7 @@ public class ArrowTool extends Tool {
 	 */
 	public ArrowTool(AutomatonPane view, AutomatonDrawer drawer,
 			TransitionCreator creator) {
-		super(view, drawer);
-		this.creator = creator;
+		super(view, drawer, creator);
 	}
 
 	/**
@@ -91,8 +90,6 @@ public class ArrowTool extends Tool {
 	 */
 	public ArrowTool(AutomatonPane view, AutomatonDrawer drawer) {
 		super(view, drawer);
-		this.creator = TransitionCreator.creatorForAutomaton(getAutomaton(),
-				getView());
 	}
 
 	/**
@@ -176,6 +173,7 @@ public class ArrowTool extends Tool {
 	 * @param event
 	 *            the mouse event
 	 */
+	@Override
 	protected void showPopup(MouseEvent event) {
 		// Should we show a popup menu?
 		if (event.isPopupTrigger()) {
@@ -191,33 +189,6 @@ public class ArrowTool extends Tool {
 		lastClickedState = null;
 		lastClickedTransition = null;
 	}
-
-    private boolean ctrlAndShiftUp(InputEvent event) {
-        // Check currently pressed keys
-        int modifiersEx = event.getModifiersEx();
-        // Check if Ctrl is NOT pressed
-        boolean isCtrlUp = (modifiersEx & CTRL_CMD_SHORTCUT_MASK) == 0;
-        // Check if Shift is NOT pressed
-        boolean isShiftUp = (modifiersEx & SHIFT_DOWN_MASK) == 0;
-        // Ctrl and Shift are both up
-        return isCtrlUp && isShiftUp;
-    }
-
-    private boolean shiftUp(InputEvent event) {
-        // Check currently pressed keys
-        int modifiersEx = event.getModifiersEx();
-        // Check if Shift is NOT pressed
-        boolean isShiftUp = (modifiersEx & SHIFT_DOWN_MASK) == 0;
-        return isShiftUp;
-    }
-
-    private boolean altKeyDown(InputEvent event) {
-        // Check currently pressed keys
-        int modifiersEx = event.getModifiersEx();
-        // Check if ALT IS pressed
-        boolean isAltDown = (modifiersEx & ALT_DOWN_MASK) != 0;
-        return isAltDown;
-    }
 
     /**
 	 * On a mouse press, allows the state to be dragged about unless this is a
@@ -258,7 +229,9 @@ public class ArrowTool extends Tool {
         }
 
 		// Right-clicking a transition prompts the edit menu
-		if (event.getButton() == MouseEvent.BUTTON3 && lastClickedTransition != null){
+		if (event.getButton() == MouseEvent.BUTTON3 && lastClickedTransition != null) {
+			getAutomaton().deselectAllTransitions();
+			lastClickedTransition.isSelected = true;
 			creator.editTransition(lastClickedTransition, event.getPoint());
 		}
 
@@ -960,9 +933,6 @@ public class ArrowTool extends Tool {
 //	}
 
 
-
-	/** The transition creator for editing transitions. */
-	private TransitionCreator creator;
 
 	/** The state that was last clicked. */
 	private State lastClickedState = null;
