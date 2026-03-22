@@ -24,7 +24,6 @@ import java.util.Set;
 public class StateContextMenu extends ContextMenu implements ActionListener {
     private State[] states;
     private State state;
-    private Point myPoint;
 
     protected final JCheckBoxMenuItem makeFinal, makeInitial;
 
@@ -84,7 +83,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
     }
 
     public void selectAndEnableMenuItems(State[] states, Point p) {
-        myPoint = Objects.requireNonNullElseGet(p, () -> new Point(0, 0));
+        setMyPoint(p);
         this.states = states;
         int numSelectedStates = 0;
         int numSelectedFinalStates = 0;
@@ -209,10 +208,19 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
                 }
                 break;
             case addNote_TEXT:
-                Note note = addNote(myPoint);
-                State clickedState = drawer.stateAtPoint(myPoint);
-                if (clickedState != null) {
-                    clickedState.setNote(note);
+                boolean anyNotesAdded = false;
+                for (State state : states) {
+                    if (state.isSelected()) {
+                        anyNotesAdded = true;
+                        Point point = state.getPoint();
+                        int x = point.x + drawer.getStateDrawer().getRadius();
+                        int y = point.y + (drawer.getStateDrawer().getRadius() / 3);
+                        state.setNote(addNote(new Point(x, y)));
+                    }
+                }
+
+                if (!anyNotesAdded) {
+                    addNote(myPoint);
                 }
                 break;
             case editBlock_DEFAULT:

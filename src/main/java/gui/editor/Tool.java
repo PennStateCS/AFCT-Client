@@ -202,7 +202,7 @@ public abstract class Tool extends SuperMouseAdapter {
 			return;
 		}
 
-		System.out.println("showPopup");
+		//System.out.println("showPopup");
 
 		// Should we show a popup menu?
 		if (event.isPopupTrigger() || event.getButton() == MouseEvent.BUTTON3) {

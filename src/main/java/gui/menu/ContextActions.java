@@ -113,6 +113,9 @@ public class ContextActions {
 
     public void updateJMenu(JMenu menu, Tool currentTool, boolean showDefault) {
         menu.removeAll();
+        stateContextMenu.clearMyPoint();
+        transitionContextMenu.clearMyPoint();
+        defaultContextMenu.clearMyPoint();
         addMenuItems(menu, currentTool, null, showDefault);
     }
 
