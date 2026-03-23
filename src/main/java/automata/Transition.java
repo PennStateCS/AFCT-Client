@@ -21,6 +21,9 @@
 package automata;
 
 import automata.State;
+import gui.environment.Profile;
+import gui.environment.Universe;
+
 import java.io.Serializable;
 import java.awt.Point;
 
@@ -133,6 +136,29 @@ public abstract class Transition implements Serializable, Cloneable {
 	}
 
 	/**
+	 * Returns the description for a Transition with any spaces correctly handled.
+	 * This method should ONLY be used for rendering, NOT getting the actual value of the transition.
+	 *
+	 * @return the description of the transition with any spaces replaced by {@link #SPACE_MARKER}
+	 */
+	public abstract String getDescriptionWithSpacesHandled();
+
+	/**
+	 * If <code>s</code> is empty, this method returns the empty string symbol {@link Profile#getEmptyString()}.
+	 * Otherwise, it returns <code>s</code> with any spaces replaced by {@link #SPACE_MARKER}.
+	 *
+	 * @param s the string to replace spaces in
+	 * @return <code>s</code> with any spaces replaced by {@link #SPACE_MARKER}
+	 */
+	public static String getEmptyOrReplaceSpaces(String s) {
+		if (s.isEmpty()) {
+			return Universe.curProfile.getEmptyString();
+		} else {
+			return s.replaceAll(" ", SPACE_MARKER);
+		}
+	}
+
+	/**
 	 * Returns if this transition is a self-loop (i.e. the from state = the to state).
 	 *
 	 * @return <CODE>true</CODE> if this transition is a self-loop, <CODE>false</CODE> otherwise
@@ -207,4 +233,6 @@ public abstract class Transition implements Serializable, Cloneable {
     private Point myControlPoint;
 
     public boolean isSelected = false;
+
+	public static final String SPACE_MARKER = "␣";
 }

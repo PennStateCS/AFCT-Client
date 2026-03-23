@@ -22,10 +22,11 @@ package automata.vdg;
 
 import automata.Transition;
 import automata.State;
+import automata.fsa.FSATransition;
 
 /**
  * A <CODE>VDGTransition</CODE> is a <CODE>Transition</CODE> object used by
- * Variable Dependecy Graphs (VDGs). They have no labels.
+ * Variable Dependency Graphs (VDGs). They have no labels.
  * 
  * @author Ryan Cavalcante
  */
@@ -70,5 +71,11 @@ public class VDGTransition extends Transition {
 	 */
 	public String toString() {
 		return super.toString();
+	}
+
+
+	@Override
+	public String getDescriptionWithSpacesHandled() {
+		return getEmptyOrReplaceSpaces(getDescription());
 	}
 }

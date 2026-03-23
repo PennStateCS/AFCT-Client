@@ -300,30 +300,7 @@ public class CurvedArrow {
 		g2.transform(affineToText);
 
 		// Handle spaces in transition
-		String tempLabel;
-		if (myTransition instanceof PDATransition temp) {
-			String empty = Universe.curProfile.getEmptyString();
-			String input = temp.getInputToRead().replaceAll(" ", "␣");
-			if (input.isEmpty()) input = String.valueOf(empty);
-			String toPop = temp.getStringToPop().replaceAll(" ", "␣");
-			if (toPop.isEmpty()) toPop = String.valueOf(empty);
-			String toPush = temp.getStringToPush().replaceAll(" ", "␣");
-			if (toPush.isEmpty()) toPush = String.valueOf(empty);
-
-			tempLabel = input + ", " + toPop + " → " + toPush;
-		} else if (myTransition instanceof TMTransition temp) {
-			StringBuilder sb = new StringBuilder();
-			int t = temp.tapes();
-			for (int i = 0; i < t; i++) {
-				if (i != 0) {
-					sb.append(" | ");
-				}
-				sb.append(temp.getRead(i)).append(" → ").append(temp.getWrite(i)).append(", ").append(temp.getDirection(i));
-			}
-			tempLabel = sb.toString();
-		} else {
-			tempLabel = label.replaceAll(" ", "␣");
-		}
+		String tempLabel = myTransition.getDescriptionWithSpacesHandled();
 
 		// What about the text label?
 		FontMetrics metrics = g2.getFontMetrics();
