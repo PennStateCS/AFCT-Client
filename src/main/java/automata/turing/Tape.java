@@ -300,5 +300,6 @@ public class Tape implements Serializable {
 	private int cachedHash = 0xdeadbeef;
 
 	/** The blank tape symbol. */
-	public static final char BLANK = '\u25A1';
+	//public static final char BLANK = '\u25A1';
+	public static final char BLANK = '\u2294'; // TODO: maybe make this an option in the prefs menu?
 }

@@ -43,6 +43,7 @@ import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
 import gui.editor.IconKeeper;
+import gui.menu.SettingsMenu;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 
@@ -52,6 +53,7 @@ import org.w3c.dom.Node;
 import org.xml.sax.SAXException;
 
 import static gui.Globals.getPreferencesFilePath;
+import static gui.environment.Universe.settingsMenu;
 
 public class Profile {
     // TODO: combine LAMBDA with lambda, and EPSILON with epsilon
@@ -61,7 +63,6 @@ public class Profile {
 	public static final String epsilon = "\u03B5";
 	public static final String lambdaText = "u03BB";
 	public static final String epsilonText = "u03B5";
-	private String emptyString = epsilon;
     public static final String Z_PDA_STACK_BOTTOM_MARKER = "Z";
     public static final String DOLLAR_SIGN_PDA_STACK_BOTTOM_MARKER = "$";
     public static String PDA_STACK_BOTTOM_MARKER = DOLLAR_SIGN_PDA_STACK_BOTTOM_MARKER;
@@ -103,6 +104,9 @@ public class Profile {
     /**The tag name for legacy icons preference.*/
     public static final String AUTO_INITIAL_STATE = "auto_set_first_state_as_initial_state";
 
+    /* Settings */
+
+    private String emptyString = epsilon;
 
 	/**
 	 * Determines whether transitions can be issued from the final
@@ -110,133 +114,57 @@ public class Profile {
 	 * 
 	 * @author Chris Morgan
 	 */
-	private boolean transTuringFinal;
+	private boolean turingTransFromFinal;
 
     //default to acceptByFinalState, since that was how it used to be
     private boolean turingAcceptByFinalState; //I would rather have it a better way, but I'm short on Time - ~Henry
     private boolean turingAcceptByHalting; //I would rather have it a better way, but I'm short on Time - ~Henry
-
     private boolean turingAllowStay; //default to true since that was the old implementation
-
-	/**
-	 * A JCheckBoxMenuItem that displays and allows one to change transTuringFinal.
-	 */
-	private JCheckBoxMenuItem transTuringFinalCheckBox; 
-
-	private JCheckBoxMenuItem turingAcceptByFinalStateCheckBox; 
-	private JCheckBoxMenuItem turingAcceptByHaltingCheckBox; 
-	private JCheckBoxMenuItem turingAllowStayCheckBox;
 
     /**
      * Flag to keep track of if in this environment we should automatically
      * set the first state placed down to be the initial state. This is
      * just for quality of life reasons.
      */
-    // TODO make it possible to override this setting for individual environments (i.e. individual editor windows)
+    // TODO: make it possible to override this setting for individual environments (i.e. individual editor windows)
     //   This will likely be part of the planned update to include a preferences menu on editor windows,
-    //      not just the manu window.
+    //      not just the main window.
     private boolean autoInitialState;
-    private JCheckBoxMenuItem autoInitialStateCheckBox;
 
     /**
      * Legacy options
      */
     private boolean legacyUseLegacyIcons;
     private boolean legacyUseLegacySubmissionGui;
-    private JCheckBoxMenuItem legacyUseLegacyIconsCheckBox;
-    private JCheckBoxMenuItem legacyUseLegacySubmissionGuiCheckBox;
 
 
     public Path pathToFile;
 	
     public void setNumUndo(int nn){
     	undo_num = nn;
+        settingsMenu.getSetUndoAmountAction().updateActionText();
+    }
+
+    public int getNumUndo() {
+        return undo_num;
     }
 	
 	public Profile(){
         // Set default emptyString character to epsilon
 		emptyString = epsilon;
 
-		transTuringFinal = false;
-		transTuringFinalCheckBox = new JCheckBoxMenuItem("Enable Transitions From Turing Machine Final States");
-        transTuringFinalCheckBox.setSelected(transTuringFinal);
-		transTuringFinalCheckBox.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e)
-            {
-            	setTransitionsFromTuringFinalStateAllowed(transTuringFinalCheckBox.isSelected());
-            	savePreferences();
-            }
-        });
-
+        // Turing Machine Settings
+		turingTransFromFinal = false;
         turingAcceptByFinalState = true; //default to true, since that was the status before;
-		turingAcceptByFinalStateCheckBox = new JCheckBoxMenuItem("Accept by Final State");
-        turingAcceptByFinalStateCheckBox.setSelected(turingAcceptByFinalState);
-		turingAcceptByFinalStateCheckBox.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e)
-            {
-            	setAcceptByFinalState(turingAcceptByFinalStateCheckBox.isSelected());
-            	savePreferences();
-            }
-        });
-
         turingAcceptByHalting = false; //defaults to false, since it was not in previous JFLAP
-        turingAcceptByHaltingCheckBox = new JCheckBoxMenuItem("Accept by Halting"); 
-        turingAcceptByHaltingCheckBox.setSelected(turingAcceptByHalting); 
-		turingAcceptByHaltingCheckBox.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e)
-            {
-            	setAcceptByHalting(turingAcceptByHaltingCheckBox.isSelected());
-            	savePreferences();
-            }
-        });
-
         turingAllowStay = false; //defaults to false temporarily since that's how it was before
-        turingAllowStayCheckBox = new JCheckBoxMenuItem("Allow stay for tape head on transition"); 
-        turingAllowStayCheckBox.setSelected(turingAllowStay);
-		turingAllowStayCheckBox.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e)
-            {
-            	setAllowStay(turingAllowStayCheckBox.isSelected());
-            	savePreferences();
-            }
-        });
 
-
-        legacyUseLegacyIcons = false; //defaults to false
-        legacyUseLegacyIconsCheckBox = new JCheckBoxMenuItem("Use legacy toolbar icons");
-        legacyUseLegacyIconsCheckBox.setSelected(legacyUseLegacyIcons);
-        legacyUseLegacyIconsCheckBox.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e)
-            {
-                IconKeeper.useNewIcons = !legacyUseLegacyIconsCheckBox.isSelected();
-                setUseLegacyIcons(legacyUseLegacyIconsCheckBox.isSelected());
-                savePreferences();
-            }
-        });
-
+        // Legacy Settings
+        legacyUseLegacyIcons = false;
         legacyUseLegacySubmissionGui = false;
-        legacyUseLegacySubmissionGuiCheckBox = new JCheckBoxMenuItem("Use legacy submission interface");
-        legacyUseLegacySubmissionGuiCheckBox.setSelected(legacyUseLegacySubmissionGui);
-        legacyUseLegacySubmissionGuiCheckBox.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e)
-            {
-                setUseLegacySubmissionGui(legacyUseLegacySubmissionGuiCheckBox.isSelected());
-                savePreferences();
-            }
-        });
 
+        // Other settings
         autoInitialState = true;
-        //autoInitialStateCheckBox = new JCheckBoxMenuItem("Make 1st State the Initial State");
-        autoInitialStateCheckBox = new JCheckBoxMenuItem("Auto Set the Initial State");
-        autoInitialStateCheckBox.setSelected(autoInitialState);
-        autoInitialStateCheckBox.addActionListener(new ActionListener() {
-            public void actionPerformed(ActionEvent e)
-            {
-                setAutoInitialState(autoInitialStateCheckBox.isSelected());
-                savePreferences();
-            }
-        });
-
 	}
 	
 	/**
@@ -280,8 +208,8 @@ public class Profile {
 	 * @param t whether the transitions are allowed
 	 */
 	public void setTransitionsFromTuringFinalStateAllowed(boolean t) {
-		transTuringFinal = t;
-		transTuringFinalCheckBox.setSelected(t);
+		turingTransFromFinal = t;
+		settingsMenu.getTMPrefs().turingTransitionsFromFinalStateCheckBox.setSelected(t);
 	}
 	
 	/**
@@ -291,7 +219,7 @@ public class Profile {
 	 */
 	public void setAcceptByFinalState(boolean t) {
 		turingAcceptByFinalState = t;
-		turingAcceptByFinalStateCheckBox.setSelected(t);
+        settingsMenu.getTMPrefs().turingAcceptByFinalStateCheckBox.setSelected(t);
 	}
 	/**
 	 * Sets whether Turing machines will accept by halting.
@@ -300,7 +228,7 @@ public class Profile {
 	 */
 	public void setAcceptByHalting(boolean t) {
 		turingAcceptByHalting = t;
-		turingAcceptByHaltingCheckBox.setSelected(t);
+        settingsMenu.getTMPrefs().turingAcceptByHaltingCheckBox.setSelected(t);
 	}
 
 	/**
@@ -310,22 +238,26 @@ public class Profile {
 	 */
 	public void setAllowStay(boolean t) {
 		turingAllowStay = t;
-		turingAllowStayCheckBox.setSelected(t);
+        settingsMenu.getTMPrefs().turingAllowStayCheckBox.setSelected(t);
         TMTransitionCreator.setDirs(t);
 	}
 
     public void setUseLegacyIcons(boolean t) {
         legacyUseLegacyIcons = t;
-        legacyUseLegacyIconsCheckBox.setSelected(t);
+        settingsMenu.getLegacyOptions().legacyUseLegacyIconsCheckBox.setSelected(t);
     }
 
     public void setUseLegacySubmissionGui(boolean t) {
         legacyUseLegacySubmissionGui = t;
-        legacyUseLegacySubmissionGuiCheckBox.setSelected(t);
+        settingsMenu.getLegacyOptions().legacyUseLegacySubmissionGuiCheckBox.setSelected(t);
     }
 
     public boolean getUseLegacySubmissionGui() {
         return legacyUseLegacySubmissionGui;
+    }
+
+    public boolean getLegacyUseLegacyIcons() {
+        return legacyUseLegacyIcons;
     }
 
 	/**
@@ -334,7 +266,7 @@ public class Profile {
 	 * @return whether the transitions are allowed from final states
 	 */
 	public boolean transitionsFromTuringFinalStateAllowed() {
-		return transTuringFinal;
+		return turingTransFromFinal;
 	}
 	
     public boolean getAcceptByFinalState(){
@@ -345,45 +277,18 @@ public class Profile {
         return turingAcceptByHalting;
     }
 
+    public boolean getAllowStay(){
+        return turingAllowStay;
+    }
+
 
     public void setAutoInitialState(boolean t) {
         autoInitialState = t;
-        autoInitialStateCheckBox.setSelected(t);
+        settingsMenu.getAutoInitialStateCheckBox().setSelected(t);
     }
 
     public boolean getAutoInitialState() {
         return autoInitialState;
-    }
-
-	/**
-	 * Returns the JCheckBoxMenuItem that can allow the user to change whether
-	 * Turing machine final states are allowed.
-	 */
-	public JCheckBoxMenuItem getTuringFinalCheckBox() {
-		return transTuringFinalCheckBox;
-	}
-
-	public JCheckBoxMenuItem getAcceptByFinalStateCheckBox() {
-		return turingAcceptByFinalStateCheckBox ;
-    }
-	public JCheckBoxMenuItem getAcceptByHaltingCheckBox() {
-		return turingAcceptByHaltingCheckBox;
-	}
-
-	public JCheckBoxMenuItem getAllowStayCheckBox() {
-		return turingAllowStayCheckBox;
-	}
-
-    public JCheckBoxMenuItem getUseLegacyIconsCheckBox() {
-        return legacyUseLegacyIconsCheckBox;
-    }
-
-    public JCheckBoxMenuItem getUseLegacySubmissionGuiCheckBox() {
-        return legacyUseLegacySubmissionGuiCheckBox;
-    }
-
-    public JCheckBoxMenuItem getAutoInitialStateCheckBox() {
-        return autoInitialStateCheckBox;
     }
 
     protected static Element createElement(Document document, String tagname, Map<?, ?> attributes, String text) {
@@ -436,7 +341,7 @@ public class Profile {
             }
 
             savePreferencesHelper(EMPTY_STRING_NAME, empty, doc);
-            savePreferencesHelper(TURING_FINAL_NAME, transTuringFinal, doc);
+            savePreferencesHelper(TURING_FINAL_NAME, turingTransFromFinal, doc);
             savePreferencesHelper(UNDO_AMOUNT_NAME, undo_num, doc);
             savePreferencesHelper(AUTO_INITIAL_STATE, autoInitialState, doc);
             savePreferencesHelper(ACCEPT_FINAL_STATE, turingAcceptByFinalState, doc);
