@@ -42,6 +42,7 @@ public class Globals {
     public static String JAR_NAME = "afct-client.jar";
     public static String AFCT_DATA_FOLDER_NAME = "AFCT-Data";
     public static String PREFERENCES_FILE_NAME = "AFCT-Preferences.xml";
+    public static String FILE_CREATED_WITH_STRING = "Created with AFCT " + currentVersion + " (based on JFLAP " + gui.AboutBox.VERSION + ")";
 
     private static final String htmlProperty = "html.disable";
     public final static String UPDATE = "UPDATE";

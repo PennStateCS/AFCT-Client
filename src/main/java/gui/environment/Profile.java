@@ -42,6 +42,7 @@ import javax.xml.transform.TransformerFactoryConfigurationError;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 
+import gui.Globals;
 import gui.editor.IconKeeper;
 import gui.menu.SettingsMenu;
 import org.w3c.dom.Document;
@@ -325,8 +326,7 @@ public class Profile {
 			
 			builder = factory.newDocumentBuilder();
 			Document doc = builder.newDocument();
-			doc.appendChild(doc.createComment("Created with JFLAP "
-					+ gui.AboutBox.VERSION + "."));
+			doc.appendChild(doc.createComment(Globals.FILE_CREATED_WITH_STRING));
 			// Create and add the <structure> element.
 			Element structureElement = createElement(doc, STRUCTURE_NAME, null,
 					null);
