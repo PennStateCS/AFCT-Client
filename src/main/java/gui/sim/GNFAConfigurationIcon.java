@@ -26,7 +26,7 @@ import java.awt.*;
  * This is a configuration icon for configurations related to a generalized
  * nondeterministic finite state automata (GNFA).
  * These sorts of configurations are defined only by the state that
- * the automata is current in, plus the input left.
+ * the automata is currently in, plus the remaining input.
  *
  * @author Teddy FitzPatrick
  */
