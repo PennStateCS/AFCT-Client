@@ -61,7 +61,6 @@ public class CurvedArrow {
 		refreshCurve();
 	}
 
-
 	/**
 	 * Sets the start point.
 	 * 
@@ -362,33 +361,27 @@ public class CurvedArrow {
         double factory = length == 0.0 ? 0.0 : lengthy / length;
 
         if (myTransition.getControl() == null){
-
             control.x = (int) (centerx + curvy * HEIGHT * factory);
             control.y = (int) (centery - curvy * HEIGHT * factorx);
             high.x = (int) (centerx + curvy * HEIGHT * factory / 2.0);
             high.y = (int) (centery - curvy * HEIGHT * factorx / 2.0);
-
-        }
-        else{
+        } else{
             control.x = (int) myTransition.getControl().x;
             control.y = (int) myTransition.getControl().y;
 
             //take the vector from the center to the control, and take half of that
             double xt = control.x - centerx;
             double yt = centery - control.y;
-
             high.x = (int) (centerx + xt / 2); 
             high.y = (int) (centery - yt / 2);
         }
-
-            curve.setCurve((float) start.x, (float) start.y, (float) control.x,
-                    (float) control.y, (float) end.x, (float) end.y);
-
-            affineToText = new AffineTransform();
-            affineToText.translate(high.x, high.y);
-            affineToText.rotate(Math.atan2(lengthy, lengthx));
-            if (end.x < start.x)
-                affineToText.rotate(Math.PI);
+		curve.setCurve((float) start.x, (float) start.y, (float) control.x,
+				(float) control.y, (float) end.x, (float) end.y);
+		affineToText = new AffineTransform();
+		affineToText.translate(high.x, high.y);
+		affineToText.rotate(Math.atan2(lengthy, lengthx));
+		if (end.x < start.x)
+			affineToText.rotate(Math.PI);
 	}
 
 	/**
@@ -540,7 +533,9 @@ public class CurvedArrow {
     /** Color of the control point outer ring, default is white**/
     public static java.awt.Color CONTROL_POINT_OUTER_COLOR = new java.awt.Color(255, 255, 255);
 
-    public Transition myTransition;
+	public boolean isReflexive = false;
+
+	public Transition myTransition;
 
     public float[] dashPattern = {3.0f, 3.0f};
 
