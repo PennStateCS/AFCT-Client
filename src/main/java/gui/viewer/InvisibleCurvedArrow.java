@@ -47,11 +47,21 @@ public class InvisibleCurvedArrow extends CurvedArrow {
 	 * @param curvy
 	 *            the curvi-ness factor; 0 will create a straight line; 1 and -1
 	 *            are rather curvy
+	 * @param t
+	 *            the curve's transition
+	 * @param reflexivity
+	 *            bool: true if curve is reflexive, false otherwise
 	 */
-	public InvisibleCurvedArrow(Point start, Point end, float curvy, Transition t) {
-		super(start, end, curvy, t);
+	public InvisibleCurvedArrow(Point start, Point end, float curvy, Transition t, boolean reflexivity) {
+		super(start, end, curvy, t, reflexivity);
 	}
 
+	/**
+	 * See {@link #InvisibleCurvedArrow(Point, Point, float, Transition, boolean)} + reflexivity = false
+	 */
+	public InvisibleCurvedArrow(Point start, Point end, float curvy, Transition t) {
+		this(start, end, curvy, t, false);
+	}
 
     @Override
     public void drawAsColor(Graphics2D g, Color color) {

@@ -461,8 +461,9 @@ public class AutomatonDrawer {
 					//EDebug.print(selfTransitionMap);
 					Point storedfrom = pointOnState(states[i], (selfTransitionMap.get(trans[n])+Math.PI*.166));
 					Point storedto = pointOnState(states[i], (selfTransitionMap.get(trans[n])-Math.PI*.166));
-					CurvedArrow arrow = n == 0 ? new CurvedArrow(storedfrom, storedto, -2.0f, trans[n])
-					: new InvisibleCurvedArrow(storedfrom, storedto, -2.0f - n, trans[n]);
+					CurvedArrow arrow = n == 0
+					? new CurvedArrow(storedfrom, storedto, -2.0f, trans[n], true)
+					: new InvisibleCurvedArrow(storedfrom, storedto, -2.0f - n, trans[n], true);
 					arrow.isReflexive = true;
 
 					arrow.setLabel(trans[n].getDescription());
@@ -471,9 +472,9 @@ public class AutomatonDrawer {
 				}else{
 					//EDebug.print(selfTransitionMap);
 					selfTransitionMap.put(trans[n], -Math.PI*.5);
-					CurvedArrow arrow = n == 0 ? new CurvedArrow(from, to, -2.0f, trans[n])
-						: new InvisibleCurvedArrow(from, to, -2.0f - n, trans[n]);
-					arrow.isReflexive = true;
+					CurvedArrow arrow = n == 0
+					? new CurvedArrow(from, to, -2.0f, trans[n], true)
+					: new InvisibleCurvedArrow(from, to, -2.0f - n, trans[n], true);
                     //INSERTED for TransitionGUI
                     arrow.myTransition = trans[n];
                     //END INSERTED for TransitionGUI

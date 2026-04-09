@@ -50,8 +50,13 @@ public class CurvedArrow {
 	 * @param curvy
 	 *            the curvi-ness factor; 0 will create a straight line; 1 and -1
 	 *            are rather curvy
+	 * @param t
+	 *            the curve's transition
+	 * @param reflexivity
+	 *            bool: true if curve is reflexive, false otherwise
 	 */
-	public CurvedArrow(Point start, Point end, float curvy, Transition t) {
+	public CurvedArrow(Point start, Point end, float curvy, Transition t, boolean reflexivity) {
+		isReflexive = reflexivity;
 		curve = new QuadCurve2D.Float();
 		setStart(start);
 		setEnd(end);
@@ -59,6 +64,13 @@ public class CurvedArrow {
 		setCurvy(curvy);
         myTransition = t;
 		refreshCurve();
+	}
+
+	/**
+	 * See {@link #CurvedArrow(Point, Point, float, Transition, boolean)} + reflexivity = false
+	 */
+	public CurvedArrow(Point start, Point end, float curvy, Transition t) {
+		this(start, end, curvy, t, false);
 	}
 
 	/**
@@ -350,6 +362,8 @@ public class CurvedArrow {
 	public void refreshCurve() {
 //        System.out.println("Curve refreshing");
 		needsRefresh = false;
+
+		System.out.println(isReflexive + " " + this);
 
         double lengthx = end.x - start.x;
         double lengthy = end.y - start.y;
