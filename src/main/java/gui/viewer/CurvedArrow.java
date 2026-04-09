@@ -61,19 +61,6 @@ public class CurvedArrow {
 		refreshCurve();
 	}
 
-	/**
-	 * Sets the start point.
-	 * 
-	 * @param x1
-	 *            the x coordinate of the start point
-	 * @param y1
-	 *            the y coordinate of the start point
-	 */
-	public void setStart(int x1, int y1) {
-		start.x = x1;
-		start.y = y1;
-		needsRefresh = true;
-	}
 
 	/**
 	 * Sets the start point.
@@ -83,20 +70,6 @@ public class CurvedArrow {
 	 */
 	public void setStart(Point start) {
 		this.start = start;
-		needsRefresh = true;
-	}
-
-	/**
-	 * Sets the end point.
-	 * 
-	 * @param x2
-	 *            the x coordinate of the end point
-	 * @param y2
-	 *            the y coordinate of the end point
-	 */
-	public void setEnd(int x2, int y2) {
-		end.x = x2;
-		end.y = y2;
 		needsRefresh = true;
 	}
 
