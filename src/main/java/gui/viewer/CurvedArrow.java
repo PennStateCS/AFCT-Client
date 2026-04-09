@@ -377,7 +377,29 @@ public class CurvedArrow {
             control.y = (int) (centery - curvy * HEIGHT * factorx);
             high.x = (int) (centerx + curvy * HEIGHT * factory / 2.0);
             high.y = (int) (centery - curvy * HEIGHT * factorx / 2.0);
-        } else{
+        }  else if (isReflexive){
+			// Control point moved from default position on reflexive arrow
+			control.x = (int) myTransition.getControl().x;
+			control.y = (int) myTransition.getControl().y;
+
+			Point statePoint = myTransition.getFromState().getPoint();
+			// Importing constants of rendering dimensions/angles
+			double reflex_angle = AutomatonDrawer.REFLEXIVE_ANGLE;
+			double radii = StateDrawer.STATE_RADIUS;
+			// Calculating a new position for the start and end points of the arrow
+			double psi = Math.atan2(control.y - statePoint.y, control.x - statePoint.x);
+			double startAngle = psi + reflex_angle;
+			double endAngle = psi - reflex_angle;
+			// update arrow start position
+			start.x = (int) (statePoint.x + radii * Math.cos(startAngle));
+			start.y = (int) (statePoint.y + radii * Math.sin(startAngle));
+			// update arrow end position
+			end.x = (int) (statePoint.x + radii * Math.cos(endAngle));
+			end.y = (int) (statePoint.y + radii * Math.sin(endAngle));
+
+			high.x = (int) (centerx + curvy * HEIGHT * factory / 2.0);
+			high.y = (int) (centery - curvy * HEIGHT * factorx / 2.0);
+		} else{
 			// Control point moved from default position on non-reflexive arrow
             control.x = (int) myTransition.getControl().x;
             control.y = (int) myTransition.getControl().y;
