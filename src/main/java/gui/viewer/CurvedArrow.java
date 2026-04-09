@@ -360,10 +360,7 @@ public class CurvedArrow {
 	 * Refreshes the curve object.
 	 */
 	public void refreshCurve() {
-//        System.out.println("Curve refreshing");
 		needsRefresh = false;
-
-		System.out.println(isReflexive + " " + this);
 
         double lengthx = end.x - start.x;
         double lengthy = end.y - start.y;
@@ -374,12 +371,14 @@ public class CurvedArrow {
         double factorx = length == 0.0 ? 0.0 : lengthx / length;
         double factory = length == 0.0 ? 0.0 : lengthy / length;
 
+		// Control point is never adjusted; curve in its default orientation
         if (myTransition.getControl() == null){
             control.x = (int) (centerx + curvy * HEIGHT * factory);
             control.y = (int) (centery - curvy * HEIGHT * factorx);
             high.x = (int) (centerx + curvy * HEIGHT * factory / 2.0);
             high.y = (int) (centery - curvy * HEIGHT * factorx / 2.0);
         } else{
+			// Control point moved from default position on non-reflexive arrow
             control.x = (int) myTransition.getControl().x;
             control.y = (int) myTransition.getControl().y;
 
