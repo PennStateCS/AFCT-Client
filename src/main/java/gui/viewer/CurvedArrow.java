@@ -43,33 +43,6 @@ public class CurvedArrow {
 	/**
 	 * Instantiates a <CODE>CurvedArrow</CODE> object.
 	 * 
-	 * @param x1
-	 *            the x coordinate of the start point
-	 * @param y1
-	 *            the y coordinate of the start point
-	 * @param x2
-	 *            the x coordinate of the end point
-	 * @param y2
-	 *            the y coordinate of the end point
-	 * @param curvy
-	 *            the curvi-ness factor; 0 will create a straight line; 1 and -1
-	 *            are rather curvy
-	 */
-	public CurvedArrow(int x1, int y1, int x2, int y2, float curvy, Transition t) {
-		curve = new QuadCurve2D.Float();
-		start = new Point();
-		end = new Point();
-		control = new Point();
-		setStart(x1, y1);
-		setEnd(x2, y2);
-		setCurvy(curvy);
-        myTransition = t;
-		refreshCurve();
-	}
-
-	/**
-	 * Instantiates a <CODE>CurvedArrow</CODE> object.
-	 * 
 	 * @param start
 	 *            the start point
 	 * @param end

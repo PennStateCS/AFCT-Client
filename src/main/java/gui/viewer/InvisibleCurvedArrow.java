@@ -40,25 +40,6 @@ public class InvisibleCurvedArrow extends CurvedArrow {
 	/**
 	 * Instantiates an <CODE>InvisibleCurvedArrow</CODE> object.
 	 * 
-	 * @param x1
-	 *            the x coordinate of the start point
-	 * @param y1
-	 *            the y coordinate of the start point
-	 * @param x2
-	 *            the x coordinate of the end point
-	 * @param y2
-	 *            the y coordinate of the end point
-	 * @param curvy
-	 *            the curvi-ness factor; 0 will create a straight line; 1 and -1
-	 *            are rather curvy
-	 */
-	public InvisibleCurvedArrow(int x1, int y1, int x2, int y2, float curvy, Transition t) {
-		super(x1, y1, x2, y2, curvy, t);
-	}
-
-	/**
-	 * Instantiates an <CODE>InvisibleCurvedArrow</CODE> object.
-	 * 
 	 * @param start
 	 *            the start point
 	 * @param end
