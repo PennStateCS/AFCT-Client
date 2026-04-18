@@ -101,13 +101,19 @@ public class GenerateOCRDataAction extends RestrictedAction{
             // remove orphaned states
             removeOrphanedStates(this.automaton);
 
+            // check that the automaton still has states after pruning
+            if (this.automaton.getStates().length < 1) {
+                this.automaton.clear();
+                continue;
+            }
+
             // choose a layout algorithm
             layoutProcess algorithmCode = chooseLayoutProcess(numStatesForThisExample, numTransitions);
 
             // apply the algorithm
             applyLayoutAlgorithm(algorithmCode);
 
-            // In the case that the initial state is more on the right side mirror the automaton
+            // In the case that the initial state is more on the right side, mirror the automaton
             // across the vertical axis because real life people probably don't put the initial
             // state to the right.
             ensureInitialStateOnLeftSide(this.automaton);
@@ -361,8 +367,8 @@ public class GenerateOCRDataAction extends RestrictedAction{
 
         for (State s : states) {
             Point point = s.getPoint();
-            // these are just magic numbers that subjectivly give good results
-            Point newPoint = new Point(point.x+200, point.y+100);
+            // these are just magic numbers that subjectively give good results
+            Point newPoint = new Point(point.x+200, point.y+20);
             s.setPoint(newPoint);
         }
     }
@@ -403,7 +409,7 @@ public class GenerateOCRDataAction extends RestrictedAction{
         }
 
         states = automaton.getStates();
-        if (haveToChooseInitialState) {
+        if (haveToChooseInitialState && states.length > 0) {
             int rand = (int)(Math.random() * states.length);
             automaton.setInitialState(states[rand]);
         }
