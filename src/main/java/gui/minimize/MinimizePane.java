@@ -26,6 +26,7 @@ import automata.graph.*;
 import automata.graph.layout.GEMLayoutAlgorithm;
 import gui.SplitPaneFactory;
 import gui.editor.*;
+import gui.environment.AutomatonEnvironment;
 import gui.environment.Environment;
 import gui.tree.*;
 import gui.viewer.*;

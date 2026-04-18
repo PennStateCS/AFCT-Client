@@ -75,15 +75,21 @@ public class SelectionDrawer extends AutomatonDrawer {
 	 * @param state
 	 *            the state to draw
 	 */
-	public void drawState(Graphics g, State state) {
+	@Override
+	public void drawState(Graphics g, State state, boolean ignoreSelected) {
 		if (selected.contains(state)) {
 			getStateDrawer().drawState(g, getAutomaton(), state,
-					state.getPoint(), SELECTED_COLOR);
+					state.getPoint(), SELECTED_COLOR, ignoreSelected);
 			if (doesDrawStateLabels())
 				getStateDrawer().drawStateLabel(g, state, state.getPoint(),
 						StateDrawer.STATE_COLOR);
 		} else
-			super.drawState(g, state);
+			super.drawState(g, state, ignoreSelected);
+	}
+
+	@Override
+	public void drawState(Graphics g, State state) {
+		drawState(g, state, false);
 	}
 
 	/**

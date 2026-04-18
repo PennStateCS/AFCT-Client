@@ -5,9 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
-import com.sun.tools.javac.Main;
 import gui.popups.ExtensionPopup;
-import submission.AFCTClient;
 import submission.SessionHandler;
 
 import javax.swing.*;
@@ -24,6 +22,7 @@ import java.util.Objects;
 import java.util.prefs.Preferences;
 
 import static gui.editor.IconKeeper.getRefreshIcon;
+import static gui.viewer.StateDrawer.HIGHLIGHT_COLOR;
 import static java.lang.Math.abs;
 import static java.lang.Math.floor;
 
@@ -43,9 +42,28 @@ public class Globals {
     public static String JAR_NAME = "afct-client.jar";
     public static String AFCT_DATA_FOLDER_NAME = "AFCT-Data";
     public static String PREFERENCES_FILE_NAME = "AFCT-Preferences.xml";
+    public static String FILE_CREATED_WITH_STRING = "Created with AFCT " + currentVersion + " (based on JFLAP " + gui.AboutBox.VERSION + ")";
 
     private static final String htmlProperty = "html.disable";
     public final static String UPDATE = "UPDATE";
+
+    public static final Color FROM_COLOR = new Color(37,99,235);
+    //public static Color TO_COLOR = new Color(84,132,234);
+    //public static final Color BOTH_COLOR = new Color(84,132,234);
+    //public static final Color BOTH_COLOR = new Color(71,154,188);
+    //public static final Color BOTH_COLOR = new Color(54,128,211);
+    //public static final Color BOTH_COLOR = new Color(68,135,134);
+    //public static final Color BOTH_COLOR = new Color(108,69,247);
+    public static final Color BOTH_COLOR = new Color(116, 49, 255);
+    //public static final Color BOTH_COLOR = new Color(84,116,229);
+    public static final Color TEST_COLOR = new Color(84,255,132);
+    //public static Color TO_COLOR = new Color(178,255,255);
+    //public static final Color TO_COLOR = new Color(153,255,255);
+    //public static final Color TO_COLOR = new Color(127,255,255);
+    //public static final Color TO_COLOR = new Color(69,129,142);
+    //public static final Color TO_COLOR = new Color(32,178,204);
+    public static final Color TO_COLOR = HIGHLIGHT_COLOR;
+    public static final Color NEITHER_COLOR = new Color(216,216,216);
 
     private static int positioningFudgeFactor = 20;
 
@@ -637,8 +655,12 @@ public class Globals {
         positionFrameNearWindow(frame, targetPosition, window, false);
     }
 
-    public static void changeSize(Component component, int fontSize) {
-        component.setFont(component.getFont().deriveFont((float) fontSize));
+    public static void changeSize(Component component, float fontSize) {
+        component.setFont(component.getFont().deriveFont(fontSize));
+    }
+
+    public static void changeFontSize(Component component, float fontSize) {
+        changeSize(component, fontSize);
     }
 
     public static void unBoldFont(Component component) {
@@ -785,6 +807,7 @@ public class Globals {
                 dataFolderPath = Paths.get(homeDir, "AppData", "Local", AFCT_DATA_FOLDER_NAME);
                 break;
             case MAC:
+                // TODO This path seems to not work for macOS? Need to look into this later...
                 dataFolderPath = Paths.get(homeDir, "Library", "Application Support", AFCT_DATA_FOLDER_NAME);
                 break;
             case LINUX:

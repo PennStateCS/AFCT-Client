@@ -49,8 +49,7 @@ public class BlockTransitionTool extends TransitionTool {
 	 */
 	public BlockTransitionTool(AutomatonPane view, AutomatonDrawer drawer,
 		TransitionCreator creator) {
-		super(view, drawer);
-		this.creator = creator;
+		super(view, drawer, creator);
 	}
 
 	/**
@@ -70,8 +69,6 @@ public class BlockTransitionTool extends TransitionTool {
 	 */
 	public BlockTransitionTool(AutomatonPane view, AutomatonDrawer drawer) {
 		super(view, drawer);
-		this.creator = TransitionCreator.creatorForAutomaton(getAutomaton(),
-				getView());
 	}
 
 	/**

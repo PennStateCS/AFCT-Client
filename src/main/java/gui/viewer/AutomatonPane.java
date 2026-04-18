@@ -158,7 +158,7 @@ public class AutomatonPane extends JPanel implements Scrollable {
 		Graphics2D g2 = (Graphics2D) g;
 
 		g2.transform(transform);
-		drawer.drawAutomaton(g);
+		drawer.drawAutomaton(g, this instanceof ZoomPane);
 
 		//g2.translate(-transform.getTranslateX(), -transform.getTranslateY());
 		//g2.scale(1.0/transform.getScaleX(), 1.0/transform.getScaleY());

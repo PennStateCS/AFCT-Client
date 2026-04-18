@@ -20,6 +20,7 @@
 
 package gui.editor;
 
+import automata.Transition;
 import gui.environment.AutomatonEnvironment;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
@@ -57,8 +58,7 @@ public class TransitionTool extends Tool {
 	 */
 	public TransitionTool(AutomatonPane view, AutomatonDrawer drawer,
 			TransitionCreator creator) {
-		super(view, drawer);
-		this.creator = creator;
+		super(view, drawer, creator);
 	}
 
 	/**
@@ -69,8 +69,6 @@ public class TransitionTool extends Tool {
 	 */
 	public TransitionTool(AutomatonPane view, AutomatonDrawer drawer) {
 		super(view, drawer);
-		this.creator = TransitionCreator.creatorForAutomaton(getAutomaton(),
-				getView());
 	}
 
 	/**
@@ -99,8 +97,17 @@ public class TransitionTool extends Tool {
 	 *            the mouse event
 	 */
 	public void mousePressed(MouseEvent event) {
-		if (getDrawer().getAutomaton().getEnvironmentFrame() !=null)
-    		((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
+		getView().getDrawer().showConnected = false;
+//		if (getDrawer().getAutomaton().getEnvironmentFrame() !=null)
+//    		((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
+
+		// Right-clicking a transition prompts the edit menu
+		if (event.isPopupTrigger() || event.getButton() == MouseEvent.BUTTON3) {
+			first = null;
+			showPopup(event);
+			return;
+		}
+
 		first = getDrawer().stateAtPoint(event.getPoint());
 		if (first == null)
 			return;
@@ -132,10 +139,16 @@ public class TransitionTool extends Tool {
 	 */
 	public void mouseReleased(MouseEvent event) {
 		// Did we even start at a state?
-		if (first == null)
+		if (first == null) {
+			// Handle whether a popup should be shown
+			showPopup(event);
 			return;
+		}
 		State state = getDrawer().stateAtPoint(event.getPoint());
 		if (state != null) {
+			if (getDrawer().getAutomaton().getEnvironmentFrame() !=null) {
+				((AutomatonEnvironment) getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
+			}
 		    creator.createTransition(first, state);
 		}
 		first = null;
@@ -174,9 +187,6 @@ public class TransitionTool extends Tool {
 
 	/** The point over which we are hovering. */
 	protected Point hover;
-
-	/** The transition creator. */
-	protected TransitionCreator creator;
 
 	/** The stroke object that draws the lines. */
 	private static Stroke STROKE = new java.awt.BasicStroke(2.4f);

@@ -60,7 +60,7 @@ public class BuildingBlockTool extends Tool {
 	 */
 	public BuildingBlockTool(AutomatonPane view, AutomatonDrawer drawer,
 			TransitionCreator creator) {
-		super(view, drawer);
+		super(view, drawer, creator);
 
 	}
 

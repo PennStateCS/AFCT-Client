@@ -20,11 +20,13 @@
 
 package gui.viewer;
 
-import java.awt.Graphics2D;
-import java.awt.Point;
+import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.Area;
 import automata.Transition;
+
+import static gui.Globals.*;
+import static gui.Globals.NEITHER_COLOR;
 
 /**
  * An invisible curved arrow is a curved arrow where the actual line and arrow
@@ -38,25 +40,6 @@ public class InvisibleCurvedArrow extends CurvedArrow {
 	/**
 	 * Instantiates an <CODE>InvisibleCurvedArrow</CODE> object.
 	 * 
-	 * @param x1
-	 *            the x coordinate of the start point
-	 * @param y1
-	 *            the y coordinate of the start point
-	 * @param x2
-	 *            the x coordinate of the end point
-	 * @param y2
-	 *            the y coordinate of the end point
-	 * @param curvy
-	 *            the curvi-ness factor; 0 will create a straight line; 1 and -1
-	 *            are rather curvy
-	 */
-	public InvisibleCurvedArrow(int x1, int y1, int x2, int y2, float curvy, Transition t) {
-		super(x1, y1, x2, y2, curvy, t);
-	}
-
-	/**
-	 * Instantiates an <CODE>InvisibleCurvedArrow</CODE> object.
-	 * 
 	 * @param start
 	 *            the start point
 	 * @param end
@@ -64,22 +47,40 @@ public class InvisibleCurvedArrow extends CurvedArrow {
 	 * @param curvy
 	 *            the curvi-ness factor; 0 will create a straight line; 1 and -1
 	 *            are rather curvy
+	 * @param t
+	 *            the curve's transition
+	 * @param reflexivity
+	 *            bool: true if curve is reflexive, false otherwise
 	 */
-	public InvisibleCurvedArrow(Point start, Point end, float curvy, Transition t) {
-		super(start, end, curvy, t);
+	public InvisibleCurvedArrow(Point start, Point end, float curvy, Transition t, boolean reflexivity) {
+		super(start, end, curvy, t, reflexivity);
 	}
 
 	/**
-	 * Draws the arrow on the indicated graphics environment.
-	 * 
-	 * @param g
-	 *            the graphics to draw this arrow upon
+	 * See {@link #InvisibleCurvedArrow(Point, Point, float, Transition, boolean)} + reflexivity = false
 	 */
-	public void draw(Graphics2D g) {
-		if (needsRefresh)
-			refreshCurve();
-		drawText(g);
+	public InvisibleCurvedArrow(Point start, Point end, float curvy, Transition t) {
+		this(start, end, curvy, t, false);
 	}
+
+    @Override
+    public void drawAsColor(Graphics2D g, Color color) {
+        if (needsRefresh)
+            refreshCurve();
+        drawText(g, color);
+    }
+
+    @Override
+    public void drawAsGradient(Graphics2D g, Color startColor, Color endColor, CONNECTION_TYPE connectionType) {
+        if (needsRefresh)
+            refreshCurve();
+        switch (connectionType) {
+            case FROM -> drawText(g, FROM_COLOR);
+            case TO -> drawText(g, TO_COLOR);
+            case BOTH -> drawText(g, BOTH_COLOR);
+            case NEITHER -> drawText(g, NEITHER_COLOR);
+        }
+    }
 
 	/**
 	 * Draws a highlight of the curve. This will only highlight the label.

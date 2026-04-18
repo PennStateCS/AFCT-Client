@@ -48,6 +48,7 @@ import automata.mealy.MooreMachine;
 import automata.turing.TuringMachine;
 import automata.turing.TuringMachineBuildingBlocks;
 
+import gui.environment.Universe;
 import gui.viewer.AutomatonPane;
 
 
@@ -72,6 +73,8 @@ public class Automaton implements Serializable, Cloneable {
 	private static final long serialVersionUID = 1L;
 
     private HashMap<State, Point> savedStatePoints;
+
+    private boolean skipAutoInitialState = false;
 
 	/**
 	 * Creates an instance of <CODE>Automaton</CODE>. The created instance
@@ -107,6 +110,7 @@ public class Automaton implements Serializable, Cloneable {
 			System.err.println("Warning: clone of automaton failed!");
 			return null;
 		}
+        a.setSkipAutoInitialState(true);
 		a.setEnvironmentFrame(this.getEnvironmentFrame());
 		
 		
@@ -164,6 +168,7 @@ public class Automaton implements Serializable, Cloneable {
 
 		}
 
+        a.setSkipAutoInitialState(false);
 		// Should be done now!
 		return a;
 	}
@@ -315,7 +320,12 @@ public class Automaton implements Serializable, Cloneable {
 		}
 		if (transitions.contains(trans))
 			return;
-        if(trans.getToState() == null || trans.getFromState() == null) return;
+		// check that the transition's states exist in the automaton
+		State fromState = trans.getFromState();
+		State toState = trans.getToState();
+		if (fromState == null || toState == null) return;
+		if (!states.contains(fromState) || !states.contains(toState)) return;
+
 		transitions.add(trans);
         if(transitionFromStateMap == null) transitionFromStateMap = new HashMap<>();
 		List<Transition> list = (List<Transition>) transitionFromStateMap.get(trans.getFromState());
@@ -434,11 +444,10 @@ public class Automaton implements Serializable, Cloneable {
 	}
 
 	/**
-	 * Adds a new state to this automata. Clients should use the <CODE>createState</CODE>
+	 * Adds a new state to this automaton. Clients should use the <CODE>createState</CODE>
 	 * method instead.
 	 * 
-	 * @param state
-	 *            the state to add
+	 * @param state the state to add
 	 */
 	public final void addState(State state) {
 		states.add(state);
@@ -446,9 +455,20 @@ public class Automaton implements Serializable, Cloneable {
 		transitionToStateMap.put(state, new LinkedList<Transition>());
 		cachedStates = null;
 
-		distributeStateEvent(new AutomataStateEvent(this, state, true, false,
-				false));
+        // check if this is the first state that has been placed down in this environment
+        // if so, mark it automatically as the initial state for quality of life reasons
+        if (!this.skipAutoInitialState && Universe.curProfile.getAutoInitialState()) {
+            if (this.states.size() == 1) {
+                setInitialState(state);
+            }
+        }
+
+		distributeStateEvent(new AutomataStateEvent(this, state, true, false, false));
 	}
+
+    public void setSkipAutoInitialState(boolean skip) {
+        this.skipAutoInitialState = skip;
+    }
 
 	/**
 	 * Removes a state from the automaton. This will also remove all transitions
@@ -593,7 +613,89 @@ public class Automaton implements Serializable, Cloneable {
 
         return selectedStates.toArray(new State[0]);
     }
-	
+
+	public Transition[] getSelectedTransitions() {
+		Transition[] transitions = getTransitions();
+		ArrayList<Transition> selectedTransitions = new ArrayList<>();
+		for (Transition transition : transitions) {
+			if (transition.isSelected) {
+				selectedTransitions.add(transition);
+			}
+		}
+		return selectedTransitions.toArray(new Transition[0]);
+	}
+
+	public boolean anyStatesSelected() {
+		boolean anySelected = false;
+		// slight optimization as iterating an Array is O(n), but iterating a HashSet is O(n+m)
+		// where n is the number of elements in the set and m is the "capacity" of the backing (the number of buckets)
+		if (cachedStates != null) {
+			for (State state : cachedStates) {
+				if (state.isSelected()) {
+					anySelected = true;
+					break;
+				}
+			}
+		} else {
+			for (State state : states) {
+				if (state.isSelected()) {
+					anySelected = true;
+					break;
+				}
+			}
+		}
+
+		return anySelected;
+	}
+
+	public boolean anyTransitionsSelected() {
+		boolean anySelected = false;
+		// slight optimization as iterating an Array is O(n), but iterating a HashSet is O(n+m)
+		// where n is the number of elements in the set and m is the "capacity" of the backing (the number of buckets)
+		if (cachedTransitions != null) {
+			for (Transition transition : cachedTransitions) {
+				if (transition.isSelected) {
+					anySelected = true;
+					break;
+				}
+			}
+		} else {
+			for (Transition transition : transitions) {
+				if (transition.isSelected) {
+					anySelected = true;
+					break;
+				}
+			}
+		}
+		return anySelected;
+	}
+
+	public boolean anyStatesOrTransitionsSelected() {
+		// For now, check for selected states first as multiple can be selected at once.
+		// As (currently) only one transition can be selected at a time, the chance of hitting early stopping is lower
+		if (anyStatesSelected()) {
+			return true;
+		} else {
+			return anyTransitionsSelected();
+		}
+
+		// This should only be used if, in the future, multiple transitions can be selected at once
+//		// Check size to determine order to check for selected in to try to reduce time taken
+//		if (states.size() < transitions.size()) {
+//			if (anyStatesSelected()) {
+//				return true;
+//			} else {
+//				return anyTransitionsSelected();
+//			}
+//		} else {
+//			if (anyTransitionsSelected()) {
+//				return true;
+//			} else {
+//				return anyStatesSelected();
+//			}
+//		}
+	}
+
 	public void selectStatesWithinBounds(Rectangle bounds){
 //        if (bounds.width == -1 && bounds.height == -1) {
 //            return;
@@ -616,6 +718,19 @@ public class Automaton implements Serializable, Cloneable {
 			}
         }
     }
+
+//    public void addSelectToStatesWithinBounds(Rectangle bounds, boolean doNotDeselect) {
+//        State[] states = getStates();
+//        for (State state : states) {
+//            if (bounds.contains(state.getPoint())) {
+//                state.setSelect(doNotDeselect || !state.isSelected());
+//            }
+//        }
+//    }
+//
+//    public void addSelectToStatesWithinBounds(Rectangle bounds){
+//        addSelectToStatesWithinBounds(bounds, false);
+//    }
 
     public void deselectStatesAndTransitions() {
         deselectAllStates();
@@ -1295,7 +1410,7 @@ public class Automaton implements Serializable, Cloneable {
 	protected State initialState = null;
 
 	/** The list of transitions in this automaton. */
-	protected Set<Object> transitions;
+	protected Set<Transition> transitions;
 
 	/**
 	 * A mapping from states to a list holding transitions from those states.
@@ -1352,7 +1467,7 @@ public class Automaton implements Serializable, Cloneable {
     	HashSet<Object> t = new HashSet<Object>(transitions);
 		for (Object o:t)
 			removeTransition((Transition)o);
-		transitions = new HashSet<Object>();
+		transitions = new HashSet<>();
 		
 		
 		t = new HashSet<Object>(states);
@@ -1394,6 +1509,7 @@ public class Automaton implements Serializable, Cloneable {
     private static int duplicateOffset = 15;
 
     private static void copyStatesAndTransitions(Automaton from, Automaton to, boolean overwriteInitialState, boolean onlyCopySelected, boolean copyStateNames) {
+        to.setSkipAutoInitialState(true);
         State[] states;
         if (onlyCopySelected) {
             states = from.getSelectedStates();
@@ -1461,6 +1577,7 @@ public class Automaton implements Serializable, Cloneable {
         if (to.view != null) {
             to.view.repaint();
         }
+        to.setSkipAutoInitialState(false);
     }
 
     public void duplicateSelected(boolean copyStateNames) {
@@ -1561,11 +1678,12 @@ public class Automaton implements Serializable, Cloneable {
         // Try to create a new object.
         try {
             // I am a bad person for writing this hack.
-//			if (this instanceof TuringMachine)
-//				a = new TuringMachine(((TuringMachine) this).tapes());
-//			else
-            //a = (Automaton) getClass().newInstance();
-            automaton = (Automaton) getClass().getDeclaredConstructor().newInstance();
+			if (this instanceof TuringMachine) {
+				automaton = new TuringMachine(((TuringMachine) this).tapes());
+			} else {
+				//a = (Automaton) getClass().newInstance();
+				automaton = (Automaton) getClass().getDeclaredConstructor().newInstance();
+			}
         } catch (Throwable e) {
             // Well golly, we're sure screwed now!
             System.err.println("Warning: clone of automaton failed!");

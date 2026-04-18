@@ -197,8 +197,11 @@ public class UndoKeeper {
     }
 
     private void updateUndoRedoButtonState(){
-        EditorPane ep = (EditorPane)myMaster.getEnvironmentFrame().getEnvironment().getActive();
-        ep.toolbar.enableOrDisableUndo(!myDeck.isEmpty());
-        ep.toolbar.enableOrDisableRedo(!myBackDeck.isEmpty());
+        Component pane = myMaster.getEnvironmentFrame().getEnvironment().getActive();
+        if (pane instanceof EditorPane){
+            EditorPane ep = (EditorPane)myMaster.getEnvironmentFrame().getEnvironment().getActive();
+            ep.toolbar.enableOrDisableUndo(!myDeck.isEmpty());
+            ep.toolbar.enableOrDisableRedo(!myBackDeck.isEmpty());
+        }
     }
 }

@@ -29,15 +29,15 @@ import java.awt.event.InputEvent;
 import java.awt.event.KeyEvent;
 import java.io.Serializable;
 
-import javax.swing.JFileChooser;
-import javax.swing.KeyStroke;
-import javax.swing.JOptionPane;
+import javax.swing.*;
+
 import debug.EDebug;
 
 /**
  * The <CODE>SetUndoAmount</CODE> is an action to set the amount of Undos that are stored for automaton construction.
  * 
  * @author Henry Qin
+ * @author Jesse Burdick-Pless
  */
 
 public class SetUndoAmountAction extends RestrictedAction {
@@ -48,13 +48,9 @@ public class SetUndoAmountAction extends RestrictedAction {
 
 	/**
 	 * Instantiates a new <CODE>SetUndoAmountAction</CODE>.
-	 * 
-	 * @param environment
-	 *            the environment that holds the serializable object
 	 */
 	public SetUndoAmountAction () {
-		super("Set Undo Limit", null);
-		//this.environment = environment;
+		super(getActionText(), null);
 	}
 
 	/**
@@ -85,7 +81,29 @@ public class SetUndoAmountAction extends RestrictedAction {
         Universe.curProfile.setNumUndo(n);
         Universe.curProfile.savePreferences();
 
+		updateActionText();
+	}
 
+	private static String getActionText() {
+		String base = "Set Undo Limit";
+		Integer undoNum = null;
+		if (Universe.curProfile != null) {
+			undoNum = Universe.curProfile.getNumUndo();
+		}
+
+		if (undoNum != null) {
+			if (undoNum < 0) {
+				base += " (currently unlimited)";
+			} else {
+				base += " (currently " + undoNum + ")";
+			}
+		}
+
+		return base;
+	}
+
+	public void updateActionText() {
+		this.putValue(Action.NAME, getActionText());
 	}
 
 	/**
@@ -99,8 +117,5 @@ public class SetUndoAmountAction extends RestrictedAction {
 	public static boolean isApplicable(Object object) {
 		return true;
 	}
-
-	/** The environment that this save action accesses its Undo from. */
-	protected Environment environment;
 
 }

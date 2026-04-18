@@ -28,6 +28,8 @@ import automata.Configuration;
 import automata.State;
 import automata.Transition;
 
+import static gui.environment.Profile.PDA_STACK_BOTTOM_MARKER;
+
 public class PDAStepWithClosureSimulator extends PDAStepByStateSimulator {
 
 	public PDAStepWithClosureSimulator(Automaton automaton) {
@@ -49,7 +51,7 @@ public class PDAStepWithClosureSimulator extends PDAStepByStateSimulator {
 		Configuration[] configs = new Configuration[closure.length];
 		for (int k = 0; k < closure.length; k++) {
 			CharacterStack stack = new CharacterStack();
-			stack.push("Z");
+			stack.push(PDA_STACK_BOTTOM_MARKER);
 			configs[k] = new PDAConfiguration(closure[k], null, input, input,
 					stack, myAcceptance);
 		}

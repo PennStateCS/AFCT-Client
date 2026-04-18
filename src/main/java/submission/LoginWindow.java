@@ -69,7 +69,6 @@ public class LoginWindow extends JFrame {
         if (!this.isVisible()) {
             this.populateGui(sessionHandler);
         }
-        loginResultLabel.setText(defaultLoginResultLabelText);
         this.pack();
         this.setVisible(true);
         this.toFront();
@@ -224,6 +223,8 @@ public class LoginWindow extends JFrame {
             public void windowClosing(java.awt.event.WindowEvent e) {
                 saveLoginInfo();
                 frame.dispose();
+                // Clear loginResultLabel
+                loginResultLabel.setText(defaultLoginResultLabelText);
                 openQueuedSubmitWindow();
             }
         };

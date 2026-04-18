@@ -139,6 +139,14 @@ public class AutomatonEnvironment extends Environment {
                 automaton.removeTransition(transition);
             }
         }
+
+        // TODO: there is still some jank with this -- deleting a selected transition when in highlight mode is wacky
+        if (automaton.getView().getDrawer().showConnected) {
+            // If nothing is selected at this point
+            if (!automaton.anyStatesOrTransitionsSelected()) {
+                automaton.getView().getDrawer().showConnected = false;
+            }
+        }
     }
 
     @Override
@@ -197,7 +205,7 @@ public class AutomatonEnvironment extends Environment {
                     Globals.lastCopiedString = pastedText;
                     Globals.lastCopiedAutomaton = tempAutomaton;
                 }
-                Automaton.copyBetweenAutomaton(Globals.lastCopiedAutomaton, automaton, false, shiftHeld);
+                Automaton.copyBetweenAutomaton(Globals.lastCopiedAutomaton, automaton, false, !shiftHeld);
             } catch (UnsupportedFlavorException | IOException e) {
                 JOptionPane.showMessageDialog(this, "The clipboard doesn't contain an AFCT structure.",
                         "AFCT", JOptionPane.ERROR_MESSAGE);

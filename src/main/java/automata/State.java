@@ -277,10 +277,10 @@ public class State implements Serializable {
 	
     public int specialHash(){
     	
-         return point.hashCode() 
-         + (myNote == null? -1 : myNote.specialHash()) 
-         + (getLabel() == null ? -1 
-        		 : getLabel().hashCode());
+         return point.hashCode()
+				 + (myNote == null? -1 : myNote.specialHash())
+				 + (getLabel() == null ? -1 : getLabel().hashCode())
+				 + (name == null ? -1 : name.hashCode());
     }
 
 
@@ -374,5 +374,15 @@ public class State implements Serializable {
 	public boolean isSelected(){
 		return selected;
 	}
+
+    private boolean delayDeselect = false;
+
+    public void setDelayDeselect(boolean delayDeselect) {
+        this.delayDeselect = delayDeselect;
+    }
+
+    public boolean getDelayDeselect(){
+        return delayDeselect;
+    }
 
 }

@@ -22,6 +22,8 @@ package gui.action;
 
 import java.awt.event.InputEvent;
 
+import static gui.editor.EditorKeyBindings.CTRL_CMD_SHORTCUT_MASK;
+
 /**
  * The <TT>MenuConstants</TT> class is a simple class for retrieving
  * information universally important to menu items.
@@ -53,12 +55,13 @@ public class MenuConstants {
 	 * Initializes the value for the main menu mask.
 	 */
 	private static void initMainMenuMask() {
-		String s = System.getProperty("os.name");
-		if ((s.lastIndexOf("Windows") != -1)
-				|| (s.lastIndexOf("windows") != -1))
-			MAIN_MENU_MASK = InputEvent.CTRL_MASK;
-		else
-			MAIN_MENU_MASK = InputEvent.META_MASK;
+        MAIN_MENU_MASK = CTRL_CMD_SHORTCUT_MASK;
+//		String s = System.getProperty("os.name");
+//		if ((s.lastIndexOf("Windows") != -1)
+//				|| (s.lastIndexOf("windows") != -1))
+//			MAIN_MENU_MASK = InputEvent.CTRL_MASK;
+//		else
+//			MAIN_MENU_MASK = InputEvent.META_MASK;
 	}
 
 	/** The main mask for keystrokes in a menu. */

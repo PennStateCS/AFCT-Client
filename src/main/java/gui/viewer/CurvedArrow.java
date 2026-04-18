@@ -25,6 +25,12 @@ import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 
 import automata.Transition;
+import automata.pda.PDATransition;
+import automata.turing.TMTransition;
+import automata.turing.Tape;
+import gui.environment.Universe;
+
+import static gui.Globals.*;
 
 /**
  * This is a simple class for storing and drawing a curved line with possible
@@ -37,33 +43,6 @@ public class CurvedArrow {
 	/**
 	 * Instantiates a <CODE>CurvedArrow</CODE> object.
 	 * 
-	 * @param x1
-	 *            the x coordinate of the start point
-	 * @param y1
-	 *            the y coordinate of the start point
-	 * @param x2
-	 *            the x coordinate of the end point
-	 * @param y2
-	 *            the y coordinate of the end point
-	 * @param curvy
-	 *            the curvi-ness factor; 0 will create a straight line; 1 and -1
-	 *            are rather curvy
-	 */
-	public CurvedArrow(int x1, int y1, int x2, int y2, float curvy, Transition t) {
-		curve = new QuadCurve2D.Float();
-		start = new Point();
-		end = new Point();
-		control = new Point();
-		setStart(x1, y1);
-		setEnd(x2, y2);
-		setCurvy(curvy);
-        myTransition = t;
-		refreshCurve();
-	}
-
-	/**
-	 * Instantiates a <CODE>CurvedArrow</CODE> object.
-	 * 
 	 * @param start
 	 *            the start point
 	 * @param end
@@ -71,8 +50,13 @@ public class CurvedArrow {
 	 * @param curvy
 	 *            the curvi-ness factor; 0 will create a straight line; 1 and -1
 	 *            are rather curvy
+	 * @param t
+	 *            the curve's transition
+	 * @param reflexivity
+	 *            bool: true if curve is reflexive, false otherwise
 	 */
-	public CurvedArrow(Point start, Point end, float curvy, Transition t) {
+	public CurvedArrow(Point start, Point end, float curvy, Transition t, boolean reflexivity) {
+		isReflexive = reflexivity;
 		curve = new QuadCurve2D.Float();
 		setStart(start);
 		setEnd(end);
@@ -83,17 +67,10 @@ public class CurvedArrow {
 	}
 
 	/**
-	 * Sets the start point.
-	 * 
-	 * @param x1
-	 *            the x coordinate of the start point
-	 * @param y1
-	 *            the y coordinate of the start point
+	 * See {@link #CurvedArrow(Point, Point, float, Transition, boolean)} + reflexivity = false
 	 */
-	public void setStart(int x1, int y1) {
-		start.x = x1;
-		start.y = y1;
-		needsRefresh = true;
+	public CurvedArrow(Point start, Point end, float curvy, Transition t) {
+		this(start, end, curvy, t, false);
 	}
 
 	/**
@@ -104,20 +81,6 @@ public class CurvedArrow {
 	 */
 	public void setStart(Point start) {
 		this.start = start;
-		needsRefresh = true;
-	}
-
-	/**
-	 * Sets the end point.
-	 * 
-	 * @param x2
-	 *            the x coordinate of the end point
-	 * @param y2
-	 *            the y coordinate of the end point
-	 */
-	public void setEnd(int x2, int y2) {
-		end.x = x2;
-		end.y = y2;
 		needsRefresh = true;
 	}
 
@@ -143,6 +106,32 @@ public class CurvedArrow {
 		needsRefresh = true;
 	}
 
+    public void drawAsColor(Graphics2D g, Color color) {
+        if (needsRefresh)
+            refreshCurve();
+        g.setColor(color);
+        g.draw(curve); // Draws the main part of the arrow.
+        drawArrow(g, end, control); // Draws the arrow head.
+        drawText(g, color);
+    }
+
+    public void drawAsGradient(Graphics2D g, Color startColor, Color endColor, CONNECTION_TYPE connectionType) {
+        if (needsRefresh)
+            refreshCurve();
+        LinearGradientPaint gradientPaint = new LinearGradientPaint(this.start, this.end, new float[]{0.0f, 1.0f}, new Color[]{startColor, endColor});
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setPaint(gradientPaint);
+        g2.draw(curve); // Draws the main part of the arrow.
+        drawArrow(g2, end, control); // Draws the arrow head.
+        switch (connectionType) {
+            case FROM -> drawText(g, FROM_COLOR);
+            case TO -> drawText(g, TO_COLOR);
+            case BOTH -> drawText(g, BOTH_COLOR);
+            case NEITHER -> drawText(g, NEITHER_COLOR);
+        }
+        g2.dispose();
+    }
+
 	/**
 	 * Draws the arrow on the indicated graphics environment.
 	 * 
@@ -150,12 +139,7 @@ public class CurvedArrow {
 	 *            the graphics to draw this arrow upon
 	 */
 	public void draw(Graphics2D g) {
-		if (needsRefresh)
-			refreshCurve();
-		g.setColor(ARROW_COLOR);
-		g.draw(curve); // Draws the main part of the arrow.
-		drawArrow(g, end, control); // Draws the arrow head.
-		drawText(g);
+        drawAsColor(g, ARROW_COLOR);
 	}
 
     public void drawControlPoint(Graphics2D g){ //adjust later to center of circle = focus point
@@ -167,6 +151,7 @@ public class CurvedArrow {
         g2.fillOval((int)curve.getCtrlX() - 5, (int)curve.getCtrlY() - 5, controlPointDiameter, controlPointDiameter);
         g2.setColor(CONTROL_POINT_OUTER_COLOR);
         g2.drawOval((int)curve.getCtrlX() - 5, (int)curve.getCtrlY() - 5, controlPointDiameter, controlPointDiameter);
+        g2.dispose();
     }
 
     protected void drawGlowHighlight(Graphics2D g, boolean drawCurve) {
@@ -221,6 +206,41 @@ public class CurvedArrow {
         }
 	}
 
+    public enum CONNECTION_TYPE {
+        FROM,
+        TO,
+        BOTH,
+        NEITHER,
+    }
+
+    public void drawConnectedView(Graphics2D g, Transition transition) {
+		// TODO: ALSO change text color for invisible arrows that are connected to the selected transition
+		//  currently for transitions on multiple things, on the selected one will be highlighted if selecting a transition (states work fine)
+        if (transition.getFromState().isSelected() && transition.getToState().isSelected()) {
+            drawAsColor(g, BOTH_COLOR);
+        } else if (transition.getFromState().isSelected()) {
+            drawAsColor(g, FROM_COLOR);
+            //drawAsGradient(g, FROM_COLOR, TO_COLOR, CONNECTION_TYPE.FROM);
+        } else if (transition.getToState().isSelected()) {
+            drawAsColor(g, TO_COLOR);
+            //drawAsGradient(g, TO_COLOR, FROM_COLOR, CONNECTION_TYPE.TO);
+        } else {
+            drawAsColor(g, NEITHER_COLOR);
+        }
+    }
+
+    public void drawConnectedViewHighlightSelected(Graphics2D g, Transition transition, boolean forceDrawAsSelected) {
+        if (transition.isSelected || forceDrawAsSelected) {
+			if (transition.isSelfLoop()){
+				drawAsColor(g, BOTH_COLOR);
+			} else {
+				drawAsColor(g, FROM_COLOR);
+			}
+        } else {
+            drawAsColor(g, NEITHER_COLOR);
+        }
+    }
+
 	/**
 	 * Draws the text on the high point of the arc. The text drawn is none other
 	 * than the label for this object, as retrieved from <CODE>getLabel</CODE>.
@@ -228,7 +248,7 @@ public class CurvedArrow {
 	 * @param g
 	 *            the graphics object to draw the text upon
 	 */
-	public void drawText(Graphics2D g) {
+	public void drawText(Graphics2D g, Color color) {
 		// We don't want to corrupt the graphics environs with our
 		// affine transforms!
 		Graphics2D g2 = (Graphics2D) g.create();
@@ -236,9 +256,12 @@ public class CurvedArrow {
 				RenderingHints.VALUE_ANTIALIAS_ON);
 		g2.transform(affineToText);
 
+		// Handle spaces in transition
+		String tempLabel = myTransition.getDescriptionWithSpacesHandled();
+
 		// What about the text label?
 		FontMetrics metrics = g2.getFontMetrics();
-		bounds = metrics.getStringBounds(getLabel(), g2);
+		bounds = metrics.getStringBounds(tempLabel, g2);
 		// Will the label appear to be upside down?
 		boolean upsideDown = end.x < start.x;
 		float dx = (float) bounds.getWidth() / 2.0f;
@@ -246,10 +269,14 @@ public class CurvedArrow {
 				.getDescent();
 		bounds.setRect(bounds.getX() - dx, bounds.getY() + dy, bounds
 				.getWidth(), bounds.getHeight());
-		g2.setColor(new Color(0,0,0));
-		for (int i = 0; i < label.length(); i += CHARS_PER_STEP) {
-			String sublabel = label.substring(i, Math.min(i + CHARS_PER_STEP,
-					label.length()));
+		g2.setColor(color);
+
+		for (int i = 0; i < tempLabel.length(); i += CHARS_PER_STEP) {
+			String sublabel = tempLabel.substring(i, Math.min(i + CHARS_PER_STEP,
+					tempLabel.length()));
+//            if (sublabel.contains(" ")) {
+//                sublabel = sublabel.replaceAll(" ", "␣");
+//            }
 			g2.drawString(sublabel, -dx, dy);
 			dx -= (float) metrics.getStringBounds(sublabel, g2).getWidth();
 		}
@@ -260,6 +287,17 @@ public class CurvedArrow {
 		 * GRAPHICS.getFontMetrics(); }
 		 */
 	}
+
+    /**
+     * Draws the text on the high point of the arc. The text drawn is none other
+     * than the label for this object, as retrieved from <CODE>getLabel</CODE>.
+     *
+     * @param g
+     *            the graphics object to draw the text upon
+     */
+    public void drawText(Graphics2D g) {
+        drawText(g, Color.black);
+    }
 
 	/**
 	 * Sets the label that will be drawn on the high arc point.
@@ -322,7 +360,6 @@ public class CurvedArrow {
 	 * Refreshes the curve object.
 	 */
 	public void refreshCurve() {
-//        System.out.println("Curve refreshing");
 		needsRefresh = false;
 
         double lengthx = end.x - start.x;
@@ -334,34 +371,52 @@ public class CurvedArrow {
         double factorx = length == 0.0 ? 0.0 : lengthx / length;
         double factory = length == 0.0 ? 0.0 : lengthy / length;
 
+		// Control point is never adjusted; curve in its default orientation
         if (myTransition.getControl() == null){
-
             control.x = (int) (centerx + curvy * HEIGHT * factory);
             control.y = (int) (centery - curvy * HEIGHT * factorx);
             high.x = (int) (centerx + curvy * HEIGHT * factory / 2.0);
             high.y = (int) (centery - curvy * HEIGHT * factorx / 2.0);
+        }  else if (isReflexive){
+			// Control point moved from default position on reflexive arrow
+			control.x = (int) myTransition.getControl().x;
+			control.y = (int) myTransition.getControl().y;
 
-        }
-        else{
+			Point statePoint = myTransition.getFromState().getPoint();
+			// Importing constants of rendering dimensions/angles
+			double reflex_angle = AutomatonDrawer.REFLEXIVE_ANGLE;
+			double radii = StateDrawer.STATE_RADIUS;
+			// Calculating a new position for the start and end points of the arrow
+			double psi = Math.atan2(control.y - statePoint.y, control.x - statePoint.x);
+			double startAngle = psi + reflex_angle;
+			double endAngle = psi - reflex_angle;
+			// update arrow start position
+			start.x = (int) (statePoint.x + radii * Math.cos(startAngle));
+			start.y = (int) (statePoint.y + radii * Math.sin(startAngle));
+			// update arrow end position
+			end.x = (int) (statePoint.x + radii * Math.cos(endAngle));
+			end.y = (int) (statePoint.y + radii * Math.sin(endAngle));
+
+			high.x = (int) (centerx + curvy * HEIGHT * factory / 2.0);
+			high.y = (int) (centery - curvy * HEIGHT * factorx / 2.0);
+		} else{
+			// Control point moved from default position on non-reflexive arrow
             control.x = (int) myTransition.getControl().x;
             control.y = (int) myTransition.getControl().y;
 
             //take the vector from the center to the control, and take half of that
             double xt = control.x - centerx;
             double yt = centery - control.y;
-
             high.x = (int) (centerx + xt / 2); 
             high.y = (int) (centery - yt / 2);
         }
-
-            curve.setCurve((float) start.x, (float) start.y, (float) control.x,
-                    (float) control.y, (float) end.x, (float) end.y);
-
-            affineToText = new AffineTransform();
-            affineToText.translate(high.x, high.y);
-            affineToText.rotate(Math.atan2(lengthy, lengthx));
-            if (end.x < start.x)
-                affineToText.rotate(Math.PI);
+		curve.setCurve((float) start.x, (float) start.y, (float) control.x,
+				(float) control.y, (float) end.x, (float) end.y);
+		affineToText = new AffineTransform();
+		affineToText.translate(high.x, high.y);
+		affineToText.rotate(Math.atan2(lengthy, lengthx));
+		if (end.x < start.x)
+			affineToText.rotate(Math.PI);
 	}
 
 	/**
@@ -513,7 +568,9 @@ public class CurvedArrow {
     /** Color of the control point outer ring, default is white**/
     public static java.awt.Color CONTROL_POINT_OUTER_COLOR = new java.awt.Color(255, 255, 255);
 
-    public Transition myTransition;
+	public boolean isReflexive = false;
+
+	public Transition myTransition;
 
     public float[] dashPattern = {3.0f, 3.0f};
 

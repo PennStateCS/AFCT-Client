@@ -32,6 +32,9 @@ import automata.AutomatonSimulator;
 import automata.Configuration;
 import automata.State;
 import automata.Transition;
+import gui.DisableGUI;
+
+import static gui.environment.Profile.PDA_STACK_BOTTOM_MARKER;
 
 /**
  * The PDA simulator object simulates the behavior of a pushdown automaton.
@@ -53,19 +56,24 @@ public class PDAStepByStateSimulator extends AutomatonSimulator {
 		/** default acceptance is by final state. */
 		
 		Object[] possibleValues = {"Final State", "Empty Stack"};
-		Object selectedValue = JOptionPane.showInputDialog(null,
-		            "Accept by", "Input",
-		            JOptionPane.INFORMATION_MESSAGE, null,
-		            possibleValues, possibleValues[0]);
-		if(selectedValue.equals(possibleValues[0])){
+		Object selectedValue;
+		if (DisableGUI.allowGUI) {
+			selectedValue = JOptionPane.showInputDialog(null,
+					"Accept by", "Input",
+					JOptionPane.INFORMATION_MESSAGE, null,
+					possibleValues, possibleValues[0]);
+			if(selectedValue.equals(possibleValues[0])){
+				myAcceptance = FINAL_STATE;
+				//EDebug.print("fstate");
+			}else if(selectedValue.equals(possibleValues[1])){
+				myAcceptance = EMPTY_STACK;
+				//EDebug.print("estack");
+			}
+			//myAcceptance = FINAL_STATE;
+			//myAcceptance=selectedValue;
+		} else {
 			myAcceptance = FINAL_STATE;
-			//EDebug.print("fstate");
-		}else if(selectedValue.equals(possibleValues[1])){
-			myAcceptance = EMPTY_STACK;
-			//EDebug.print("estack");
 		}
-		//myAcceptance = FINAL_STATE;
-		//myAcceptance=selectedValue;
 	}
 
 	/**
@@ -80,7 +88,7 @@ public class PDAStepByStateSimulator extends AutomatonSimulator {
 		/** The stack should contain the bottom of stack marker. */
 		Configuration[] configs = new Configuration[1];
 		CharacterStack stack = new CharacterStack();
-		stack.push("Z");
+		stack.push(PDA_STACK_BOTTOM_MARKER);
 		configs[0] = new PDAConfiguration(myAutomaton.getInitialState(), null,
 				input, input, stack, myAcceptance);
 		return configs;

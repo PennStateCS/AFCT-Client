@@ -12,6 +12,7 @@ public class DetailsPanel2 extends JPanel {
     private final JPanel detailsPanel;
     private final JTextArea detailsText;
     private final JPanel card;
+    private String currentDetailsText = " ";
 
     public DetailsPanel2() {
         detailsToggle = new JToggleButton("View details ▸");
@@ -34,11 +35,27 @@ public class DetailsPanel2 extends JPanel {
         this.toggleDetailsPanel(false);
     }
 
+    private void doDetailsTextUpdate() {
+        SwingUtilities.invokeLater(() -> {
+            if (this.detailsPanel.isVisible()) {
+                this.detailsText.setText(currentDetailsText);
+            }
+            //detailsText.setCaretPosition(0);
+            // Important for layout recalculation in Swing
+//            detailsPanel.revalidate();
+//            detailsPanel.repaint();
+//            detailsText.revalidate();
+//            detailsText.repaint();
+            card.revalidate();
+            card.repaint();
+        });
+    }
+
     public void setDetailsText(String text) {
-        this.detailsText.setText(text);
-        // Important for layout recalculation in Swing
-        card.revalidate();
-        card.repaint();
+        this.currentDetailsText = text;
+        if (this.detailsPanel.isVisible()) {
+            doDetailsTextUpdate();
+        }
     }
 
     private void toggleDetailsPanel(boolean enable) {
@@ -46,9 +63,7 @@ public class DetailsPanel2 extends JPanel {
         detailsToggle.setText(enable ? "Hide details ▾" : "View details ▸");
         detailsToggle.setSelected(enable);
 
-        // Important for layout recalculation in Swing
-        card.revalidate();
-        card.repaint();
+        doDetailsTextUpdate();
     }
 
     private void initializeDetailsPanel() {

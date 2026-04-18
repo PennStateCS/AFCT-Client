@@ -9,17 +9,19 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.Objects;
 
 public abstract class ContextMenu implements ActionListener {
     protected AutomatonPane view;
     protected AutomatonDrawer drawer;
     protected boolean allListenersAdded = false;
+    protected Point myPoint;
 
     protected JMenuItem addNote;
 
     protected static final String addNote_TEXT = "Add Note";
 
-    protected static final String DEFAULT_NOTE_TEXT = "insert_text";
+    public static final String DEFAULT_NOTE_TEXT = "insert_text";
 
     public ContextMenu(AutomatonPane view, AutomatonDrawer drawer) {
         this.view = view;
@@ -41,10 +43,31 @@ public abstract class ContextMenu implements ActionListener {
 
     protected Note addNote(Point point) {
         ((AutomatonEnvironment)drawer.getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
-        Note newNote = new Note(point, DEFAULT_NOTE_TEXT);
+        Note newNote;
+        if (point != null) {
+            newNote = new Note(point, DEFAULT_NOTE_TEXT);
+        } else {
+            newNote = new Note(DEFAULT_NOTE_TEXT);
+        }
         newNote.initializeForView(view);
         drawer.getAutomaton().addNote(newNote);
         return newNote;
+    }
+
+    protected Note addNote() {
+        return addNote(null);
+    }
+
+    public void setMyPoint(Point p) {
+        if (myPoint == null) {
+            myPoint = Objects.requireNonNullElseGet(p, () -> new Point(0, 0));
+        } else if (p != null ){
+            myPoint = p;
+        }
+    }
+
+    public void clearMyPoint() {
+        myPoint = null;
     }
 
     @Override

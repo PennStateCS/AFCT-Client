@@ -69,8 +69,11 @@ public class MenuBarCreator {
 			bar.add(menu);
 
         menu = getEditMenu(frame);
-        if (menu.getItemCount() > 0)
+        Environment environment = frame.getEnvironment();
+        Serializable object = environment.getObject();
+        if (object instanceof Automaton) {
             bar.add(menu);
+        }
 
         menu = getViewMenu(frame);
         if (menu.getItemCount() > 0)
@@ -127,8 +130,11 @@ public class MenuBarCreator {
 			bar.add(menu);
 
         menu = getEditMenu(frame);
-        if (menu.getItemCount() > 0)
+        Environment environment = frame.getEnvironment();
+        Serializable object = environment.getObject();
+        if (object instanceof Automaton) {
             bar.add(menu);
+        }
 
         menu = getViewMenu(frame);
         if (menu.getItemCount() > 0)
@@ -189,7 +195,10 @@ public class MenuBarCreator {
 	private static JMenu getFileMenu(EnvironmentFrame frame) {
 		Environment environment = frame.getEnvironment();
 		JMenu menu = new JMenu("File");
+
 		addItem(menu, new NewAction());
+		addItem(menu, NewInstanceOfCurrentAction.getActionInstance(frame));
+
 		SecurityManager sm = System.getSecurityManager();
 		if (Universe.CHOOSER != null) {
 			// Can't open and save files.
@@ -512,8 +521,13 @@ public class MenuBarCreator {
 		if (ConvertFSAToGrammarAction.isApplicable(object))
 			addItem(menu, new ConvertFSAToGrammarAction(
 					(gui.environment.AutomatonEnvironment) environment));
+
 		if (ConvertPDAToGrammarAction.isApplicable(object))
 			addItem(menu, new ConvertPDAToGrammarAction(
+					(gui.environment.AutomatonEnvironment) environment));
+
+		if (BetterConvertPDAToGrammarAction.isApplicable(object))
+			addItem(menu, new BetterConvertPDAToGrammarAction(
 					(gui.environment.AutomatonEnvironment) environment));
 
 		if (ConvertFSAToREAction.isApplicable(object))
@@ -639,6 +653,8 @@ public class MenuBarCreator {
 		});
 		
 		addItem(menu, new AboutAction());
+
+		addItem(menu, new KeyboardShortcutsAction(frame));
 
 		return menu;
 	}

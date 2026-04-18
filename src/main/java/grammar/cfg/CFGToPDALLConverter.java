@@ -29,6 +29,8 @@ import automata.StatePlacer;
 import automata.Transition;
 import automata.pda.PDATransition;
 
+import static gui.environment.Profile.PDA_STACK_BOTTOM_MARKER;
+
 /**
  * The CFG to PDA (LL parsing) converter can be used to convert a context free
  * grammar to a pushdown automaton that can be used for LL parsing. You can do
@@ -96,12 +98,12 @@ public class CFGToPDALLConverter extends GrammarToAutomatonConverter {
 		automaton.addFinalState(finalState);
 
 		String startVariable = grammar.getStartVariable();
-		String temp = startVariable.concat(BOTTOM_OF_STACK);
+		String temp = startVariable.concat(PDA_STACK_BOTTOM_MARKER);
 		PDATransition trans1 = new PDATransition(initialState,
-				intermediateState, "", BOTTOM_OF_STACK, temp);
+				intermediateState, "", PDA_STACK_BOTTOM_MARKER, temp);
 		automaton.addTransition(trans1);
 		PDATransition trans2 = new PDATransition(intermediateState, finalState,
-				"", BOTTOM_OF_STACK, "");
+				"", PDA_STACK_BOTTOM_MARKER, "");
 		automaton.addTransition(trans2);
 
 		String[] terminals = grammar.getTerminals();

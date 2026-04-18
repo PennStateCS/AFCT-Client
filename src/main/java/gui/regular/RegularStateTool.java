@@ -61,6 +61,7 @@ public class RegularStateTool extends StateTool {
 	 *            the mouse event
 	 */
 	public void mousePressed(MouseEvent event) {
+		getView().getDrawer().showConnected = false;
 		if ((state = controller.stateCreate(event.getPoint())) == null)
 			return;
 		getView().repaint();

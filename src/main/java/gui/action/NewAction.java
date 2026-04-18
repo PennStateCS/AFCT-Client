@@ -181,31 +181,10 @@ public class NewAction extends RestrictedAction {
             menu = new JMenu("Batch");
             MenuBarCreator.addItem(menu, new TestAction());
             menuBar.add(menu);
-            menu = new JMenu("Preferences");
 
-            JMenu tmPrefMenu = new JMenu("Turing Machine Preferences");
-            tmPrefMenu.add(Universe.curProfile.getTuringFinalCheckBox());
-            tmPrefMenu.add(Universe.curProfile.getAcceptByFinalStateCheckBox());
-            tmPrefMenu.add(Universe.curProfile.getAcceptByHaltingCheckBox());
-            tmPrefMenu.add(Universe.curProfile.getAllowStayCheckBox());
+			// add settings menu
+            menuBar.add(Universe.settingsMenu);
 
-            JMenu legacyPrefMenu = new JMenu("Legacy Options");
-            legacyPrefMenu.add(Universe.curProfile.getUseLegacyIconsCheckBox());
-            legacyPrefMenu.add(Universe.curProfile.getUseLegacySubmissionGuiCheckBox());
-
-
-            //MenuBarCreator.addItem(menu, new ColorChooserAction());
-            MenuBarCreator.addItem(menu, new EmptyStringCharacterAction());
-//            menu.add(Universe.curProfile.getTuringFinalCheckBox());
-            menu.add(new SetUndoAmountAction());
-            menu.add(new ColorChooserAction());
-
-            menu.add(tmPrefMenu);
-            menu.add(legacyPrefMenu);
-
-            
-
-            menuBar.add(menu);
 			setJMenuBar(menuBar);
 		}
 
