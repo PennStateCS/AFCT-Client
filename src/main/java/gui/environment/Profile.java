@@ -67,6 +67,10 @@ public class Profile {
     public static final String Z_PDA_STACK_BOTTOM_MARKER = "Z";
     public static final String DOLLAR_SIGN_PDA_STACK_BOTTOM_MARKER = "$";
     public static String PDA_STACK_BOTTOM_MARKER = DOLLAR_SIGN_PDA_STACK_BOTTOM_MARKER;
+    public enum transitionRendering {
+        STACKONTOP,
+        COMMADELINIATEDLIST,
+    }
 
 	public String Color = "Original";
 	//public int undo_num = 50;
@@ -102,8 +106,9 @@ public class Profile {
     /**The tag name for legacy icons preference.*/
     public static final String LEGACY_SUBMISSION_GUI = "legacy_use_legacy_submission_gui";
 
-    /**The tag name for legacy icons preference.*/
+    /**The tag name for the first state auto initial state feature.*/
     public static final String AUTO_INITIAL_STATE = "auto_set_first_state_as_initial_state";
+
 
     /* Settings */
 
@@ -131,6 +136,11 @@ public class Profile {
     //   This will likely be part of the planned update to include a preferences menu on editor windows,
     //      not just the main window.
     private boolean autoInitialState;
+
+    /**
+     * Setting for how transition labels should be rendered.
+     */
+    private transitionRendering transitionsRenderedAs;
 
     /**
      * Legacy options
@@ -166,6 +176,7 @@ public class Profile {
 
         // Other settings
         autoInitialState = true;
+        transitionsRenderedAs = transitionRendering.STACKONTOP;
 	}
 	
 	/**
@@ -290,6 +301,14 @@ public class Profile {
 
     public boolean getAutoInitialState() {
         return autoInitialState;
+    }
+
+    public transitionRendering getTransitionsRenderedAs() {
+        return transitionsRenderedAs;
+    }
+
+    public void setTransitionsRenderedAs(transitionRendering transitionsRenderedAs) {
+        this.transitionsRenderedAs = transitionsRenderedAs;
     }
 
     protected static Element createElement(Document document, String tagname, Map<?, ?> attributes, String text) {

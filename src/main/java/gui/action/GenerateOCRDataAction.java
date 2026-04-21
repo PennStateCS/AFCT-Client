@@ -323,6 +323,13 @@ public class GenerateOCRDataAction extends RestrictedAction{
         }
     }
 
+    /**
+     * Pops up a file selection window for the user to select where they want
+     * to save their synthetic data to.
+     * @return String representing the absolute file path to the user selected
+     * directory
+     * @throws Exception throws an exception if no folder was selected
+     */
     private String getFolderToSaveTo() throws Exception{
         String folderYouWantToSaveTo = null;
         Universe.CHOOSER.setFileSelectionMode(JFileChooser.DIRECTORIES_ONLY);
@@ -373,6 +380,15 @@ public class GenerateOCRDataAction extends RestrictedAction{
         }
     }
 
+    /**
+     * In cases where the initial state is more on the right side of the automaton,
+     * this method will flip the automaton over the vertical axis so that the initial
+     * state is always more on the left side. When to flip is determined by calculating
+     * the average X position of all the states, and then checking if the X position
+     * of the initial state is greater than the average.
+     * @param automaton The automaton in which you want flipped if the inital state
+     *                  is more to the right.
+     */
     private void ensureInitialStateOnLeftSide(FiniteStateAutomaton automaton) {
         int averageX = 0;
         State[] states = automaton.getStates();
@@ -391,6 +407,12 @@ public class GenerateOCRDataAction extends RestrictedAction{
         }
     }
 
+    /**
+     * Removes any state in an automaton that has no transitions going out
+     * or into the state.
+     * @param automaton The automaton in which you want orphaned states to
+     *                  be pruned.
+     */
     private void removeOrphanedStates(FiniteStateAutomaton automaton) {
         State[] states = automaton.getStates();
         boolean haveToChooseInitialState = false;
