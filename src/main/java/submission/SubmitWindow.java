@@ -10,6 +10,7 @@ import gui.environment.Universe;
 import javax.swing.*;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
+import javax.swing.event.HyperlinkEvent;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -54,6 +55,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     private JTextPane feedbackTextPane;
     private JLabel feedbackLabel;
+    private JEditorPane feedbackEditorPane;
+    private String feedbackEditorPaneFontName;
 
     private JScrollPane scrollPane;
 
@@ -102,6 +105,13 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         feedbackTextPane = new JTextPane();
         feedbackTextPane.setContentType("text/html");
         feedbackLabel = new JLabel("<html> </html>");
+
+        feedbackEditorPane = new JEditorPane();
+        feedbackEditorPane.setContentType("text/html");
+        feedbackEditorPane.setEditable(false);
+        feedbackEditorPaneFontName = feedbackLabel.getFont().getFontName();
+        feedbackEditorPane.setCaretColor(new Color(0, 0, 0, 0));
+        feedbackEditorPane.setSelectedTextColor(null);
 
         setupGui();
         populateGui();
@@ -154,10 +164,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         feedbackTextPane.setCaretPosition(feedbackTextPane.getDocument().getLength());
 
         if (line.startsWith(feedbackPrefix)) {
-            feedbackLabel.setText("<html>" + line.substring(feedbackPrefix.length() - 1, line.length()) + "</html>");
-        } else {
-            feedbackLabel.setText("<html>" + line + "</html>");
+            line = line.substring(feedbackPrefix.length() - 1);
+            //feedbackLabel.setText("<html>" + line.substring(feedbackPrefix.length() - 1, line.length()) + "</html>");
         }
+        feedbackLabel.setText("<html>" + line + "</html>");
+
+        feedbackEditorPane.setText("<html><body style=\"font-family: " + feedbackEditorPaneFontName + "; font-size: 12px\">" + line + "</body></html>");
+        //feedbackEditorPane.getCaret().setVisible(false);
+        //feedbackEditorPane.setCaretColor(new Color(0, 0, 0, 0));
     }
 
     public void logout() {
@@ -385,8 +399,48 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         feedbackLabelPanel.add(feedbackLabel, c2);
 
         // Add feedbackLabelPanel to contentPane
+        //c.gridy = y++;
+        //contentPane.add(createInputPanel(feedbackLabelPanel, "Feedback", false), c);
+
+
+        // Handle feedbackEditorPane
+        feedbackEditorPane.addHyperlinkListener(e -> {
+            if (HyperlinkEvent.EventType.ENTERED.equals(e.getEventType())) {
+
+            } else if (HyperlinkEvent.EventType.EXITED.equals(e.getEventType())) {
+
+            } else if (HyperlinkEvent.EventType.ACTIVATED.equals(e.getEventType())) {
+                if (Desktop.isDesktopSupported()) {
+                    try {
+                        Desktop.getDesktop().browse(e.getURL().toURI());
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        // Add feedbackEditorPane to contentPane
         c.gridy = y++;
-        contentPane.add(createInputPanel(feedbackLabelPanel, "Feedback", false), c);
+        contentPane.add(createFeedbackPanelHelper(feedbackEditorPane, -3), c);
+    }
+
+    private JPanel createFeedbackPanelHelper(Component component, int insetOffset) {
+        changeSize(component, 16);
+        unBoldFont(component);
+
+        // create feedbackPanel
+        JPanel feedbackPanel = new JPanel(new GridBagLayout());
+        feedbackPanel.setBackground(Color.WHITE);
+        feedbackPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+        // Add component to feedbackPanel
+        GridBagConstraints c2 = setConstraints(1, 1, 0, 0);
+        c2.insets = new Insets(10, 12, 10, 12);
+        c2.insets = new Insets(10 + insetOffset, 12 + insetOffset, 10 + insetOffset, 12 + insetOffset);
+        feedbackPanel.add(component, c2);
+
+        // Create InputPanel
+        return createInputPanel(feedbackPanel, "Feedback", false);
     }
 
     private void addRefreshButton(JPanel inputPanel, JButton refreshButton, int y) {
@@ -902,7 +956,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                                 throw new IOException("Invalid feedback given by server!");
                             }
                             boolean correct = (boolean) submission.get("correct");
-                            publish(feedbackPrefix + colorMessage(feedback, correct));
+                            publish(feedbackPrefix + colorSuccessFailMessage(feedback, correct));
                             if (correct) {
                                 // Keep submitted problem selected if the "All Problems" radio button is selected
                                 if (allProblems.isSelected()) {
@@ -914,7 +968,16 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             }
                         } catch (IOException ex) {
                             // TODO: print the response from the server to stderr
-                            publish(colorHTMLErrorMessage("Submission failed: " + ex.getMessage()));
+                            if (ex.getMessage().equalsIgnoreCase("read timed out")) {
+                                String link = getAssignmentLink(client);
+                                String message = colorHTMLWarningMessage("Your submission is taking a while to check.")
+                                                + "<br>"
+                                                + "<a href=\"" + link + "\">Click here</a>"
+                                                + colorHTMLWarningMessage(" to view the status of your submission in the AFCT Dashboard.");
+                                publish(message);
+                            } else {
+                                publish(colorHTMLErrorMessage("Submission failed: " + ex.getMessage()));
+                            }
                         }
                         //publish("");
                         return null;
@@ -945,6 +1008,17 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 Globals.sessionHandler.displayLoginThenSubmission(submitWindow);
             }
         });
+    }
+
+    public String getAssignmentLink(AFCTClient client) {
+        CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
+        AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
+
+        assert selectedCourse != null;
+        assert selectedAssignment != null;
+        assert client != null;
+        String url = client.getBaseUrl() + "/dashboard/courses/" + selectedCourse.id + "/" + selectedAssignment.id;
+        return url;
     }
 
     private File createTempFile() {
