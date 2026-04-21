@@ -4,12 +4,17 @@ import gui.action.ColorChooserAction;
 import gui.action.EmptyStringCharacterAction;
 import gui.action.SetUndoAmountAction;
 import gui.editor.IconKeeper;
+import gui.editor.TransitionTool;
 import gui.environment.Profile;
 import gui.environment.Universe;
+import gui.viewer.CurvedArrow;
+import gui.viewer.StateDrawer;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.awt.event.KeyEvent;
 
 /**
  * This class handles creation of the dropdown settings menu.
@@ -24,6 +29,7 @@ public class SettingsMenu extends JMenu {
     private final TuringMachinePreferences turingMachinePreferences;
     private final LegacyOptions legacyOptions;
     private JCheckBoxMenuItem autoInitialStateCheckBox;
+    private final TransitionRenderingOptions transitionRenderingOptions;
 
     public SettingsMenu() {
         super("Settings");
@@ -34,6 +40,7 @@ public class SettingsMenu extends JMenu {
 
         this.turingMachinePreferences = new TuringMachinePreferences();
         this.legacyOptions = new LegacyOptions();
+        this.transitionRenderingOptions = new TransitionRenderingOptions();
         setupAutoInitialStateCheckBox();
 
 
@@ -43,7 +50,7 @@ public class SettingsMenu extends JMenu {
         this.add(colorChooserAction);
         this.add(turingMachinePreferences);
         this.add(legacyOptions);
-
+        this.add(transitionRenderingOptions);
     }
 
     public SetUndoAmountAction getSetUndoAmountAction() {
@@ -136,6 +143,33 @@ public class SettingsMenu extends JMenu {
                 Universe.curProfile.savePreferences();
             });
             this.add(legacyUseLegacySubmissionGuiCheckBox);
+        }
+    }
+
+    public static class TransitionRenderingOptions extends JMenu {
+        public JRadioButton chooseRenderOnTopButton;
+        public JRadioButton chooseCommaDelineatedListButton;
+
+        public TransitionRenderingOptions() {
+            super("Transition Rendering Options");
+
+            chooseRenderOnTopButton = new JRadioButton("Stacked characters");
+//            chooseRenderOnTopButton.setActionCommand("Original");
+            chooseRenderOnTopButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event) {
+                    Universe.curProfile.setTransitionsRenderedAs(Profile.transitionRendering.STACKONTOP);
+                }
+            });
+            this.add(chooseRenderOnTopButton);
+
+            chooseCommaDelineatedListButton = new JRadioButton("Comma delineated list");
+//            chooseCommaDelineatedListButton.setActionCommand("Original");
+            chooseCommaDelineatedListButton.addActionListener(new ActionListener() {
+                public void actionPerformed(ActionEvent event){
+                    Universe.curProfile.setTransitionsRenderedAs(Profile.transitionRendering.COMMADELINIATEDLIST);
+                }
+            });
+            this.add(chooseCommaDelineatedListButton);
         }
     }
 
