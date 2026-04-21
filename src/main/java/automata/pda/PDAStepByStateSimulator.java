@@ -33,6 +33,8 @@ import automata.Configuration;
 import automata.State;
 import automata.Transition;
 import gui.DisableGUI;
+import gui.environment.EnvironmentFrame;
+import gui.environment.Universe;
 
 import static gui.environment.Profile.PDA_STACK_BOTTOM_MARKER;
 
@@ -54,26 +56,53 @@ public class PDAStepByStateSimulator extends AutomatonSimulator {
 	public PDAStepByStateSimulator(Automaton automaton) {
 		super(automaton);
 		/** default acceptance is by final state. */
-		
-		Object[] possibleValues = {"Final State", "Empty Stack"};
-		Object selectedValue;
+
 		if (DisableGUI.allowGUI) {
-			selectedValue = JOptionPane.showInputDialog(null,
+			EnvironmentFrame parent = automaton.getEnvironmentFrame();
+
+			Object[] possibleValues = {"Final State", "Empty Stack"};
+			Object selectedValue;
+			selectedValue = JOptionPane.showInputDialog(parent,
 					"Accept by", "Input",
 					JOptionPane.INFORMATION_MESSAGE, null,
 					possibleValues, possibleValues[0]);
-			if(selectedValue.equals(possibleValues[0])){
+			if (selectedValue == null) {
+				myAcceptance = FINAL_STATE;
+			} else if (selectedValue.equals(possibleValues[0])){
 				myAcceptance = FINAL_STATE;
 				//EDebug.print("fstate");
-			}else if(selectedValue.equals(possibleValues[1])){
+			} else if (selectedValue.equals(possibleValues[1])){
 				myAcceptance = EMPTY_STACK;
 				//EDebug.print("estack");
 			}
 			//myAcceptance = FINAL_STATE;
 			//myAcceptance=selectedValue;
+
+			Object[] possibleValues2 = {"Yes", "No"};
+			Integer selectedValue2 = JOptionPane.showOptionDialog(parent,
+					"Should \"" + PDA_STACK_BOTTOM_MARKER + "\" be added to the stack automatically to mark the bottom?",
+					"Automatically mark stack bottom?",
+					JOptionPane.YES_NO_OPTION, JOptionPane.QUESTION_MESSAGE, null,
+					possibleValues2, possibleValues2[0]);
+			if(selectedValue2 == 0){
+				setAutoMarkStackBottom(true);
+			}else if(selectedValue2 == 1){
+				setAutoMarkStackBottom(false);
+			}
 		} else {
 			myAcceptance = FINAL_STATE;
+			setAutoMarkStackBottom(false);
 		}
+	}
+
+	protected boolean autoMarkStackBottom = true;
+
+	public boolean isAutoMarkStackBottom() {
+		return autoMarkStackBottom;
+	}
+
+	public void setAutoMarkStackBottom(boolean autoMarkStackBottom) {
+		this.autoMarkStackBottom = autoMarkStackBottom;
 	}
 
 	/**
@@ -88,7 +117,9 @@ public class PDAStepByStateSimulator extends AutomatonSimulator {
 		/** The stack should contain the bottom of stack marker. */
 		Configuration[] configs = new Configuration[1];
 		CharacterStack stack = new CharacterStack();
-		stack.push(PDA_STACK_BOTTOM_MARKER);
+		if (this.isAutoMarkStackBottom()) {
+			stack.push(PDA_STACK_BOTTOM_MARKER);
+		}
 		configs[0] = new PDAConfiguration(myAutomaton.getInitialState(), null,
 				input, input, stack, myAcceptance);
 		return configs;

@@ -207,7 +207,8 @@ public class MenuBarCreator {
 			saveImageMenu.add(new SaveGraphGIFAction(environment, menu));
 			saveImageMenu.add(new SaveGraphBMPAction(environment, menu));
             if (environment instanceof AutomatonEnvironment){ //this is strictly for non-Grammar
-                JarFile jar = null;
+                // TODO: investigate this
+				JarFile jar = null;
                 try{
                     if (new File("JFLAP.jar").exists()) jar = new JarFile("JFLAP.jar");
                     else if (new File("JFLAP_With_Source.jar").exists()) jar = new JarFile("JFLAP_With_Source.jar");
