@@ -8,6 +8,7 @@ import gui.environment.EnvironmentFrame;
 import gui.environment.Universe;
 
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
 import javax.swing.event.HyperlinkEvent;
@@ -127,10 +128,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         this.getContentPane().add(scrollPane);
         this.setVisible(false);
+
+        // Just here so that the feedback panel is sized correctly when the window is created
+        appendResult(colorHTMLMessage("Initial Value", "white"));
+
     }
 
     public void displaySubmitWindow() {
-        // Safety measure so that GUI doesn't stop working if courseBox is disabled when it shouldn't be
+        // Safety measure so that the GUI doesn't stop working if courseBox is disabled when it shouldn't be
         toggleCourseBox(true);
 
         if (sessionHandler.loggedIn) {
@@ -938,6 +943,18 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             assert assignment != null;
                             assert problem != null;
 
+                            // Create a timer that waits 10 seconds before showing a message to the user.
+                            // Define the time delay in milliseconds (1000ms = 1 second)
+                            int delay = 10_000; // 10 secs
+                            // Create and start the Swing Timer
+                            Timer timer = new Timer(delay, e1 -> {
+                                // This code runs after the delay
+                                String link = getAssignmentLink(client);
+                                publish(getSlowSubmissionCheckMessage_afterSomeWait(link));
+                            });
+                            timer.setRepeats(false); // Ensure the timer only runs once
+                            timer.start();
+
                             Map<String, Object> submission = client.createSubmission(
                                     assignment.id,
                                     problem.id,
@@ -970,11 +987,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             // TODO: print the response from the server to stderr
                             if (ex.getMessage().equalsIgnoreCase("read timed out")) {
                                 String link = getAssignmentLink(client);
-                                String message = colorHTMLWarningMessage("Your submission is taking a while to check.")
-                                                + "<br>"
-                                                + "<a href=\"" + link + "\">Click here</a>"
-                                                + colorHTMLWarningMessage(" to view the status of your submission in the AFCT Dashboard.");
-                                publish(message);
+                                publish(getSlowSubmissionCheckMessage_goToDashboard(link));
                             } else {
                                 publish(colorHTMLErrorMessage("Submission failed: " + ex.getMessage()));
                             }
@@ -995,6 +1008,45 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 }.execute();
             }
         });
+    }
+
+    private String getSlowSubmissionCheckMessage_clickToViewStatus(String link) {
+        return colorHTMLWarningMessage("Your submission is taking a while to check...")
+                + "<br>"
+                + "<a href=\"" + link + "\">Click here</a>"
+                + colorHTMLWarningMessage(" to view the status of your submission in the AFCT Dashboard.");
+    }
+
+    private String getSlowSubmissionCheckMessage_afterSomeWait(String link) {
+        // TODO: which part of the text should be the link?
+        return colorHTMLWarningMessage("Your submission is taking a while to check...")
+                + "<br>"
+                + colorHTMLWarningMessage("When completed, you can view the status of your submission in the ")
+                + "<a href=\"" + link + "\">AFCT Dashboard</a>";
+    }
+
+    private String getSlowSubmissionCheckMessage_goToDashboard_old1(String link) {
+        return colorHTMLWarningMessage("Your submission is taking a while to check...")
+                + "<br>"
+                + colorHTMLWarningMessage("The status of your submission will be updated on the ")
+                + "<a href=\"" + link + "\">AFCT Dashboard</a>"
+                + colorHTMLWarningMessage(" when complete.");
+    }
+
+    private String getSlowSubmissionCheckMessage_goToDashboard_old2(String link) {
+        String color = "#cc4125";
+        return colorHTMLMessage("Your submission is taking a while to check...", color)
+                + "<br>"
+                + colorHTMLMessage("The status of your submission will be updated on the ", color)
+                + "<a href=\"" + link + "\">AFCT Dashboard</a>"
+                + colorHTMLMessage(" when complete.", color);
+    }
+
+    private String getSlowSubmissionCheckMessage_goToDashboard(String link) {
+        String color = "#cc4125";
+        return colorHTMLMessage("The status of your submission will be updated on the ", color)
+                + "<a href=\"" + link + "\">AFCT Dashboard</a>"
+                + colorHTMLMessage(" when complete.", color);
     }
 
     private void handlers_logout() {

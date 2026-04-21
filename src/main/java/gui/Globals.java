@@ -695,16 +695,16 @@ public class Globals {
         component.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
-    public static String colorMessage(String message, String color) {
+    public static String colorHTMLMessage(String message, String color) {
         return "<span style=\"color: " + color + ";\">" + message + "</span>";
     }
 
     public static String colorSuccessFailMessage(String message, boolean success) {
         String result;
         if (success) {
-            result = colorMessage(message, "#00b050");
+            result = colorHTMLMessage(message, "#00b050");
         } else {
-            result = colorMessage(message, "red");
+            result = colorHTMLMessage(message, "red");
         }
         return result;
     }
@@ -720,7 +720,7 @@ public class Globals {
     public static String colorHTMLWarningMessage(String message) {
         //return colorMessage(message, "#ffd500");
         //return colorMessage(message, "#f1c232");
-        return colorMessage(message, "#e69138");
+        return colorHTMLMessage(message, "#e69138");
     }
 
     public static void errorPrint(String output) {
