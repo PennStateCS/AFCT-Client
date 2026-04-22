@@ -56,7 +56,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     private JTextPane feedbackTextPane;
     private JLabel feedbackLabel;
-    private JEditorPane feedbackEditorPane;
+    private final JEditorPane feedbackEditorPane;
     private String feedbackEditorPaneFontName;
 
     private JScrollPane scrollPane;
@@ -950,7 +950,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             Timer timer = new Timer(delay, e1 -> {
                                 // This code runs after the delay
                                 String link = getAssignmentLink(client);
-                                publish(getSlowSubmissionCheckMessage_afterSomeWait(link));
+                                String message = getSlowSubmissionCheckMessage_afterSomeWait(link);
+                                // added to stop the timer from setting the text after a submission is complete
+                                if (feedbackEditorPane.getText().contains("Submitting…")) {
+                                    publish(message);
+                                }
                             });
                             timer.setRepeats(false); // Ensure the timer only runs once
                             timer.start();
@@ -961,6 +965,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                                     "Submission from GUI",
                                     selectedFile
                             );
+                            // added to stop the timer from setting the text after a submission is complete
+                            timer.stop();
 
                             //publish("Submission successful!");
                             //publish("Data: " + submission);
