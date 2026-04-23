@@ -952,7 +952,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                                 String link = getAssignmentLink(client);
                                 String message = getSlowSubmissionCheckMessage_afterSomeWait(link);
                                 // added to stop the timer from setting the text after a submission is complete
-                                if (feedbackEditorPane.getText().contains("Submitting…")) {
+                                if (feedbackEditorPane.getText().contains("Submitting")) {
                                     publish(message);
                                 }
                             });
