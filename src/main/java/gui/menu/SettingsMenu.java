@@ -154,7 +154,6 @@ public class SettingsMenu extends JMenu {
             super("Transition Rendering Options");
 
             chooseRenderOnTopButton = new JRadioButton("Stacked characters");
-//            chooseRenderOnTopButton.setActionCommand("Original");
             chooseRenderOnTopButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent event) {
                     Universe.curProfile.setTransitionsRenderedAs(Profile.transitionRendering.STACKONTOP);
@@ -163,13 +162,27 @@ public class SettingsMenu extends JMenu {
             this.add(chooseRenderOnTopButton);
 
             chooseCommaDelineatedListButton = new JRadioButton("Comma delineated list");
-//            chooseCommaDelineatedListButton.setActionCommand("Original");
             chooseCommaDelineatedListButton.addActionListener(new ActionListener() {
                 public void actionPerformed(ActionEvent event){
                     Universe.curProfile.setTransitionsRenderedAs(Profile.transitionRendering.COMMADELINIATEDLIST);
                 }
             });
             this.add(chooseCommaDelineatedListButton);
+
+            ButtonGroup btnGroup = new ButtonGroup();
+            btnGroup.add(chooseRenderOnTopButton);
+            btnGroup.add(chooseCommaDelineatedListButton);
+
+            // select the initial button to be activated based on the current profile
+            Profile.transitionRendering renderingMode = Universe.curProfile.getTransitionsRenderedAs();
+            switch(renderingMode) {
+                case Profile.transitionRendering.STACKONTOP:
+                    chooseRenderOnTopButton.setSelected(true);
+                    break;
+                case Profile.transitionRendering.COMMADELINIATEDLIST:
+                    chooseCommaDelineatedListButton.setSelected(true);
+                    break;
+            }
         }
     }
 
