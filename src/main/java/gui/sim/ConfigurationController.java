@@ -20,28 +20,24 @@
 
 package gui.sim;
 
-import gui.viewer.SelectionDrawer;
-
 import java.awt.Component;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Iterator;
-import java.util.Stack;
 import java.util.List;
 
 import javax.swing.JOptionPane;
 import javax.swing.JSplitPane;
 
-import automata.Automaton;
 import automata.AutomatonSimulator;
-import automata.Configuration; import automata.State;
-import automata.turing.TMSimulator;
+import automata.Configuration;
 import automata.turing.TMConfiguration;
+import automata.turing.TMSimulator;
 import automata.turing.TMState;
-import automata.turing.TuringMachine;
-import automata.turing.TuringMachineBuildingBlocks;
+ import automata.turing.TuringMachine;
+import gui.viewer.SelectionDrawer;
 
 
 /**
@@ -126,13 +122,47 @@ public class ConfigurationController implements ConfigurationSelectionListener {
 	}
 
 	/**
+	 * Types of step functions
+	 */
+	public enum StepType {
+        SINGLE, MULTI, BREAK
+    }
+
+	/**
+	 * Returns true if any configuration is on a breakpoint state
+	 * @param configs the list of configurations
+	 * @return true if any configuration is on a breakpoint state
+	 */
+	private boolean onBreakPoint(Configuration[] configs) {
+		for (Configuration config : configs) {
+			if (config.getCurrentState().isBreakpoint()) {
+				return true;
+			}
+		}
+		return false;
+	}
+
+	/**
 	 * The step method takes all configurations from the configuration pane, and
 	 * replaces them with "successor" transitions.
+	 * @return true if stepping is complete for multistep and breakpoint stepping
 	 * 
 	 * @param blockStep
 	 */
-	public void step(boolean blockStep) {
-		Configuration[] configs = configurations.getValidConfigurations();
+	public boolean step(boolean blockStep, StepType steptype) {
+		Configuration[] configs = null;
+		if (steptype == StepType.SINGLE) {
+			configs = configurations.getValidConfigurations();
+		} else {
+			configs = configurations.getConfigurations();
+			if (configurations.getValidConfigurations().length == 0) {
+				return true;
+			}
+			if (steptype == StepType.BREAK && onBreakPoint(configs)) {
+				return true;
+			}
+		}
+		
 		ArrayList<Configuration> list = new ArrayList<>();
 		HashSet<Configuration> reject = new HashSet<>();
 
@@ -146,7 +176,7 @@ public class ConfigurationController implements ConfigurationSelectionListener {
                 //MERLIN MERLIN MERLIN MERLIN MERLIN//
                 if (next.size() == 0) { //crucial check for rejection
                     //System.out.println("Rejected");
-                    reject.add(configs[i]);
+					reject.add(configs[i]);
                     list.add(configs[i]);
                 } else
                     list.addAll(next);
@@ -203,6 +233,8 @@ public class ConfigurationController implements ConfigurationSelectionListener {
 		} catch (Throwable e) {
 
 		}
+
+		return false;
 		
 //		State current = null;
 //		Iterator iter = list.iterator();

@@ -84,6 +84,7 @@ public class Automaton implements Serializable, Cloneable {
 		states = new HashSet<State>();
 		transitions = new HashSet<>();
 		finalStates = new HashSet<State>();
+		breakpointStates = new HashSet<State>();
 		initialState = null;
 
         savedStatePoints = new HashMap<>();
@@ -400,10 +401,6 @@ public class Automaton implements Serializable, Cloneable {
 	}
 
 	
-	
-
-
-	
 	/**
 	 * Moves objects from Array to List
 	 * 
@@ -488,6 +485,7 @@ public class Automaton implements Serializable, Cloneable {
 				false));
 		states.remove(state);
 		finalStates.remove(state);
+		breakpointStates.remove(state);
 		if (state == initialState)
 			initialState = null;
 
@@ -863,6 +861,38 @@ public class Automaton implements Serializable, Cloneable {
 				return state;
 		}
 		return null;
+	}
+
+	public void addBreakpoint(State state) {
+		state.setBreakpoint(true);
+		breakpointStates.add(state);
+		distributeStateEvent(new AutomataStateEvent(this, state, false, false,
+				true));
+	}
+
+	public void removeBreakpoint(State state) {
+		state.setBreakpoint(false);
+		breakpointStates.remove(state);
+		distributeStateEvent(new AutomataStateEvent(this, state, false, false,
+				true));
+	}
+
+	/**
+	 * Returns an array that contains every state in this automaton that is a
+	 * breakpoint state. The array is not necessarily gauranteed to be in any
+	 * particular order.
+	 * 
+	 * @return an array containing all breakpoint states of this automaton
+	 */
+	public State[] getBreakpoints() {
+		return (State[]) breakpointStates.toArray();
+	}
+
+	/** 
+	 * @return true if inputted state is a breakpoint
+	 */
+	public boolean isBreakpointState(State state) {
+		return breakpointStates.contains(state);
 	}
 
 	/**
@@ -1406,6 +1436,9 @@ public class Automaton implements Serializable, Cloneable {
 	 */
 	public Set<State> finalStates;
 
+	/** The states with breakpoints on */
+	public Set<State> breakpointStates;
+
 	/** The initial state. */
 	protected State initialState = null;
 
@@ -1477,6 +1510,7 @@ public class Automaton implements Serializable, Cloneable {
 		
 		
 		finalStates = new HashSet<State>();
+		breakpointStates = new HashSet<State>();
 		
 		
 		initialState = null;

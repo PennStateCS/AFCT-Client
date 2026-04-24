@@ -265,6 +265,12 @@ public class StateDrawer {
 			if (automaton.isFinalState(state))
 				g.drawOval(point.x - radius + 3, point.y - radius + 3,
 						(radius - 3) << 1, (radius - 3) << 1);
+			// If this is a breakpoint state
+			if (state.isBreakpoint()) {
+				g.setColor(BREAKPOINT_COLOR);
+				g.drawOval(point.x - radius + 6, point.y - radius + 6,
+						(radius - 6) << 1, (radius - 6) << 1);
+			}
 			// If this is the initial state.
 			if (automaton.getInitialState() == state) {
 				int[] x = { point.x - radius, point.x - (radius << 1),
@@ -457,6 +463,9 @@ public class StateDrawer {
 
 	/** The base color for states. */
 	public static Color STATE_COLOR = new Color(255, 255, 150);
+
+	/** Color when marked as a breakpoint */
+	public static Color BREAKPOINT_COLOR = new Color(215, 0, 64);
 	
 	/** The color of a selected state. **/
 	public static Color HIGHLIGHT_COLOR = new  Color(100, 200, 200);

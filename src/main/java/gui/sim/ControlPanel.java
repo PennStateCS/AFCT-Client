@@ -20,12 +20,14 @@
 
 package gui.sim;
 
-import gui.TooltipAction;
-
+import java.awt.Component;
 import java.awt.event.ActionEvent;
 
 import javax.swing.AbstractAction;
+import javax.swing.JOptionPane;
 import javax.swing.JToolBar;
+
+import gui.TooltipAction;
 
 /**
  * This is a control panel with buttons for invoking methods on a configuration
@@ -65,6 +67,7 @@ public class ControlPanel extends JToolBar {
 	 * A simple helper function that initializes the gui.
 	 */
 	protected void initView() {
+		Component myself = (Component) this;
 		this.add(new TooltipAction("Step", "Moves existing valid "
 				+ "configurations to the next " + "configurations.") {
 			/**
@@ -72,18 +75,76 @@ public class ControlPanel extends JToolBar {
 					 */
 					private static final long serialVersionUID = 1L;
 
+			@Override
 			public void actionPerformed(ActionEvent e) {
-				controller.step(blockStep);
+				controller.step(blockStep, ConfigurationController.StepType.SINGLE);
 			}
 		});
 
-		this.add(new TooltipAction("Reset", "Resets the simulation to "
-				+ "start conditions.") {
+		
+		int MAX_ATTEMPTS = 10000;
+
+		this.add(new TooltipAction("Multi-step", "Moves existing valid "
+			+ "configurations forward by x configurations") {
+			private static final long serialVersionUID = 1L;
+		@Override
+			public void actionPerformed(ActionEvent e) {
+				try {
+					int steps = Integer.parseInt((String) JOptionPane.showInputDialog(
+					myself,
+					"How many steps?",
+					"Multi-step",
+					JOptionPane.PLAIN_MESSAGE,
+					null,
+					null,
+					"10"));
+					
+					int cur_attempt = 0;
+					for (int i = 0; i < steps; i++) {
+						boolean finished = controller.step(blockStep, ConfigurationController.StepType.MULTI);
+						if (finished) {
+							break;
+						}
+						cur_attempt++;
+						if (cur_attempt > MAX_ATTEMPTS) {
+							JOptionPane.showMessageDialog(myself, "Max of " + MAX_ATTEMPTS + " steps generated");
+							break;
+						}
+					}
+				} catch (IncompatibleClassChangeError error) {
+					System.err.println(error.getMessage());
+				}
+			}
+		});
+
+		this.add(new TooltipAction("Debug", "Moves existing valid "
+				+ "configurations until hitting a breakpoint, or hitting a max_attempts.") {
 			/**
 					 * 
 					 */
 					private static final long serialVersionUID = 1L;
 
+			@Override
+			public void actionPerformed(ActionEvent e) {
+				boolean completed = false;
+				int cur_attempt = 0;
+				controller.step(blockStep, ConfigurationController.StepType.SINGLE);
+				while (!completed) {
+					completed = controller.step(blockStep, ConfigurationController.StepType.BREAK);
+					cur_attempt++;
+					if (cur_attempt > MAX_ATTEMPTS) {
+						JOptionPane.showMessageDialog(myself, "Max of " + MAX_ATTEMPTS + " steps generated");
+						break;
+					}
+				}
+			}
+		});
+
+		this.add(new TooltipAction("Reset", "Resets the simulation to "
+				+ "start conditions.") {
+					private static final long serialVersionUID = 1L;
+
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				controller.reset();
 			}
@@ -99,6 +160,7 @@ public class ControlPanel extends JToolBar {
 				 */
 				private static final long serialVersionUID = 1L;
 
+				@Override
 				public void actionPerformed(ActionEvent e) {
     				controller.focus();
     			}
@@ -110,6 +172,7 @@ public class ControlPanel extends JToolBar {
 				 */
 				private static final long serialVersionUID = 1L;
 
+				@Override
 				public void actionPerformed(ActionEvent e) {
     				controller.defocus();
     			}
@@ -121,6 +184,7 @@ public class ControlPanel extends JToolBar {
 			 */
 			private static final long serialVersionUID = 1L;
 
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				controller.freeze();
 			}
@@ -132,6 +196,7 @@ public class ControlPanel extends JToolBar {
 			 */
 			private static final long serialVersionUID = 1L;
 
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				controller.thaw();
 			}
@@ -143,6 +208,7 @@ public class ControlPanel extends JToolBar {
 			 */
 			private static final long serialVersionUID = 1L;
 
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				controller.trace();
 			}
@@ -154,6 +220,7 @@ public class ControlPanel extends JToolBar {
 			 */
 			private static final long serialVersionUID = 1L;
 
+			@Override
 			public void actionPerformed(ActionEvent e) {
 				controller.remove();
 			}

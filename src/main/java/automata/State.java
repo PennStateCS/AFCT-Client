@@ -101,7 +101,13 @@ public class State implements Serializable {
 								true, false));
 	}
 	
+	public void setBreakpoint(boolean val) {
+		this.isBreakpoint = val;
+	}
 
+	public boolean isBreakpoint() {
+		return this.isBreakpoint;
+	}
 
 	/**
 	 * Returns the state ID for this state.
@@ -171,7 +177,7 @@ public class State implements Serializable {
 
 	private String digitizer(int number) {
 		if (number == 0)
-			return "\u2080";
+			return "\u2080"; // subscript 0
 		String s = digitizer(number / 10, 1);
 		return s + (SS + (char) (number % 10));
 	}
@@ -354,6 +360,9 @@ public class State implements Serializable {
 //	private boolean finalStateInBlock = false;
 	
 	private boolean selected = false;
+
+	/** Whether to break stepping when reaching state */
+	private boolean isBreakpoint = false;
 
 	public void setSelect(boolean select) {
         if (selected == select) {
