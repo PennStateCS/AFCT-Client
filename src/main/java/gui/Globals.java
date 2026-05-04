@@ -5,9 +5,7 @@ import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
 import com.google.gson.JsonSyntaxException;
-import com.sun.tools.javac.Main;
 import gui.popups.ExtensionPopup;
-import submission.AFCTClient;
 import submission.SessionHandler;
 
 import javax.swing.*;
@@ -44,13 +42,20 @@ public class Globals {
     public static String JAR_NAME = "afct-client.jar";
     public static String AFCT_DATA_FOLDER_NAME = "AFCT-Data";
     public static String PREFERENCES_FILE_NAME = "AFCT-Preferences.xml";
+    public static String FILE_CREATED_WITH_STRING = "Created with AFCT " + currentVersion + " (based on JFLAP " + gui.AboutBox.VERSION + ")";
 
     private static final String htmlProperty = "html.disable";
     public final static String UPDATE = "UPDATE";
 
     public static final Color FROM_COLOR = new Color(37,99,235);
     //public static Color TO_COLOR = new Color(84,132,234);
-    public static final Color BOTH_COLOR = new Color(84,132,234);
+    //public static final Color BOTH_COLOR = new Color(84,132,234);
+    //public static final Color BOTH_COLOR = new Color(71,154,188);
+    //public static final Color BOTH_COLOR = new Color(54,128,211);
+    //public static final Color BOTH_COLOR = new Color(68,135,134);
+    //public static final Color BOTH_COLOR = new Color(108,69,247);
+    public static final Color BOTH_COLOR = new Color(116, 49, 255);
+    //public static final Color BOTH_COLOR = new Color(84,116,229);
     public static final Color TEST_COLOR = new Color(84,255,132);
     //public static Color TO_COLOR = new Color(178,255,255);
     //public static final Color TO_COLOR = new Color(153,255,255);
@@ -650,8 +655,12 @@ public class Globals {
         positionFrameNearWindow(frame, targetPosition, window, false);
     }
 
-    public static void changeSize(Component component, int fontSize) {
-        component.setFont(component.getFont().deriveFont((float) fontSize));
+    public static void changeSize(Component component, float fontSize) {
+        component.setFont(component.getFont().deriveFont(fontSize));
+    }
+
+    public static void changeFontSize(Component component, float fontSize) {
+        changeSize(component, fontSize);
     }
 
     public static void unBoldFont(Component component) {
@@ -686,22 +695,32 @@ public class Globals {
         component.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
     }
 
-    public static String colorMessage(String message, boolean success) {
+    public static String colorHTMLMessage(String message, String color) {
+        return "<span style=\"color: " + color + ";\">" + message + "</span>";
+    }
+
+    public static String colorSuccessFailMessage(String message, boolean success) {
         String result;
         if (success) {
-            result = "<span style=\"color: #00b050;\">" + message + "</span>";
+            result = colorHTMLMessage(message, "#00b050");
         } else {
-            result = "<span style=\"color: red;\">" + message + "</span>";
+            result = colorHTMLMessage(message, "red");
         }
         return result;
     }
 
     public static String colorHTMLSuccessMessage(String message) {
-        return colorMessage(message, true);
+        return colorSuccessFailMessage(message, true);
     }
 
     public static String colorHTMLErrorMessage(String message) {
-        return colorMessage(message, false);
+        return colorSuccessFailMessage(message, false);
+    }
+
+    public static String colorHTMLWarningMessage(String message) {
+        //return colorMessage(message, "#ffd500");
+        //return colorMessage(message, "#f1c232");
+        return colorHTMLMessage(message, "#e69138");
     }
 
     public static void errorPrint(String output) {

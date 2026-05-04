@@ -45,6 +45,8 @@ import automata.pda.PDAToCFGConverter;
 import automata.pda.PDATransition;
 import automata.pda.PushdownAutomaton;
 
+import static gui.environment.Profile.PDA_STACK_BOTTOM_MARKER;
+
 /**
  * This action handles the conversion of an PDA to a context free grammar.
  * 
@@ -85,8 +87,15 @@ public class ConvertPDAToGrammarAction extends ConvertAutomatonToGrammarAction {
 		// Check the final states.
 		State[] finalStates = getAutomaton().getFinalStates();
 		if (finalStates.length != 1) {
-			JOptionPane.showMessageDialog(frame,
-					"There must be exactly one final state!",
+			drawer.clearSelected();
+			for (State state : finalStates) {
+				drawer.addSelected(state);
+			}
+//			JOptionPane.showMessageDialog(frame,
+//					"There must be exactly one final state!",
+//					"Final State Error", JOptionPane.ERROR_MESSAGE);
+			messageLabel.setText("There must be exactly one final state!");
+			JOptionPane.showMessageDialog(frame, messagePanel,
 					"Final State Error", JOptionPane.ERROR_MESSAGE);
 			return false;
 		}
@@ -96,7 +105,7 @@ public class ConvertPDAToGrammarAction extends ConvertAutomatonToGrammarAction {
 		HashSet<PDATransition> bad = new HashSet<>();
 		for (int i = 0; i < toFinal.length; i++) {
 			PDATransition t = (PDATransition) toFinal[i];
-			if (!t.getStringToPop().equals("Z"))
+			if (!t.getStringToPop().equals(PDA_STACK_BOTTOM_MARKER))
 				bad.add(t);
 		}
 		if (bad.size() != 0) {
@@ -104,7 +113,7 @@ public class ConvertPDAToGrammarAction extends ConvertAutomatonToGrammarAction {
 			Iterator<PDATransition> it = bad.iterator();
 			while (it.hasNext())
 				drawer.addSelected((Transition) it.next());
-			messageLabel.setText("Transitions to final must pop only 'Z'.");
+			messageLabel.setText("Transitions to final must pop only '" + PDA_STACK_BOTTOM_MARKER + "'.");
 			JOptionPane.showMessageDialog(frame, messagePanel,
 					"Final Transitions Error", JOptionPane.ERROR_MESSAGE);
 			return false;

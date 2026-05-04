@@ -8,8 +8,10 @@ import gui.environment.EnvironmentFrame;
 import gui.environment.Universe;
 
 import javax.swing.*;
+import javax.swing.Timer;
 import javax.swing.border.Border;
 import javax.swing.border.LineBorder;
+import javax.swing.event.HyperlinkEvent;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
@@ -54,6 +56,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     private JTextPane feedbackTextPane;
     private JLabel feedbackLabel;
+    private final JEditorPane feedbackEditorPane;
+    private String feedbackEditorPaneFontName;
 
     private JScrollPane scrollPane;
 
@@ -103,6 +107,13 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         feedbackTextPane.setContentType("text/html");
         feedbackLabel = new JLabel("<html> </html>");
 
+        feedbackEditorPane = new JEditorPane();
+        feedbackEditorPane.setContentType("text/html");
+        feedbackEditorPane.setEditable(false);
+        feedbackEditorPaneFontName = feedbackLabel.getFont().getFontName();
+        feedbackEditorPane.setCaretColor(new Color(0, 0, 0, 0));
+        feedbackEditorPane.setSelectedTextColor(null);
+
         setupGui();
         populateGui();
         setupEventHandlers();
@@ -117,10 +128,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         this.getContentPane().add(scrollPane);
         this.setVisible(false);
+
+        // Just here so that the feedback panel is sized correctly when the window is created
+        appendResult(colorHTMLMessage("Initial Value", "white"));
+
     }
 
     public void displaySubmitWindow() {
-        // Safety measure so that GUI doesn't stop working if courseBox is disabled when it shouldn't be
+        // Safety measure so that the GUI doesn't stop working if courseBox is disabled when it shouldn't be
         toggleCourseBox(true);
 
         if (sessionHandler.loggedIn) {
@@ -154,10 +169,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         feedbackTextPane.setCaretPosition(feedbackTextPane.getDocument().getLength());
 
         if (line.startsWith(feedbackPrefix)) {
-            feedbackLabel.setText("<html>" + line.substring(feedbackPrefix.length() - 1, line.length()) + "</html>");
-        } else {
-            feedbackLabel.setText("<html>" + line + "</html>");
+            line = line.substring(feedbackPrefix.length() - 1);
+            //feedbackLabel.setText("<html>" + line.substring(feedbackPrefix.length() - 1, line.length()) + "</html>");
         }
+        feedbackLabel.setText("<html>" + line + "</html>");
+
+        feedbackEditorPane.setText("<html><body style=\"font-family: " + feedbackEditorPaneFontName + "; font-size: 12px\">" + line + "</body></html>");
+        //feedbackEditorPane.getCaret().setVisible(false);
+        //feedbackEditorPane.setCaretColor(new Color(0, 0, 0, 0));
     }
 
     public void logout() {
@@ -385,8 +404,48 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         feedbackLabelPanel.add(feedbackLabel, c2);
 
         // Add feedbackLabelPanel to contentPane
+        //c.gridy = y++;
+        //contentPane.add(createInputPanel(feedbackLabelPanel, "Feedback", false), c);
+
+
+        // Handle feedbackEditorPane
+        feedbackEditorPane.addHyperlinkListener(e -> {
+            if (HyperlinkEvent.EventType.ENTERED.equals(e.getEventType())) {
+
+            } else if (HyperlinkEvent.EventType.EXITED.equals(e.getEventType())) {
+
+            } else if (HyperlinkEvent.EventType.ACTIVATED.equals(e.getEventType())) {
+                if (Desktop.isDesktopSupported()) {
+                    try {
+                        Desktop.getDesktop().browse(e.getURL().toURI());
+                    } catch (Exception ex) {
+                        ex.printStackTrace();
+                    }
+                }
+            }
+        });
+
+        // Add feedbackEditorPane to contentPane
         c.gridy = y++;
-        contentPane.add(createInputPanel(feedbackLabelPanel, "Feedback", false), c);
+        contentPane.add(createFeedbackPanelHelper(feedbackEditorPane, -3), c);
+    }
+
+    private JPanel createFeedbackPanelHelper(Component component, int insetOffset) {
+        changeSize(component, 16);
+        unBoldFont(component);
+
+        // create feedbackPanel
+        JPanel feedbackPanel = new JPanel(new GridBagLayout());
+        feedbackPanel.setBackground(Color.WHITE);
+        feedbackPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
+        // Add component to feedbackPanel
+        GridBagConstraints c2 = setConstraints(1, 1, 0, 0);
+        c2.insets = new Insets(10, 12, 10, 12);
+        c2.insets = new Insets(10 + insetOffset, 12 + insetOffset, 10 + insetOffset, 12 + insetOffset);
+        feedbackPanel.add(component, c2);
+
+        // Create InputPanel
+        return createInputPanel(feedbackPanel, "Feedback", false);
     }
 
     private void addRefreshButton(JPanel inputPanel, JButton refreshButton, int y) {
@@ -884,12 +943,30 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             assert assignment != null;
                             assert problem != null;
 
+                            // Create a timer that waits 10 seconds before showing a message to the user.
+                            // Define the time delay in milliseconds (1000ms = 1 second)
+                            int delay = 10_000; // 10 secs
+                            // Create and start the Swing Timer
+                            Timer timer = new Timer(delay, e1 -> {
+                                // This code runs after the delay
+                                String link = getAssignmentLink(client);
+                                String message = getSlowSubmissionCheckMessage_afterSomeWait(link);
+                                // added to stop the timer from setting the text after a submission is complete
+                                if (feedbackEditorPane.getText().contains("Submitting")) {
+                                    publish(message);
+                                }
+                            });
+                            timer.setRepeats(false); // Ensure the timer only runs once
+                            timer.start();
+
                             Map<String, Object> submission = client.createSubmission(
                                     assignment.id,
                                     problem.id,
                                     "Submission from GUI",
                                     selectedFile
                             );
+                            // added to stop the timer from setting the text after a submission is complete
+                            timer.stop();
 
                             //publish("Submission successful!");
                             //publish("Data: " + submission);
@@ -902,7 +979,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                                 throw new IOException("Invalid feedback given by server!");
                             }
                             boolean correct = (boolean) submission.get("correct");
-                            publish(feedbackPrefix + colorMessage(feedback, correct));
+                            publish(feedbackPrefix + colorSuccessFailMessage(feedback, correct));
                             if (correct) {
                                 // Keep submitted problem selected if the "All Problems" radio button is selected
                                 if (allProblems.isSelected()) {
@@ -914,7 +991,12 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             }
                         } catch (IOException ex) {
                             // TODO: print the response from the server to stderr
-                            publish(colorHTMLErrorMessage("Submission failed: " + ex.getMessage()));
+                            if (ex.getMessage().equalsIgnoreCase("read timed out")) {
+                                String link = getAssignmentLink(client);
+                                publish(getSlowSubmissionCheckMessage_goToDashboard(link));
+                            } else {
+                                publish(colorHTMLErrorMessage("Submission failed: " + ex.getMessage()));
+                            }
                         }
                         //publish("");
                         return null;
@@ -934,6 +1016,45 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         });
     }
 
+    private String getSlowSubmissionCheckMessage_clickToViewStatus(String link) {
+        return colorHTMLWarningMessage("Your submission is taking a while to check...")
+                + "<br>"
+                + "<a href=\"" + link + "\">Click here</a>"
+                + colorHTMLWarningMessage(" to view the status of your submission in the AFCT Dashboard.");
+    }
+
+    private String getSlowSubmissionCheckMessage_afterSomeWait(String link) {
+        // TODO: which part of the text should be the link?
+        return colorHTMLWarningMessage("Your submission is taking a while to check...")
+                + "<br>"
+                + colorHTMLWarningMessage("When completed, you can view the status of your submission in the ")
+                + "<a href=\"" + link + "\">AFCT Dashboard</a>";
+    }
+
+    private String getSlowSubmissionCheckMessage_goToDashboard_old1(String link) {
+        return colorHTMLWarningMessage("Your submission is taking a while to check...")
+                + "<br>"
+                + colorHTMLWarningMessage("The status of your submission will be updated on the ")
+                + "<a href=\"" + link + "\">AFCT Dashboard</a>"
+                + colorHTMLWarningMessage(" when complete.");
+    }
+
+    private String getSlowSubmissionCheckMessage_goToDashboard_old2(String link) {
+        String color = "#cc4125";
+        return colorHTMLMessage("Your submission is taking a while to check...", color)
+                + "<br>"
+                + colorHTMLMessage("The status of your submission will be updated on the ", color)
+                + "<a href=\"" + link + "\">AFCT Dashboard</a>"
+                + colorHTMLMessage(" when complete.", color);
+    }
+
+    private String getSlowSubmissionCheckMessage_goToDashboard(String link) {
+        String color = "#cc4125";
+        return colorHTMLMessage("The status of your submission will be updated on the ", color)
+                + "<a href=\"" + link + "\">AFCT Dashboard</a>"
+                + colorHTMLMessage(" when complete.", color);
+    }
+
     private void handlers_logout() {
         SubmitWindow submitWindow = this;
         logoutButton.addActionListener(new ActionListener() {
@@ -945,6 +1066,17 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 Globals.sessionHandler.displayLoginThenSubmission(submitWindow);
             }
         });
+    }
+
+    public String getAssignmentLink(AFCTClient client) {
+        CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
+        AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
+
+        assert selectedCourse != null;
+        assert selectedAssignment != null;
+        assert client != null;
+        String url = client.getBaseUrl() + "/dashboard/courses/" + selectedCourse.id + "/" + selectedAssignment.id;
+        return url;
     }
 
     private File createTempFile() {

@@ -190,7 +190,10 @@ public class MenuBarCreator {
 	private static JMenu getFileMenu(EnvironmentFrame frame) {
 		Environment environment = frame.getEnvironment();
 		JMenu menu = new JMenu("File");
+
 		addItem(menu, new NewAction());
+		addItem(menu, NewInstanceOfCurrentAction.getActionInstance(frame));
+
 		SecurityManager sm = System.getSecurityManager();
 		if (Universe.CHOOSER != null) {
 			// Can't open and save files.
@@ -204,7 +207,8 @@ public class MenuBarCreator {
 			saveImageMenu.add(new SaveGraphGIFAction(environment, menu));
 			saveImageMenu.add(new SaveGraphBMPAction(environment, menu));
             if (environment instanceof AutomatonEnvironment){ //this is strictly for non-Grammar
-                JarFile jar = null;
+                // TODO: investigate this
+				JarFile jar = null;
                 try{
                     if (new File("JFLAP.jar").exists()) jar = new JarFile("JFLAP.jar");
                     else if (new File("JFLAP_With_Source.jar").exists()) jar = new JarFile("JFLAP_With_Source.jar");
@@ -517,8 +521,13 @@ public class MenuBarCreator {
 		if (ConvertFSAToGrammarAction.isApplicable(object))
 			addItem(menu, new ConvertFSAToGrammarAction(
 					(gui.environment.AutomatonEnvironment) environment));
+
 		if (ConvertPDAToGrammarAction.isApplicable(object))
 			addItem(menu, new ConvertPDAToGrammarAction(
+					(gui.environment.AutomatonEnvironment) environment));
+
+		if (BetterConvertPDAToGrammarAction.isApplicable(object))
+			addItem(menu, new BetterConvertPDAToGrammarAction(
 					(gui.environment.AutomatonEnvironment) environment));
 
 		if (ConvertFSAToREAction.isApplicable(object))
@@ -644,6 +653,8 @@ public class MenuBarCreator {
 		});
 		
 		addItem(menu, new AboutAction());
+
+		addItem(menu, new KeyboardShortcutsAction(frame));
 
 		return menu;
 	}

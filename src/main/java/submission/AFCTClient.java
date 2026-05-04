@@ -20,8 +20,8 @@ public class AFCTClient {
     private static final ObjectMapper MAPPER = new ObjectMapper();
     private final String baseUrl;
     private String token;
-    private int connectTimeoutMs = 15000;
-    private int readTimeoutMs = 30000;
+    private int connectTimeoutMs = 15_000;
+    private int readTimeoutMs = 60_000; // TODO: add a way to get the appropriate timeout from the server
 
     public AFCTClient(String baseUrl) {
         //this.baseUrl = baseUrl.endsWith("/") ? baseUrl.substring(0, baseUrl.length() - 1) : baseUrl;
@@ -41,6 +41,10 @@ public class AFCTClient {
             fixedUrl = "http://" + fixedUrl;
         }
         return fixedUrl;
+    }
+
+    public String getBaseUrl() {
+        return baseUrl;
     }
 
     public AFCTClient timeouts(int connectMs, int readMs) {
@@ -202,6 +206,11 @@ public class AFCTClient {
         String pretty = tryPretty(body);
         System.err.println("HTTP ERROR " + status + " on " + label);
         System.err.println("Body:\n" + pretty);
+
+        if (body == null || body.isEmpty()) {
+            return new IOException("HTTP " + status + " on " + label);
+        }
+
         try {
             JsonObject jsonBody = stringToJson(body);
             if (jsonBody.has("error")) {

@@ -25,6 +25,10 @@ import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 
 import automata.Transition;
+import automata.pda.PDATransition;
+import automata.turing.TMTransition;
+import automata.turing.Tape;
+import gui.environment.Universe;
 
 import static gui.Globals.*;
 
@@ -270,7 +274,11 @@ public class CurvedArrow {
 
     public void drawConnectedViewHighlightSelected(Graphics2D g, Transition transition, boolean forceDrawAsSelected) {
         if (transition.isSelected || forceDrawAsSelected) {
-            drawAsColor(g, FROM_COLOR);
+			if (transition.isSelfLoop()){
+				drawAsColor(g, BOTH_COLOR);
+			} else {
+				drawAsColor(g, FROM_COLOR);
+			}
         } else {
             drawAsColor(g, NEITHER_COLOR);
         }
@@ -291,9 +299,12 @@ public class CurvedArrow {
 				RenderingHints.VALUE_ANTIALIAS_ON);
 		g2.transform(affineToText);
 
+		// Handle spaces in transition
+		String tempLabel = myTransition.getDescriptionWithSpacesHandled();
+
 		// What about the text label?
 		FontMetrics metrics = g2.getFontMetrics();
-		bounds = metrics.getStringBounds(getLabel(), g2);
+		bounds = metrics.getStringBounds(tempLabel, g2);
 		// Will the label appear to be upside down?
 		boolean upsideDown = end.x < start.x;
 		float dx = (float) bounds.getWidth() / 2.0f;
@@ -302,12 +313,13 @@ public class CurvedArrow {
 		bounds.setRect(bounds.getX() - dx, bounds.getY() + dy, bounds
 				.getWidth(), bounds.getHeight());
 		g2.setColor(color);
-		for (int i = 0; i < label.length(); i += CHARS_PER_STEP) {
-			String sublabel = label.substring(i, Math.min(i + CHARS_PER_STEP,
-					label.length()));
-            if (sublabel.contains(" ")) {
-                sublabel = sublabel.replaceAll(" ", "␣");
-            }
+
+		for (int i = 0; i < tempLabel.length(); i += CHARS_PER_STEP) {
+			String sublabel = tempLabel.substring(i, Math.min(i + CHARS_PER_STEP,
+					tempLabel.length()));
+//            if (sublabel.contains(" ")) {
+//                sublabel = sublabel.replaceAll(" ", "␣");
+//            }
 			g2.drawString(sublabel, -dx, dy);
 			dx -= (float) metrics.getStringBounds(sublabel, g2).getWidth();
 		}

@@ -21,8 +21,8 @@
 package gui.environment;
 
 import file.*;
+import gui.menu.SettingsMenu;
 import submission.SubmissionGUI;
-import submission.SubmitDialog;
 
 import java.io.File;
 import java.io.IOException;
@@ -42,6 +42,10 @@ public class Universe {
 	 * constructor.
 	 */
 	private Universe() {
+	}
+
+	public static void initialize() {
+		System.out.println("Universe initialized.");
 	}
 
 	/**
@@ -203,6 +207,7 @@ public class Universe {
 	}
 	
 	public static Profile curProfile = new Profile();
+	public static SettingsMenu settingsMenu = new SettingsMenu();
 
 
     /** The mapping of environments to submit dialogs. */

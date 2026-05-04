@@ -21,13 +21,22 @@
 package gui.editor;
 
 import automata.Automaton;
+import automata.State;
+import automata.Transition;
 import gui.SuperMouseAdapter;
 import gui.environment.AutomatonEnvironment;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
-import java.awt.Graphics;
+
+import java.awt.*;
+import java.awt.event.InputEvent;
+import java.awt.event.MouseEvent;
 import javax.swing.Icon;
 import javax.swing.KeyStroke;
+
+import static gui.editor.EditorKeyBindings.CTRL_CMD_SHORTCUT_MASK;
+import static java.awt.event.InputEvent.ALT_DOWN_MASK;
+import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 
 /**
  * The <CODE>Tool</CODE> abstract class is a type of input adapter for the
@@ -49,7 +58,25 @@ public abstract class Tool extends SuperMouseAdapter {
 	public Tool(AutomatonPane view, AutomatonDrawer drawer) {
 		this.view = view;
 		this.drawer = drawer;
-		automaton = drawer.getAutomaton();
+		this.automaton = drawer.getAutomaton();
+		this.creator = TransitionCreator.creatorForAutomaton(getAutomaton(), getView());
+	}
+
+	/**
+	 * Constructs a new tool.
+	 *
+	 * @param view
+	 *            the view the tool is in, useful for calling <CODE>repaint</CODE>
+	 * @param drawer
+	 *            the drawer of the automaton
+	 * @param creator
+	 * 	 *            the transition creator for the type of automata we are editing
+	 */
+	public Tool(AutomatonPane view, AutomatonDrawer drawer, TransitionCreator creator) {
+		this.view = view;
+		this.drawer = drawer;
+		this.automaton = drawer.getAutomaton();
+		this.creator = creator;
 	}
 
 	/**
@@ -169,6 +196,77 @@ public abstract class Tool extends SuperMouseAdapter {
         //return ((AutomatonEnvironment) view.getCreator().getAutomaton().getEnvironmentFrame().getEnvironment()).getObjectSnappingHandler();
     }
 
+	protected void showPopup(MouseEvent event) {
+		if (skipNextPopup) {
+			skipNextPopup = false;
+			return;
+		}
+
+		//System.out.println("showPopup");
+
+		// Should we show a popup menu?
+		if (event.isPopupTrigger() || event.getButton() == MouseEvent.BUTTON3) {
+			Point p = getView().transformFromAutomatonToView(event.getPoint());
+
+			State clickedState = getDrawer().stateAtPoint(event.getPoint());
+			if (clickedState != null) {
+				getAutomaton().deselectAllTransitions();
+				if (!clickedState.isSelected() && ctrlAndShiftUp(event)) {
+					getAutomaton().deselectAllStates();
+					clickedState.setSelect(true);
+					getView().repaint();
+				}
+				getDrawer().contextActions.showPopupMenu(this, p, getView(), false);
+			} else {
+				Transition transition = getDrawer().transitionAtPoint(event.getPoint());
+				if (transition != null) {
+					getAutomaton().deselectStatesAndTransitions();
+					transition.isSelected = true;
+					creator.editTransition(transition, event.getPoint());
+				} else {
+					// Open the default context-menu
+					getDrawer().contextActions.showPopupMenu(this, p, getView(), true);
+				}
+			}
+		}
+
+		// If the event is NOT a popup trigger, but the user right-clicked (so the popup was shown anyway)
+		if (!event.isPopupTrigger() && event.getButton() == MouseEvent.BUTTON3) {
+			skipNextPopup = true;
+		}
+	}
+
+	protected boolean ctrlAndShiftUp(InputEvent event) {
+		// Check currently pressed keys
+		int modifiersEx = event.getModifiersEx();
+		// Check if Ctrl is NOT pressed
+		boolean isCtrlUp = (modifiersEx & CTRL_CMD_SHORTCUT_MASK) == 0;
+		// Check if Shift is NOT pressed
+		boolean isShiftUp = (modifiersEx & SHIFT_DOWN_MASK) == 0;
+		// Ctrl and Shift are both up
+		return isCtrlUp && isShiftUp;
+	}
+
+	protected boolean shiftUp(InputEvent event) {
+		// Check currently pressed keys
+		int modifiersEx = event.getModifiersEx();
+		// Check if Shift is NOT pressed
+		boolean isShiftUp = (modifiersEx & SHIFT_DOWN_MASK) == 0;
+		return isShiftUp;
+	}
+
+	protected boolean altKeyDown(InputEvent event) {
+		// Check currently pressed keys
+		int modifiersEx = event.getModifiersEx();
+		// Check if ALT IS pressed
+		boolean isAltDown = (modifiersEx & ALT_DOWN_MASK) != 0;
+		return isAltDown;
+	}
+
+
+	/** The transition creator for editing transitions. */
+	protected TransitionCreator creator;
+
 	/** The view we receive events from. */
 	private AutomatonPane view;
 
@@ -178,4 +276,5 @@ public abstract class Tool extends SuperMouseAdapter {
 	/** The automaton. */
 	private Automaton automaton;
 
+	protected boolean skipNextPopup = false;
 }

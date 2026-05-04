@@ -123,6 +123,14 @@ public class ToolBar extends JToolBar implements ActionListener {
 			Object o = new Object();
 			imap.put(key, o);
 			amap.put(o, new ButtonClicker(button));
+
+			// Start environment with the first tool in the toolbar selected
+			if (currentTool == null) {
+				currentTool = tool;
+				currentButton = button;
+				button.setSelected(true);
+				adapter.setAdapter(tool);
+			}
 		}
 	}
 
@@ -212,7 +220,8 @@ public class ToolBar extends JToolBar implements ActionListener {
 		}
 
 		public void actionPerformed(ActionEvent e) {
-			button.doClick();
+			// only click the button when the toolbar's enabled
+			if (toolbarEnabled) button.doClick();
 		}
 
 		AbstractButton button;
@@ -229,6 +238,12 @@ public class ToolBar extends JToolBar implements ActionListener {
             redoButton.setEnabled(enable);
         }
     }
+
+	public void setEnabled(boolean enabled){
+		toolbarEnabled = enabled;
+	}
+
+	private boolean toolbarEnabled = true;
 
     private JToggleButton undoButton = null;
     private JToggleButton redoButton = null;

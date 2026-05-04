@@ -139,6 +139,14 @@ public class AutomatonEnvironment extends Environment {
                 automaton.removeTransition(transition);
             }
         }
+
+        // TODO: there is still some jank with this -- deleting a selected transition when in highlight mode is wacky
+        if (automaton.getView().getDrawer().showConnected) {
+            // If nothing is selected at this point
+            if (!automaton.anyStatesOrTransitionsSelected()) {
+                automaton.getView().getDrawer().showConnected = false;
+            }
+        }
     }
 
     @Override

@@ -613,7 +613,89 @@ public class Automaton implements Serializable, Cloneable {
 
         return selectedStates.toArray(new State[0]);
     }
-	
+
+	public Transition[] getSelectedTransitions() {
+		Transition[] transitions = getTransitions();
+		ArrayList<Transition> selectedTransitions = new ArrayList<>();
+		for (Transition transition : transitions) {
+			if (transition.isSelected) {
+				selectedTransitions.add(transition);
+			}
+		}
+		return selectedTransitions.toArray(new Transition[0]);
+	}
+
+	public boolean anyStatesSelected() {
+		boolean anySelected = false;
+		// slight optimization as iterating an Array is O(n), but iterating a HashSet is O(n+m)
+		// where n is the number of elements in the set and m is the "capacity" of the backing (the number of buckets)
+		if (cachedStates != null) {
+			for (State state : cachedStates) {
+				if (state.isSelected()) {
+					anySelected = true;
+					break;
+				}
+			}
+		} else {
+			for (State state : states) {
+				if (state.isSelected()) {
+					anySelected = true;
+					break;
+				}
+			}
+		}
+
+		return anySelected;
+	}
+
+	public boolean anyTransitionsSelected() {
+		boolean anySelected = false;
+		// slight optimization as iterating an Array is O(n), but iterating a HashSet is O(n+m)
+		// where n is the number of elements in the set and m is the "capacity" of the backing (the number of buckets)
+		if (cachedTransitions != null) {
+			for (Transition transition : cachedTransitions) {
+				if (transition.isSelected) {
+					anySelected = true;
+					break;
+				}
+			}
+		} else {
+			for (Transition transition : transitions) {
+				if (transition.isSelected) {
+					anySelected = true;
+					break;
+				}
+			}
+		}
+		return anySelected;
+	}
+
+	public boolean anyStatesOrTransitionsSelected() {
+		// For now, check for selected states first as multiple can be selected at once.
+		// As (currently) only one transition can be selected at a time, the chance of hitting early stopping is lower
+		if (anyStatesSelected()) {
+			return true;
+		} else {
+			return anyTransitionsSelected();
+		}
+
+		// This should only be used if, in the future, multiple transitions can be selected at once
+//		// Check size to determine order to check for selected in to try to reduce time taken
+//		if (states.size() < transitions.size()) {
+//			if (anyStatesSelected()) {
+//				return true;
+//			} else {
+//				return anyTransitionsSelected();
+//			}
+//		} else {
+//			if (anyTransitionsSelected()) {
+//				return true;
+//			} else {
+//				return anyStatesSelected();
+//			}
+//		}
+	}
+
 	public void selectStatesWithinBounds(Rectangle bounds){
 //        if (bounds.width == -1 && bounds.height == -1) {
 //            return;
@@ -1328,7 +1410,7 @@ public class Automaton implements Serializable, Cloneable {
 	protected State initialState = null;
 
 	/** The list of transitions in this automaton. */
-	protected Set<Object> transitions;
+	protected Set<Transition> transitions;
 
 	/**
 	 * A mapping from states to a list holding transitions from those states.
@@ -1385,7 +1467,7 @@ public class Automaton implements Serializable, Cloneable {
     	HashSet<Object> t = new HashSet<Object>(transitions);
 		for (Object o:t)
 			removeTransition((Transition)o);
-		transitions = new HashSet<Object>();
+		transitions = new HashSet<>();
 		
 		
 		t = new HashSet<Object>(states);
@@ -1596,11 +1678,12 @@ public class Automaton implements Serializable, Cloneable {
         // Try to create a new object.
         try {
             // I am a bad person for writing this hack.
-//			if (this instanceof TuringMachine)
-//				a = new TuringMachine(((TuringMachine) this).tapes());
-//			else
-            //a = (Automaton) getClass().newInstance();
-            automaton = (Automaton) getClass().getDeclaredConstructor().newInstance();
+			if (this instanceof TuringMachine) {
+				automaton = new TuringMachine(((TuringMachine) this).tapes());
+			} else {
+				//a = (Automaton) getClass().newInstance();
+				automaton = (Automaton) getClass().getDeclaredConstructor().newInstance();
+			}
         } catch (Throwable e) {
             // Well golly, we're sure screwed now!
             System.err.println("Warning: clone of automaton failed!");

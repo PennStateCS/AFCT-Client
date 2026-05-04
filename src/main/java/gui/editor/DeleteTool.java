@@ -77,6 +77,13 @@ public class DeleteTool extends Tool {
 		return KeyStroke.getKeyStroke(KeyEvent.VK_D, 0);
 	}
 
+//	public void mousePressed(MouseEvent event) {
+//		if (getView().getDrawer().showConnected) {
+//			getView().getDrawer().showConnected = false;
+//			getView().repaint();
+//		}
+//	}
+
 	/**
 	 * When the user clicks, we delete either the state or, if no state, the
 	 * transition found at this point. If there's nothing at this point, nothing
@@ -91,6 +98,12 @@ public class DeleteTool extends Tool {
 		State state = getDrawer().stateAtPoint(event.getPoint());
 		if (state != null) {
 			getAutomaton().removeState(state);
+			if (getView().getDrawer().showConnected) {
+				// If nothing is selected at this point
+				if (!getAutomaton().anyStatesOrTransitionsSelected()) {
+					getView().getDrawer().showConnected = false;
+				}
+			}
 			getView().repaint();
 			return;
 		}
@@ -98,6 +111,14 @@ public class DeleteTool extends Tool {
 		if (trans != null) {
 			getAutomaton().removeTransition(trans);
 			getView().repaint();
+		}
+
+		if (getView().getDrawer().showConnected) {
+			// If nothing is selected at this point
+			if (!getAutomaton().anyStatesOrTransitionsSelected()) {
+				getView().getDrawer().showConnected = false;
+				getView().repaint();
+			}
 		}
 	}
 }

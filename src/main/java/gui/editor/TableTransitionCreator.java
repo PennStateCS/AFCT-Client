@@ -44,6 +44,9 @@ import automata.Transition;
 import automata.turing.TMTransition;
 import automata.turing.Tape;
 import debug.EDebug;
+
+import static gui.Globals.changeFontSize;
+
 /**
  * This allows the user to create transition creators that have tables directly
  * in the editing window with a minimum of effort.
@@ -125,6 +128,9 @@ public abstract class TableTransitionCreator extends TransitionCreator {
 			}
 		};
 
+		// TODO: determine a better way to do this, that also scales the size of the table
+		//changeFontSize(table, (float) (getParent().getScale() / 20.0));
+
 		table.setGridColor(Color.gray);
 		table.setBorder(new javax.swing.border.EtchedBorder());
 		return table;
@@ -159,6 +165,11 @@ public abstract class TableTransitionCreator extends TransitionCreator {
 		} catch (IllegalArgumentException e) {
 			System.err.println("Odd 'focusCycleRoot' exception thrown "
 					+ "from the depths of Java again.");
+		}
+		finally{
+			// re-enable the toolbar after editing
+			EditorPane ep = (EditorPane) transition.getAutomaton().getEnvironmentFrame().getEnvironment().getActive();
+			ep.getToolBar().setEnabled(true);
 		}
 		if (!cancel) {
 			TableModel oldModel = createModel(transition);
@@ -216,6 +227,10 @@ public abstract class TableTransitionCreator extends TransitionCreator {
 	 *            a new transition yet to be added
 	 */
 	public void editTransition(Transition transition, Point point) {
+		// disable the toolbar
+		EditorPane ep = (EditorPane) transition.getAutomaton().getEnvironmentFrame().getEnvironment().getActive();
+		ep.getToolBar().setEnabled(false);
+
 		stopEditing(false); // Make sure...
 		this.transition = transition;
 		isNew = point == null;

@@ -20,6 +20,8 @@
 
 package automata.pda;
 
+import automata.mealy.MealyTransition;
+import automata.mealy.MooreTransition;
 import gui.environment.Universe;
 import automata.Transition;
 import automata.State;
@@ -171,7 +173,20 @@ public class PDATransition extends Transition {
 		String toPush = getStringToPush();
 		if (toPush.length() == 0)
 			toPush = Universe.curProfile.getEmptyString();
-		return input + " , " + toPop + " ; " + toPush;
+		//return input + " , " + toPop + " ; " + toPush;
+		return input + ", " + toPop + " → " + toPush;
+	}
+
+	/**
+	 * {@inheritDoc}
+	 * {@link PDATransition} has the form: "read, pop → push"
+	 * @see PDATransition#getInputToRead()
+	 * @see PDATransition#getStringToPop()
+	 * @see PDATransition#getStringToPush()
+	 */
+	@Override
+	public String getDescriptionWithSpacesHandled() {
+		return getEmptyOrReplaceSpaces(getInputToRead()) + ", " + getEmptyOrReplaceSpaces(getStringToPop()) + " → " + getEmptyOrReplaceSpaces(getStringToPush());
 	}
 
 	/**

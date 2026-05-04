@@ -3,11 +3,7 @@ package conversions;
 import java.awt.Point;
 import java.io.File;
 import java.io.Serializable;
-import java.util.Arrays;
-import java.util.ArrayList;
-import java.util.Collections;
-import java.util.HashMap;
-import java.util.HashSet;
+import java.util.*;
 
 import automata.State;
 import automata.Transition;
@@ -21,6 +17,19 @@ import com.ibm.icu.text.UnicodeSet;
 import com.ibm.icu.text.UnicodeSetIterator;
 
 public class PDAToCFG {
+    public static class TransitionException extends IllegalArgumentException {
+        public Transition[] transitions;
+        public TransitionException(String s, Transition transition) {
+            super(s);
+            this.transitions = new Transition[]{transition};
+        }
+
+        public TransitionException(String s, List<Transition> transitions) {
+            super(s);
+            this.transitions = transitions.toArray(new Transition[0]);
+        }
+    }
+
     public static HashSet<Character> stackAlphabet(PushdownAutomaton pda) {
         HashSet<Character> gamma = new HashSet<Character>();
         Transition[] transitions = pda.getTransitions();
@@ -113,7 +122,7 @@ public class PDAToCFG {
         String popString = t.getStringToPop();
 
         if (t.getStringToPush().length() > 0) {
-            throw new IllegalArgumentException("Transition " + t + " pushes symbols");
+            throw new TransitionException("Transition " + t + " pushes symbols", t);
         }
 
         if (popString.length() > 1) {
@@ -135,7 +144,7 @@ public class PDAToCFG {
         String pushString = t.getStringToPush();
 
         if (t.getStringToPop().length() > 0) {
-            throw new IllegalArgumentException("Transition " + t + " pops symbols");
+            throw new TransitionException("Transition " + t + " pops symbols", t);
         }
 
         if (pushString.length() > 1) {
@@ -177,24 +186,24 @@ public class PDAToCFG {
 
             if (pdat.getStringToPush() != "") {
                 if (pdat.getStringToPop() != "") {
-                    throw new IllegalArgumentException("Transition " + pdat.toString() + " pushes and pops symbols in the stack");
+                    throw new TransitionException("Transition " + pdat.toString() + " pushes and pops symbols in the stack", pdat);
                 }
 
                 if (pdat.getStringToPush().length() > 1) {
-                    throw new IllegalArgumentException("Transition " + pdat.toString() + " pushes more than one symbol into the stack");
+                    throw new TransitionException("Transition " + pdat.toString() + " pushes more than one symbol into the stack", pdat);
                 }
 
                 pushTransitionsByState.get(t.getFromState()).add(pdat);
             }
             else if (pdat.getStringToPop() != "") {
                 if (pdat.getStringToPop().length() > 1) {
-                    throw new IllegalArgumentException("Transition " + pdat.toString() + " pops more than one symbol from the stack");
+                    throw new TransitionException("Transition " + pdat.toString() + " pops more than one symbol from the stack", pdat);
                 }
 
                 popTransitionsByState.get(t.getFromState()).add(pdat);
             }
             else {
-                throw new IllegalArgumentException("Transition " + pdat.toString() + "neither pushes nor pops symbols in the stack");
+                throw new TransitionException("Transition " + pdat.toString() + "neither pushes nor pops symbols in the stack", pdat);
             }
         }
 

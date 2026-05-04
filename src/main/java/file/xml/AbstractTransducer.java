@@ -23,6 +23,8 @@ package file.xml;
 import java.util.Iterator;
 import java.util.Map;
 import javax.xml.parsers.*;
+
+import gui.Globals;
 import org.w3c.dom.*;
 import org.w3c.dom.Document;
 
@@ -49,8 +51,7 @@ public abstract class AbstractTransducer implements Transducer {
 		 * "version=\"1.0\""));
 		 */
 		// Add the credit string for JFLAP.
-		doc.appendChild(createComment(doc, "Created with JFLAP "
-				+ gui.AboutBox.VERSION + "."));
+		doc.appendChild(createComment(doc, Globals.FILE_CREATED_WITH_STRING));
 		// Create and add the <structure> element.
 		Element structureElement = createElement(doc, STRUCTURE_NAME, null,
 				null);

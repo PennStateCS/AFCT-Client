@@ -277,10 +277,10 @@ public class State implements Serializable {
 	
     public int specialHash(){
     	
-         return point.hashCode() 
-         + (myNote == null? -1 : myNote.specialHash()) 
-         + (getLabel() == null ? -1 
-        		 : getLabel().hashCode());
+         return point.hashCode()
+				 + (myNote == null? -1 : myNote.specialHash())
+				 + (getLabel() == null ? -1 : getLabel().hashCode())
+				 + (name == null ? -1 : name.hashCode());
     }
 
 

@@ -76,12 +76,14 @@ public class StateDrawer {
         }
 
         Color outlineColor;
+		Color textColor = Color.black;
         if(state.isSelected()) {
             if (!toSelected && !fromSelected) {
                 outlineColor = FROM_COLOR;
             } else {
                 outlineColor = BOTH_COLOR;
             }
+			textColor = outlineColor;
         } else {
             if (toSelected && fromSelected) {
                 outlineColor = BOTH_COLOR;
@@ -91,11 +93,13 @@ public class StateDrawer {
                 outlineColor = FROM_COLOR;
             } else {
                 outlineColor = NEITHER_COLOR;
+				textColor = NEITHER_COLOR;
             }
+			textColor = outlineColor;
         }
-        drawState(g, automaton, state, outlineColor);
+        drawState(g, automaton, state, outlineColor, textColor);
         if (drawStateLabels) {
-            drawStateLabel(g, state, outlineColor);
+            drawStateLabel(g, state, outlineColor, textColor);
         }
     }
 
@@ -110,18 +114,19 @@ public class StateDrawer {
         }
 
         boolean toSelected = false;
-        if (!fromSelected) {
-            Transition[] to = automaton.getTransitionsToState(state);
-            for (Transition t : to) {
-                if (t.isSelected) {
-                    toSelected = true;
-                    break;
-                }
-            }
-        }
+		Transition[] to = automaton.getTransitionsToState(state);
+		for (Transition t : to) {
+			if (t.isSelected) {
+				toSelected = true;
+				break;
+			}
+		}
+
 
         Color outlineColor;
-        if (toSelected) {
+		if (fromSelected && toSelected) {
+			outlineColor = BOTH_COLOR;
+		} else if (toSelected) {
             outlineColor = TO_COLOR;
         } else if (fromSelected) {
             outlineColor = FROM_COLOR;
@@ -145,8 +150,8 @@ public class StateDrawer {
 	 * @param state
 	 *            the state to draw
 	 */
-	public void drawState(Graphics g, Automaton automaton, State state) {
-		this.drawState(g, automaton, state, state.getPoint());
+	public void drawState(Graphics g, Automaton automaton, State state, boolean ignoreSelected) {
+		this.drawState(g, automaton, state, state.getPoint(), ignoreSelected);
 	}
 
 	/**
@@ -165,6 +170,12 @@ public class StateDrawer {
 	public void drawState(Graphics g, Automaton automaton, State state,
 			Point point) {
 		drawState(g, automaton, state, point, STATE_COLOR);
+	}
+
+	public void drawState(Graphics g, Automaton automaton, State state,
+			Point point, boolean ignoreSelected) {
+
+		drawState(g, automaton, state, point, STATE_COLOR, ignoreSelected);
 	}
 
 	/**
@@ -188,6 +199,11 @@ public class StateDrawer {
 		return;
 	}
 
+	public void drawState(Graphics g, Automaton automaton, State state,
+			Point point, Color color, boolean ignoreSelected) {
+		drawArea(g, automaton, state, point, color, ignoreSelected);
+	}
+
     /**
      * Draws an individual state with the specified outline color.
      *
@@ -204,23 +220,42 @@ public class StateDrawer {
         drawArea(g, automaton, state, state.getPoint(), STATE_COLOR, outlineColor);
     }
 
+	/**
+	 * Draws an individual state with the specified outline color and text color.
+	 *
+	 * @param g
+	 *            the graphics object to draw upon
+	 * @param state
+	 *            the state to draw
+	 * @param automaton
+	 *            the automaton this state is a part of
+	 * @param outlineColor
+	 *            the color of the outline of the state
+	 * @param textColor
+	 *           the color of the state name text
+	 */
+	public void drawState(Graphics g, Automaton automaton, State state, Color outlineColor, Color textColor) {
+		drawArea(g, automaton, state, state.getPoint(), STATE_COLOR, outlineColor, textColor, false);
+	}
+
 
     /**
 	 * @param state
 	 */
-	private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor, Color outlineColor) {
+	private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor, Color outlineColor, Color textColor, boolean ignoreSelected) {
 		// Draw the basic background of the state.
-		drawBackground(g, state, point, fillColor);
+		drawBackground(g, state, point, fillColor, ignoreSelected);
 		// What about the text label?
-		g.setColor(outlineColor);
+		g.setColor(textColor);
 
 		int dx = ((int) g.getFontMetrics().getStringBounds(state.getName(), g)
 				.getWidth()) >> 1;
 		int dy = ((int) g.getFontMetrics().getAscent()) >> 1;
 		
 		g.drawString(state.getName(), point.x - dx, point.y + dy);
-		
+
 		// Draw the outline.
+		g.setColor(outlineColor);
 		// //System.out.println("State name:" + state.getInternalName());
 //		if (state.getInternalName() == null) {
 			g.drawOval(point.x - radius, point.y - radius,
@@ -261,9 +296,18 @@ public class StateDrawer {
 //		}
 	}
 
+	private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor, Color outlineColor) {
+		drawArea(g, automaton, state, point, fillColor, outlineColor, outlineColor, false);
+	}
+
     private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor) {
         drawArea(g, automaton, state, point, fillColor, Color.black);
+		drawArea(g, automaton, state, point, fillColor, Color.black, Color.black, true);
     }
+
+	private void drawArea(Graphics g, Automaton automaton, State state, Point point, Color fillColor, boolean ignoreSelected) {
+		drawArea(g, automaton, state, point, fillColor, Color.black, Color.black, ignoreSelected);
+	}
 
 	/**
 	 * Draws the state label for a given state.
@@ -278,7 +322,7 @@ public class StateDrawer {
      * @param outlineColor
      *            the color of the outline of the label
 	 */
-	public void drawStateLabel(Graphics g, State state, Point point, Color fillColor, Color outlineColor) {
+	public void drawStateLabel(Graphics g, State state, Point point, Color fillColor, Color outlineColor, Color textColor) {
 		String[] labels = state.getLabels();
 		if (labels.length == 0)
 			return;
@@ -306,12 +350,30 @@ public class StateDrawer {
 
 		g.setColor(fillColor);
 		g.fillRect(x, y, width, height);
-		g.setColor(outlineColor);
+		g.setColor(textColor);
 		for (int i = 0; i < labels.length; i++) {
 			baseline += ascent + STATE_LABEL_PAD;
 			g.drawString(labels[i], x + STATE_LABEL_PAD, baseline);
 		}
+		g.setColor(outlineColor);
 		g.drawRect(x, y, width, height);
+	}
+
+	/**
+	 * Draws the state label for a given state.
+	 *
+	 * @param state
+	 *            the state whose label we must draw
+	 * @param point
+	 *            the point of the state, which is NOT the same thing as any
+	 *            point where the label gets drawn
+	 * @param fillColor
+	 *            the background color of the label
+	 * @param outlineColor
+	 *            the color of the outline of the label
+	 */
+	public void drawStateLabel(Graphics g, State state, Point point, Color fillColor, Color outlineColor) {
+		drawStateLabel(g, state, point, fillColor, outlineColor, outlineColor);
 	}
 
     /**
@@ -341,6 +403,18 @@ public class StateDrawer {
         drawStateLabel(g, state, state.getPoint(), STATE_COLOR, outlineColor);
     }
 
+	/**
+	 * Draws the state label for a given state.
+	 *
+	 * @param state
+	 *            the state whose label we must draw
+	 * @param outlineColor
+	 *            the color of the outline of the label
+	 */
+	public void drawStateLabel(Graphics g, State state, Color outlineColor, Color textColor) {
+		drawStateLabel(g, state, state.getPoint(), STATE_COLOR, outlineColor, textColor);
+	}
+
 
 	/**
 	 * Draws the background of the state.
@@ -354,9 +428,9 @@ public class StateDrawer {
 	 * @param color
 	 *            the color of the background, if supported by this class
 	 */
-	public void drawBackground(Graphics g, State state, Point point, Color color) {
+	public void drawBackground(Graphics g, State state, Point point, Color color, boolean ignoreSelected) {
 		g.setColor(color);
-		if(state.isSelected()) g.setColor(HIGHLIGHT_COLOR);
+		if(state.isSelected() && !ignoreSelected) g.setColor(HIGHLIGHT_COLOR);
 //		if (state.getInternalName() == null)
 			g.fillOval(point.x - radius, point.y - radius, 2 * radius,
 					2 * radius);

@@ -65,6 +65,7 @@ public class TrapStateTool extends StateTool {
 	 *            the mouse event
 	 */
 	public void mousePressed(MouseEvent event) {
+		getView().getDrawer().showConnected = false;
 		if ((myTrapState = myController.stateCreate(event.getPoint())) == null)
 			return;
 		getView().repaint();
