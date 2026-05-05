@@ -23,7 +23,20 @@ import regular.RegularExpression;
 import regular.RegularExpressionValidator;
 
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.Iterator;
+
+/**
+ * The GNFA step by state simulator object simulates the behavior of the automaton.
+ * It takes a GNFA object and an input string, running the input string on the automaton.
+ * The simulator transitions between states when a prefix of the remaining unprocessed
+ * input string matches the regular expression represented by a GNFA transition.
+ * States are traversed one at a time.
+ *
+ * @see automata.gnfa.GNFAStepByStateSimulator
+ *
+ * @author Teddy FitzPatrick
+ */
 
 public class GNFAStepByStateSimulator extends AutomatonSimulator {
     /**
@@ -34,6 +47,7 @@ public class GNFAStepByStateSimulator extends AutomatonSimulator {
      */
     public GNFAStepByStateSimulator(Automaton automaton){
         super(automaton);
+        this.seen = new HashSet<>();
     }
 
     /**
@@ -62,7 +76,7 @@ public class GNFAStepByStateSimulator extends AutomatonSimulator {
     public ArrayList<Configuration> stepConfiguration(Configuration config){
         ArrayList<Configuration> list = new ArrayList<>();
         GNFAConfiguration configuration = (GNFAConfiguration) config;
-        /** get all information from configuration. */
+        // config destructuring
         String unprocessedInput = configuration.getUnprocessedInput();
         String totalInput = configuration.getInput();
         State currentState = configuration.getCurrentState();
@@ -70,10 +84,10 @@ public class GNFAStepByStateSimulator extends AutomatonSimulator {
                 .getTransitionsFromState(currentState);
         for (int k = 0; k < transitions.length; k++) {
             GNFATransition transition = (GNFATransition) transitions[k];
-            /** get all information from transition. */
+            // get all information from transition.
             String transLabel = transition.getLabel();
             State toState = transition.getToState();
-            /** identify unprocessed input string prefixes that match the transition's regular expression */
+            // identify unprocessed input string prefixes that match the transition's regular expression
             ArrayList<String> matchingPrefixes = getMatchingPrefixes(transLabel, unprocessedInput);
             // Enumerate each regular expression-matching prefix into a new configuration
             for (String matchingPrefix : matchingPrefixes){
@@ -81,9 +95,12 @@ public class GNFAStepByStateSimulator extends AutomatonSimulator {
                 if (matchingPrefix.length() < unprocessedInput.length()){
                     nextUnprocessedInput = unprocessedInput.substring(matchingPrefix.length());
                 }
-                list.add(
-                    new GNFAConfiguration(toState, configuration, totalInput, nextUnprocessedInput)
-                );
+                GNFAConfiguration next = new GNFAConfiguration(toState, configuration, totalInput, nextUnprocessedInput);
+                // ignore configurations already explored
+                if (!(seen.contains(next))){
+                    list.add(next);
+                    seen.add(next);
+                }
             }
         }
         return list;
@@ -137,12 +154,12 @@ public class GNFAStepByStateSimulator extends AutomatonSimulator {
      * @return true if the automaton accepts the input
      */
     public boolean simulateInput(String input) {
-        /** clear the configurations to begin new simulation. */
         myConfigurations.clear();
         Configuration[] initialConfigs = getInitialConfigurations(input);
         for (int k = 0; k < initialConfigs.length; k++) {
             GNFAConfiguration initialConfiguration = (GNFAConfiguration) initialConfigs[k];
             myConfigurations.add(initialConfiguration);
+            seen.add(initialConfiguration);
         }
         while (!myConfigurations.isEmpty()) {
             if (isAccepted())
@@ -164,5 +181,7 @@ public class GNFAStepByStateSimulator extends AutomatonSimulator {
         return false;
     }
 
+    // store GNFAConfigurations already explored to prevent infinite looping on cycles
+    public HashSet<GNFAConfiguration> seen;
 }
 

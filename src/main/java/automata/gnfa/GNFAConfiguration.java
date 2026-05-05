@@ -21,10 +21,13 @@ import automata.Automaton;
 import automata.Configuration;
 import automata.State;
 
+import java.util.Objects;
+
 public class GNFAConfiguration extends Configuration {
     public GNFAConfiguration(State state, automata.gnfa.GNFAConfiguration parent, String input,
                             String unprocessed) {
         super(state, parent);
+        myCurrentState = state;
         myInput = input;
         myUnprocessedInput = unprocessed;
     }
@@ -53,8 +56,11 @@ public class GNFAConfiguration extends Configuration {
         }
     }
     public int hashCode() {
-        return super.hashCode() ^ myUnprocessedInput.hashCode();
+        return Objects.hash(myCurrentState.getLabel(), myUnprocessedInput);
     }
+
+    /** The current state of the configuration */
+    private State myCurrentState;
     /** The total input. */
     private String myInput;
 
