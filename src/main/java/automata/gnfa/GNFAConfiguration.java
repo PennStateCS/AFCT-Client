@@ -23,7 +23,7 @@ import automata.State;
 
 import java.util.Objects;
 
-public class GNFAConfiguration extends Configuration {
+public class GNFAConfiguration extends Configuration{
     public GNFAConfiguration(State state, automata.gnfa.GNFAConfiguration parent, String input,
                             String unprocessed) {
         super(state, parent);
@@ -44,17 +44,16 @@ public class GNFAConfiguration extends Configuration {
         Automaton a = s.getAutomaton();
         return a.isFinalState(s);
     }
-    public boolean equals(Object configuration) {
-        if (configuration == this)
-            return true;
-        try {
-            return super.equals(configuration)
-                    && myUnprocessedInput
-                    .equals(((automata.gnfa.GNFAConfiguration ) configuration).getUnprocessedInput());
-        } catch (ClassCastException e) {
-            return false;
-        }
+
+    @Override
+    public boolean equals(Object otherConfig) {
+        if (this == otherConfig) return true;
+        if (!(otherConfig instanceof GNFAConfiguration otherGNFAConfig)) return false;
+        return Objects.equals(myCurrentState, otherGNFAConfig.myCurrentState)
+                && Objects.equals(myUnprocessedInput, otherGNFAConfig.myUnprocessedInput);
     }
+
+    /** GNFAConfig hash is composed of the current state's label and the unprocessed input*/
     public int hashCode() {
         return Objects.hash(myCurrentState.getLabel(), myUnprocessedInput);
     }
