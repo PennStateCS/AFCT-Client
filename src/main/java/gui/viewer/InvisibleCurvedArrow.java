@@ -23,6 +23,8 @@ package gui.viewer;
 import java.awt.*;
 import java.awt.geom.Rectangle2D;
 import java.awt.geom.Area;
+import java.util.ArrayList;
+
 import automata.Transition;
 
 import static gui.Globals.*;
@@ -53,7 +55,7 @@ public class InvisibleCurvedArrow extends CurvedArrow {
 	 *            bool: true if curve is reflexive, false otherwise
 	 */
 	public InvisibleCurvedArrow(Point start, Point end, float curvy, Transition t, boolean reflexivity) {
-		super(start, end, curvy, t, reflexivity);
+		super(start, end, curvy, new ArrayList<>(), (GUITransition) t);
 	}
 
 	/**

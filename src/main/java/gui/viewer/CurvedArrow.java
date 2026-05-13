@@ -23,12 +23,10 @@ package gui.viewer;
 import java.awt.*;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
+import java.util.ArrayList;
 
+import automata.State;
 import automata.Transition;
-import automata.pda.PDATransition;
-import automata.turing.TMTransition;
-import automata.turing.Tape;
-import gui.environment.Universe;
 
 import static gui.Globals.*;
 
@@ -50,27 +48,26 @@ public class CurvedArrow {
 	 * @param curvy
 	 *            the curvi-ness factor; 0 will create a straight line; 1 and -1
 	 *            are rather curvy
-	 * @param t
-	 *            the curve's transition
-	 * @param reflexivity
-	 *            bool: true if curve is reflexive, false otherwise
+	 * @param associatedTransitions
+	 *            the actual transitions associated to this curve. These are not
+	 *            rendered but are the underlying transitions that are represented
 	 */
-	public CurvedArrow(Point start, Point end, float curvy, Transition t, boolean reflexivity) {
-		isReflexive = reflexivity;
+	public CurvedArrow(
+			Point start,
+			Point end,
+			float curvy,
+			ArrayList<Transition> associatedTransitions,
+			GUITransition transitionForRendering
+	) {
+		isReflexive = fromState == toState;
 		curve = new QuadCurve2D.Float();
 		setStart(start);
 		setEnd(end);
+		this.representativeTransition = transitionForRendering;
 		control = new Point();
 		setCurvy(curvy);
-        myTransition = t;
+        myTransitions = associatedTransitions;
 		refreshCurve();
-	}
-
-	/**
-	 * See {@link #CurvedArrow(Point, Point, float, Transition, boolean)} + reflexivity = false
-	 */
-	public CurvedArrow(Point start, Point end, float curvy, Transition t) {
-		this(start, end, curvy, t, false);
 	}
 
 	/**
@@ -257,7 +254,7 @@ public class CurvedArrow {
 		g2.transform(affineToText);
 
 		// Handle spaces in transition
-		String tempLabel = myTransition.getDescriptionWithSpacesHandled();
+		String tempLabel = representativeTransition.getDescriptionWithSpacesHandled();
 
 		// What about the text label?
 		FontMetrics metrics = g2.getFontMetrics();
@@ -277,7 +274,7 @@ public class CurvedArrow {
 //            if (sublabel.contains(" ")) {
 //                sublabel = sublabel.replaceAll(" ", "␣");
 //            }
-			g2.drawString(sublabel, -dx, dy);
+			g2.drawString(sublabel, -dx, dy+3);
 			dx -= (float) metrics.getStringBounds(sublabel, g2).getWidth();
 		}
 		// g2.drawString(label, -dx, dy);
@@ -372,17 +369,17 @@ public class CurvedArrow {
         double factory = length == 0.0 ? 0.0 : lengthy / length;
 
 		// Control point is never adjusted; curve in its default orientation
-        if (myTransition.getControl() == null){
+        if (representativeTransition.getControl() == null){
             control.x = (int) (centerx + curvy * HEIGHT * factory);
             control.y = (int) (centery - curvy * HEIGHT * factorx);
             high.x = (int) (centerx + curvy * HEIGHT * factory / 2.0);
             high.y = (int) (centery - curvy * HEIGHT * factorx / 2.0);
         }  else if (isReflexive){
 			// Control point moved from default position on reflexive arrow
-			control.x = (int) myTransition.getControl().x;
-			control.y = (int) myTransition.getControl().y;
+			control.x = (int) representativeTransition.getControl().x;
+			control.y = (int) representativeTransition.getControl().y;
 
-			Point statePoint = myTransition.getFromState().getPoint();
+			Point statePoint = representativeTransition.getFromState().getPoint();
 			// Importing constants of rendering dimensions/angles
 			double reflex_angle = AutomatonDrawer.REFLEXIVE_ANGLE;
 			double radii = StateDrawer.STATE_RADIUS;
@@ -401,8 +398,8 @@ public class CurvedArrow {
 			high.y = (int) (centery - curvy * HEIGHT * factorx / 2.0);
 		} else{
 			// Control point moved from default position on non-reflexive arrow
-            control.x = (int) myTransition.getControl().x;
-            control.y = (int) myTransition.getControl().y;
+            control.x = (int) representativeTransition.getControl().x;
+            control.y = (int) representativeTransition.getControl().y;
 
             //take the vector from the center to the control, and take half of that
             double xt = control.x - centerx;
@@ -491,12 +488,24 @@ public class CurvedArrow {
 		return curve;
 	}
 
+	public State getFromState() {
+		return fromState;
+	}
+
+	public State getToState() {
+		return toState;
+	}
+
 
 	/** The start, end, and single control points. */
 	protected Point start, end, control;
 
 	/** The high point of the arc. */
 	private Point high = new Point();
+
+	private State fromState;
+
+	private State toState;
 
 	/** The "curvy-ness" factor. */
 	protected float curvy;
@@ -570,7 +579,9 @@ public class CurvedArrow {
 
 	public boolean isReflexive = false;
 
-	public Transition myTransition;
+	public ArrayList<Transition> myTransitions;
+
+	public GUITransition representativeTransition;
 
     public float[] dashPattern = {3.0f, 3.0f};
 
