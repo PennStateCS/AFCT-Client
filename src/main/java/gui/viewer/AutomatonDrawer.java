@@ -28,14 +28,8 @@ import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.geom.AffineTransform;
-import java.awt.geom.Point2D;
 import java.awt.geom.Rectangle2D;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Set;
-
-import debug.EDebug;
+import java.util.*;
 
 import automata.Automaton;
 import automata.Note;
@@ -46,10 +40,9 @@ import automata.event.AutomataStateListener;
 import automata.event.AutomataTransitionEvent;
 import automata.event.AutomataTransitionListener;
 import equivalence.StatePair;
+import gui.environment.Profile;
+import gui.environment.Universe;
 import gui.menu.ContextActions;
-import org.apache.http.impl.cookie.RFC6265LaxSpec;
-
-import java.util.HashSet;
 
 /**
  * This is the very basic class of an Automaton drawer. It has facilities to
@@ -257,7 +250,7 @@ public class AutomatonDrawer {
 			Rectangle newBounds = new Rectangle(curNote.getAutoPoint(), new Dimension(curNote.getBounds().getSize()));
 			rect.add(newBounds);
 		}
-		Iterator<CurvedArrow> it = arrowToTransitionMap.keySet().iterator();
+		Iterator<CurvedArrow> it = arrowList.iterator();
 		while (it.hasNext()) {
 			CurvedArrow arrow = (CurvedArrow) it.next();
 			Rectangle2D arrowBounds = arrow.getBounds();
@@ -307,10 +300,9 @@ public class AutomatonDrawer {
 	 */
 	protected void drawTransitions(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;
-		Set<CurvedArrow> arrows = arrowToTransitionMap.keySet();
         if (!this.showConnected) {
-            for (CurvedArrow arrow : arrows) {
-                if (arrow.myTransition.isSelected) {
+            for (CurvedArrow arrow : arrowList) {
+                if (arrow.representativeTransition.isSelected) {
                     arrow.drawHighlight(g2);
                     arrow.drawControlPoint(g2);
                 } else {
@@ -318,8 +310,8 @@ public class AutomatonDrawer {
                 }
             }
         } else {
-            for (CurvedArrow arrow : arrows) {
-                Transition transition = arrowToTransitionMap.get(arrow);
+            for (CurvedArrow arrow : arrowList) {
+                Transition transition = arrow.representativeTransition;
                 arrow.drawConnectedView(g2, transition);
             }
         }
@@ -327,7 +319,6 @@ public class AutomatonDrawer {
 
     protected void drawTransitionsHighlightSelected(Graphics g) {
         Graphics2D g2 = (Graphics2D) g;
-        Set<CurvedArrow> arrows = arrowToTransitionMap.keySet();
         if (!this.showConnected) {
             drawTransitions(g);
         } else {
@@ -341,8 +332,8 @@ public class AutomatonDrawer {
 			// Draw transitions
 			StatePair temp;
 			boolean forceDrawAsSelected;
-            for (CurvedArrow arrow : arrows) {
-                Transition transition = arrowToTransitionMap.get(arrow);
+            for (CurvedArrow arrow : arrowList) {
+                Transition transition = arrow.representativeTransition;
 				temp = new StatePair(transition.getFromState(), transition.getToState());
 				forceDrawAsSelected = statePairs.contains(temp);
                 arrow.drawConnectedViewHighlightSelected(g2, transition, forceDrawAsSelected);
@@ -387,7 +378,7 @@ public class AutomatonDrawer {
 
 
 	/**
-	 * Refreshes the <CODE>arrowToTransitionMap</CODE> structure.
+	 * Refreshes the <CODE>arrowList</CODE> structure.
 	 */
 	private void refreshArrowMap() {
 		if (automaton == null) {
@@ -395,7 +386,7 @@ public class AutomatonDrawer {
 			return;
 		}
 		State[] states = automaton.getStates();
-		arrowToTransitionMap.clear(); // Remove old entries.
+		arrowList.clear(); // Remove old entries.
 		transitionToArrowMap.clear(); // Remove old entries.
 
 		for (int i = 0; i < states.length; i++) {
@@ -417,39 +408,17 @@ public class AutomatonDrawer {
 				double angle = angle(states[i], states[j]);
 				Point fromI = pointOnState(states[i], angle - ANGLE);
 				Point fromJ = pointOnState(states[j], angle + Math.PI + ANGLE);
-				for (int n = 0; n < itoj.length; n++) {
-					if(curveTransitionMap.containsKey(itoj[n])){
-						top = curveTransitionMap.get(itoj[n]);
-					}
-					float curvy = top+n;
-					CurvedArrow arrow = n == 0 ? new CurvedArrow(fromI, fromJ,
-							curvy, itoj[n]) : new InvisibleCurvedArrow(fromI, fromJ,
-							curvy, itoj[n]);
 
+				// Add curved arrows based on the rendering mode
+				Profile.transitionRendering transitionRenderingStyle = Universe.curProfile.getTransitionsRenderedAs();
+				createTransitionLabels(itoj, fromI, fromJ);
 
-					arrow.setLabel(itoj[n].getDescription());
-
-					arrowToTransitionMap.put(arrow, itoj[n]);
-					transitionToArrowMap.put(itoj[n], arrow);
-				}
+				// Do the same but for going in the other direction
 				fromI = pointOnState(states[i], angle + ANGLE);
 				fromJ = pointOnState(states[j], angle + Math.PI - ANGLE);
-				for (int n = 0; n < jtoi.length; n++) {
-					if(curveTransitionMap.containsKey(jtoi[n])){
-						bottom = curveTransitionMap.get(jtoi[n]);
-					}
-					float curvy = bottom+n;
-					CurvedArrow arrow = n == 0 ? new CurvedArrow(fromJ, fromI,
-							curvy, jtoi[n]) : new InvisibleCurvedArrow(fromJ, fromI,
-							curvy, jtoi[n]);
-					String label = jtoi[n].getDescription();
-
-
-					arrow.setLabel(label);
-					arrowToTransitionMap.put(arrow, jtoi[n]);
-					transitionToArrowMap.put(jtoi[n], arrow);
-				}
+				createTransitionLabels(jtoi, fromJ, fromI);
 			}
+
 			// Now handle transitions between a single state.
 			Transition[] trans = automaton.getTransitionsFromStateToState(
 					states[i], states[i]);
@@ -457,37 +426,117 @@ public class AutomatonDrawer {
 				continue;
 			Point from = pointOnState(states[i], -Math.PI * 0.333);
 			Point to = pointOnState(states[i], -Math.PI * 0.667);
-			for (int n = 0; n < trans.length; n++) {
-				if(selfTransitionMap.containsKey(trans[n])){  // Existing reflexive transition
-					//EDebug.print(selfTransitionMap);
-					Point storedfrom = pointOnState(states[i], (selfTransitionMap.get(trans[n]) + REFLEXIVE_ANGLE));
-					Point storedto = pointOnState(states[i], (selfTransitionMap.get(trans[n]) - REFLEXIVE_ANGLE));
-					CurvedArrow arrow = n == 0
-					? new CurvedArrow(storedfrom, storedto, -2.0f, trans[n], true)
-					: new InvisibleCurvedArrow(storedfrom, storedto, -2.0f - n, trans[n], true);
 
-					arrow.setLabel(trans[n].getDescription());
-					arrowToTransitionMap.put(arrow, trans[n]);
-					transitionToArrowMap.put(trans[n], arrow);
-				}else{  // Uninitialized reflexive transition
-					//EDebug.print(selfTransitionMap);
-					selfTransitionMap.put(trans[n], -Math.PI*.5);
-					CurvedArrow arrow = n == 0
-					? new CurvedArrow(from, to, -2.0f, trans[n], true)
-					: new InvisibleCurvedArrow(from, to, -2.0f - n, trans[n], true);
+			ArrayList<String> transitionLabels = new ArrayList<String>();
+
+			for (Transition transition : trans) {
+				transitionLabels.add(transition.getDescription());
+			}
+
+			GUITransition renderingTransition = new GUITransition(states[i], states[i], transitionLabels);
+			selfTransitionMap.put(renderingTransition, -Math.PI*.5);
+//			Point storedfrom = pointOnState(states[i], (selfTransitionMap.get(renderingTransition) + REFLEXIVE_ANGLE));
+//			Point storedto = pointOnState(states[i], (selfTransitionMap.get(renderingTransition) - REFLEXIVE_ANGLE));
+
+			CurvedArrow arrow = new CurvedArrow(
+					from,
+					to,
+					-2.0f,
+					new ArrayList<>(Arrays.asList(trans)),
+					renderingTransition
+			);
+
+			arrowList.add(arrow);
+			transitionToArrowMap.put(renderingTransition, arrow);
+
+			/*
+			for (int n = 0; n < trans.length; n++) {
+//					selfTransitionMap.put(trans[n], -Math.PI*.5);
+//					CurvedArrow arrow = n == 0
+//					? new CurvedArrow(from, to, -2.0f, new ArrayList<>(Arrays.asList(trans)), trans[0])
+//					: new InvisibleCurvedArrow(from, to, -2.0f - n, trans[n], true);
+					CurvedArrow arrow = new CurvedArrow(
+							from,
+							to,
+							states[i],
+							states[i],
+							-2.0f,
+							new ArrayList<>(Arrays.asList(trans))
+					);
+
                     //INSERTED for TransitionGUI
-                    arrow.myTransition = trans[n];
+                    arrow.myTransitions.add(trans[n]);
                     //END INSERTED for TransitionGUI
                     //MERLIN MERLIN MERLIN MERLIN MERLIN//
 
 
 					arrow.setLabel(trans[n].getDescription());
-					arrowToTransitionMap.put(arrow, trans[n]);
+					arrowList.add(arrow);
 					transitionToArrowMap.put(trans[n], arrow);
 				}
 			}
+			*/
 		}
 		valid = true;
+	}
+
+//	/**
+//	 * Puts arrow transition pairs into arrowList and transitionToArrowMap based
+//	 * on the transitions in the transitionList. Importantly, this method will treat every
+//	 * transition as its own curve so that every transition label will appear stacked
+//	 * on top of each other.
+//	 * @param transitionList A transition list
+//	 * @param offset Float representing how much higher to place the next curve
+//	 * @param start The start of the arrow
+//	 * @param end The end of the arrow (the part with the pointy bit)
+//	 */
+//	private void createTransitionsStackedLabels(Transition[] transitionList, float offset, Point start, Point end) {
+//		for (int n = 0; n < transitionList.length; n++) {
+//			if(curveTransitionMap.containsKey(transitionList[n])){
+//				offset = curveTransitionMap.get(transitionList[n]);
+//			}
+//			float curvy = offset+n;
+//			CurvedArrow arrow = n == 0 ? new CurvedArrow(start, end,
+//					curvy, transitionList[n]) : new InvisibleCurvedArrow(start, end,
+//					curvy, transitionList[n]);
+//
+//
+//			arrow.setLabel(transitionList[n].getDescription());
+//
+//			arrowList.add(arrow);
+//			transitionToArrowMap.put(transitionList[n], arrow);
+//		}
+//	}
+
+	private void createTransitionLabels(Transition[] transitionList, Point start, Point end) {
+		if (transitionList.length < 1) {
+			return;
+		}
+
+		State fromState = transitionList[0].getFromState();
+		State toState = transitionList[0].getToState();
+
+		float curvy = 0.5f;
+		ArrayList<String> transitionLabels = new ArrayList<String>();
+
+        for (Transition transition : transitionList) {
+            transitionLabels.add(transition.getDescription());
+        }
+
+		GUITransition representativeTransition = new GUITransition(fromState, toState, transitionLabels);
+
+		CurvedArrow arrow = new CurvedArrow(
+				start,
+				end,
+				curvy,
+				new ArrayList<>(Arrays.asList(transitionList)),
+				representativeTransition
+		);
+//		arrow.setLabel(transitionLabel);
+		arrowList.add(arrow);
+		for (Transition t: transitionList) {
+			transitionToArrowMap.put(t, arrow);
+		}
 	}
 
 	/**
@@ -589,17 +638,13 @@ public class AutomatonDrawer {
 	public Transition transitionAtPoint(Point point) {
         int fudge = 2;
         fudge = 3; // TODO - change this based on zoom level so when zoomed out it is easier to click transitions
-        // Also maybe add a "cycle click" where if you click the same place multiple times, it will cycle through
-        //      overlapping transitions
 
 		if (!valid)
 			refreshArrowMap();
-		Set<CurvedArrow> arrows = arrowToTransitionMap.keySet();
-		Iterator<CurvedArrow> it = arrows.iterator();
-		while (it.hasNext()) {
-			CurvedArrow arrow = (CurvedArrow) it.next();
+
+		for(CurvedArrow arrow : arrowList) {
 			if (arrow.isNear(point, fudge))
-				return (Transition) arrowToTransitionMap.get(arrow);
+				return arrow.representativeTransition;
 		}
 		return null;
 	}
@@ -747,10 +792,10 @@ public class AutomatonDrawer {
 	public HashMap<Transition, Float> curveTransitionMap = new HashMap<>();
 
 	/**
-	 * A map of curved arrows to transitions. This object is also used for
+	 * A list of curved arrows to transitions. This is used for
 	 * iteration over all arrows when drawing must be done
 	 */
-	public HashMap<CurvedArrow, Transition> arrowToTransitionMap = new HashMap<>();
+	public ArrayList<CurvedArrow> arrowList = new ArrayList<>();
 
 	/** The map from transitions to their respective arrows. */
 	public HashMap<Transition, CurvedArrow> transitionToArrowMap = new HashMap<>();

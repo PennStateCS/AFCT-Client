@@ -22,9 +22,6 @@ package gui.editor;
 
 import automata.*;
 import gui.environment.AutomatonEnvironment;
-import gui.environment.Environment;
-import gui.environment.EnvironmentFrame;
-import gui.environment.tag.CriticalTag;
 import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 import gui.viewer.CurvedArrow;
@@ -35,27 +32,11 @@ import java.awt.geom.Point2D;
 import java.util.ArrayList;
 
 import javax.swing.Icon;
-import javax.swing.JCheckBoxMenuItem;
-import javax.swing.JLabel;
-import javax.swing.JMenuItem;
-import javax.swing.JOptionPane;
-import javax.swing.JPanel;
-import javax.swing.JPopupMenu;
-import javax.swing.JTextField;
 import javax.swing.KeyStroke;
 
-import automata.graph.AutomatonGraph;
-import automata.graph.LayoutAlgorithm;
-import automata.graph.layout.GEMLayoutAlgorithm;
-import automata.turing.TMTransition;
-import automata.turing.TMState;
-import automata.turing.TuringMachineBuildingBlocks;
 import debug.EDebug;
 
-import static gui.editor.EditorKeyBindings.CTRL_CMD_SHORTCUT_MASK;
 import static gui.editor.IconKeeper.getArrowToolIcon;
-import static java.awt.event.InputEvent.ALT_DOWN_MASK;
-import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
 
 /**
  * The arrow tool is used mostly for editing existing objects.
@@ -425,7 +406,7 @@ public class ArrowTool extends Tool {
 //					arrow.setStart(from);
 //					arrow.setEnd(to);
 					getView().getDrawer().selfTransitionMap.put(trans[n], angle);
-					getView().getDrawer().arrowToTransitionMap.put(arrow, trans[n]);
+					getView().getDrawer().arrowList.put(arrow, trans[n]);
 					getView().getDrawer().transitionToArrowMap.put(trans[n], arrow);
 				}
                 */
@@ -478,7 +459,7 @@ public class ArrowTool extends Tool {
 					//QuadCurve2D curve = arrow.getCurve();
 					//curve.setCurve(curve.getX1(), curve.getY1(), p.x, p.y, curve.getX2(), curve.getY2());
 					
-					getView().getDrawer().arrowToTransitionMap.put(arrow, trans[n]);
+//					getView().getDrawer().arrowList.put(arrow, trans[n]);
 					getView().getDrawer().transitionToArrowMap.put(trans[n], arrow);
 				}
 			}
