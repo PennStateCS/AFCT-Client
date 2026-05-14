@@ -166,8 +166,12 @@ public class TMConfiguration extends Configuration implements Cloneable {
     }
 
 	public Object clone() {
+		Tape[] newTapes = new Tape[myTapes.length];
+		for (int i = 0; i < myTapes.length; i++) {
+			newTapes[i] = new Tape(myTapes[i]);
+		}
 		TMConfiguration newConfig = new TMConfiguration(this.getCurrentState(),
-				(TMConfiguration) this.getParent(), myTapes, myFilters);
+				(TMConfiguration) this.getParent(), newTapes, myFilters);
 		newConfig.setFocused(this.getFocused());
         newConfig.setHalted(this.isHalted());
 		return newConfig;

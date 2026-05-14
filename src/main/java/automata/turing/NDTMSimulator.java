@@ -90,10 +90,10 @@ public class NDTMSimulator extends AutomatonSimulator {
      * @param input the input string
      */
     public Configuration[] getInitialConfigurations(String input) {
-	int tapes = ((TuringMachine)myAutomaton).tapes();
-	String[] inputs=new String[tapes];
-	for (int i=0; i<tapes; i++) inputs[i]=input;
-	return getInitialConfigurations(inputs);
+		int tapes = ((TuringMachine)myAutomaton).tapes();
+		String[] inputs=new String[tapes];
+		for (int i=0; i<tapes; i++) inputs[i]=input;
+		return getInitialConfigurations(inputs);
     }
 
     /**
@@ -104,16 +104,16 @@ public class NDTMSimulator extends AutomatonSimulator {
      */
 
 	public Configuration[] getInitialConfigurations(String[] inputs) {
-	inputStrings = (String[]) inputs.clone();
-	Tape[] tapes = new Tape[inputs.length];
-	for (int i = 0; i < tapes.length; i++)
-		tapes[i] = new Tape(inputs[i]);
-	Configuration[] configs = new Configuration[1];
-	TMState initialState = (TMState) myAutomaton.getInitialState();
-    TuringMachine tm = initialState.getInnerTM();
-	configs[0] = new TMConfiguration(initialState, null, tapes, myFilters);
-	return configs;
-}
+		inputStrings = (String[]) inputs.clone();
+		Tape[] tapes = new Tape[inputs.length];
+		for (int i = 0; i < tapes.length; i++)
+			tapes[i] = new Tape(inputs[i]);
+		Configuration[] configs = new Configuration[1];
+		TMState initialState = (TMState) myAutomaton.getInitialState();
+		TuringMachine tm = initialState.getInnerTM();
+		configs[0] = new TMConfiguration(initialState, null, tapes, myFilters);
+		return configs;
+	}
 
     /**
      * Simulates one step for a particular configuration, adding
@@ -127,30 +127,28 @@ public class NDTMSimulator extends AutomatonSimulator {
 	/** get all information from configuration. */
 
 	State currentState = configuration.getCurrentState();
-	Transition[] transitions = 
-	    myAutomaton.getTransitionsFromState(currentState);
-	for (int k = 0; k < transitions.length; k++) {
-	    TMTransition t = (TMTransition) transitions[k];
-	    Tape[] tapes = configuration.getTapes();
-	    boolean okay = true;
-	    for (int i=0; okay && i<tapes.length; i++) {
-		String charAtHead = tapes[i].read();
-		String toRead = t.getRead(i);
-		if (!charAtHead.equals(toRead)) okay=false;
-	    }
-	    if (!okay) continue; // One of the toReads wasn't satisfied.
-	    State toState = t.getToState();
-	    Tape[] tapes2 = new Tape[tapes.length];
-	    for (int i=0; i<tapes.length; i++) {
-		tapes2[i]=new Tape(tapes[i]);
-		String toWrite = t.getWrite(i);
-		String direction = t.getDirection(i);
-		tapes2[i].write(toWrite);
-		tapes2[i].moveHead(direction);
-	    }
-	    TMConfiguration configurationToAdd = 
-		new TMConfiguration(toState, configuration, tapes2, myFilters);
-	    list.add(configurationToAdd);
+	Transition[] transitions = myAutomaton.getTransitionsFromState(currentState);
+	for (Transition transition : transitions) {
+		TMTransition t = (TMTransition) transition;
+		Tape[] tapes = configuration.getTapes();
+		boolean okay = true;
+		for (int i=0; okay && i<tapes.length; i++) {
+			String charAtHead = tapes[i].read();
+			String toRead = t.getRead(i);
+			if (!charAtHead.equals(toRead)) okay=false;
+		}
+		if (!okay) continue; // One of the toReads wasn't satisfied.
+		State toState = t.getToState();
+		Tape[] tapes2 = new Tape[tapes.length];
+		for (int i=0; i<tapes.length; i++) {
+			tapes2[i]=new Tape(tapes[i]);
+			String toWrite = t.getWrite(i);
+			String direction = t.getDirection(i);
+			tapes2[i].write(toWrite);
+			tapes2[i].moveHead(direction);
+		}
+		TMConfiguration configurationToAdd = new TMConfiguration(toState, configuration, tapes2, myFilters);
+		list.add(configurationToAdd);
 	}
 	return list;
     }
@@ -162,17 +160,17 @@ public class NDTMSimulator extends AutomatonSimulator {
      * automaton left the machine in a final state
      */
     public boolean isAccepted() {
-	Iterator<Configuration> it = myConfigurations.iterator();
-	while (it.hasNext()) {
-	    TMConfiguration configuration = (TMConfiguration) it.next();
-	    State currentState = configuration.getCurrentState();
-	    /** check if in final state.  contents of tape are
-	     * irrelevant. */
-	    if(myAutomaton.isFinalState(currentState)) {
-		return true;
-	    }
-	} 
-	return false;
+		Iterator<Configuration> it = myConfigurations.iterator();
+		while (it.hasNext()) {
+			TMConfiguration configuration = (TMConfiguration) it.next();
+			State currentState = configuration.getCurrentState();
+			/** check if in final state.  contents of tape are
+			 * irrelevant. */
+			if(myAutomaton.isFinalState(currentState)) {
+			return true;
+			}
+		} 
+		return false;
     }
     
     /**
@@ -182,27 +180,27 @@ public class NDTMSimulator extends AutomatonSimulator {
      * @return true if the automaton accepts the input
      */
     public boolean simulateInput(String input) {
-	/** clear the configurations to begin new simulation. */
-	myConfigurations.clear();
-	Configuration[] initialConfigs = getInitialConfigurations(input);
-	for(int k = 0; k < initialConfigs.length; k++) {
-	    TMConfiguration initialConfiguration = 
-		(TMConfiguration) initialConfigs[k];
-	    myConfigurations.add(initialConfiguration);
-	} 
-	while (!myConfigurations.isEmpty()) {
-	    if(isAccepted()) return true;
-	    ArrayList<Configuration> configurationsToAdd = new ArrayList<>();
-	    Iterator<Configuration> it = myConfigurations.iterator();
-	    while (it.hasNext()) {
-		TMConfiguration configuration = (TMConfiguration) it.next();
-		ArrayList<Configuration> configsToAdd = stepConfiguration(configuration);
-		configurationsToAdd.addAll(configsToAdd);
-		it.remove();
-	    } 
-	    myConfigurations.addAll(configurationsToAdd);
-	}
-	return false;
+		/** clear the configurations to begin new simulation. */
+		myConfigurations.clear();
+		Configuration[] initialConfigs = getInitialConfigurations(input);
+		for(int k = 0; k < initialConfigs.length; k++) {
+			TMConfiguration initialConfiguration = 
+			(TMConfiguration) initialConfigs[k];
+			myConfigurations.add(initialConfiguration);
+		} 
+		while (!myConfigurations.isEmpty()) {
+			if(isAccepted()) return true;
+			ArrayList<Configuration> configurationsToAdd = new ArrayList<>();
+			Iterator<Configuration> it = myConfigurations.iterator();
+			while (it.hasNext()) {
+			TMConfiguration configuration = (TMConfiguration) it.next();
+			ArrayList<Configuration> configsToAdd = stepConfiguration(configuration);
+			configurationsToAdd.addAll(configsToAdd);
+			it.remove();
+			} 
+			myConfigurations.addAll(configurationsToAdd);
+		}
+		return false;
     }
     private AcceptanceFilter[] myFilters;
 

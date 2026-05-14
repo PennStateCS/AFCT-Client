@@ -26,7 +26,7 @@ import java.io.FileNotFoundException;
 import java.util.*;
 
 /**
- * Temporary tester for turing trimming algo
+ * Temporary tester for Turing trimming algo
  * TODO: delete this tester class
  * @author Kyung Min (Jason) Lee
  *

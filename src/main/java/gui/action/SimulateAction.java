@@ -116,7 +116,7 @@ public class SimulateAction extends AutomatonAction {
 	 *            the initial configurations generated
 	 * @param initialInput
 	 *            the object that represents the initial input; this is a String
-	 *            object in most cases, but may differ for multiple tape turing
+	 *            object in most cases, but may differ for multiple tape Turing
 	 *            machines
 	 */
 	public void handleInteraction(Automaton automaton,

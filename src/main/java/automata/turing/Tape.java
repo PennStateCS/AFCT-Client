@@ -248,6 +248,7 @@ public class Tape implements Serializable {
 	 * @return <CODE>true</CODE> if the tapes are equal, <CODE>false</CODE>
 	 *         if they are not
 	 */
+        @Override
 	public boolean equals(Object tape) {
 		if (tape == this)
 			return true;
