@@ -2,7 +2,6 @@ package gui.viewer;
 
 import automata.State;
 import automata.Transition;
-import automata.fsa.FSATransition;
 
 import java.util.ArrayList;
 
@@ -35,6 +34,14 @@ public class GUITransition extends Transition {
     @Override
     public String getDescriptionWithSpacesHandled() {
         return "";
+    }
+
+    public ArrayList<String> getTransitionLabels() {
+        ArrayList<String> processedList = new ArrayList<>();
+        for (String s : transitionLabels) {
+            processedList.add(getEmptyOrReplaceSpaces(s));
+        }
+        return processedList;
     }
 
     private ArrayList<String> transitionLabels;
