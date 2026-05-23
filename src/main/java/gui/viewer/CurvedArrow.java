@@ -253,30 +253,33 @@ public class CurvedArrow {
 				RenderingHints.VALUE_ANTIALIAS_ON);
 		g2.transform(affineToText);
 
-		// Handle spaces in transition
-		String tempLabel = representativeTransition.getDescriptionWithSpacesHandled();
+		int dyOffset = 0;
+		for (String label : representativeTransition.getTransitionLabels()) {
+			// What about the text label?
+			FontMetrics metrics = g2.getFontMetrics();
+			bounds = metrics.getStringBounds(label, g2);
+			// Will the label appear to be upside down?
+			boolean upsideDown = end.x < start.x;
+			float dx = (float) bounds.getWidth() / 2.0f;
+			float dy = (curvy < 0.0f) ^ upsideDown ? metrics.getAscent() : -metrics
+					.getDescent();
 
-		// What about the text label?
-		FontMetrics metrics = g2.getFontMetrics();
-		bounds = metrics.getStringBounds(tempLabel, g2);
-		// Will the label appear to be upside down?
-		boolean upsideDown = end.x < start.x;
-		float dx = (float) bounds.getWidth() / 2.0f;
-		float dy = (curvy < 0.0f) ^ upsideDown ? metrics.getAscent() : -metrics
-				.getDescent();
-		bounds.setRect(bounds.getX() - dx, bounds.getY() + dy, bounds
-				.getWidth(), bounds.getHeight());
-		g2.setColor(color);
+			g2.setColor(color);
 
-		for (int i = 0; i < tempLabel.length(); i += CHARS_PER_STEP) {
-			String sublabel = tempLabel.substring(i, Math.min(i + CHARS_PER_STEP,
-					tempLabel.length()));
-//            if (sublabel.contains(" ")) {
-//                sublabel = sublabel.replaceAll(" ", "␣");
-//            }
-			g2.drawString(sublabel, -dx, dy+3);
-			dx -= (float) metrics.getStringBounds(sublabel, g2).getWidth();
+			for (int i = 0; i < label.length(); i += CHARS_PER_STEP) {
+				String sublabel = label.substring(i, Math.min(i + CHARS_PER_STEP,
+						label.length()));
+				float offsetToApply = upsideDown ? dyOffset : -dyOffset;
+				g2.drawString(sublabel, -dx, dy+offsetToApply);
+				dx -= (float) metrics.getStringBounds(sublabel, g2).getWidth();
+				dyOffset += 13;
+			}
+
+			bounds.setRect(bounds.getX() - dx, bounds.getY() + dy, bounds
+					.getWidth(), bounds.getHeight());
 		}
+
+
 		// g2.drawString(label, -dx, dy);
 		g2.dispose();
 		/*
