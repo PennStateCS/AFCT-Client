@@ -47,6 +47,7 @@ import automata.event.AutomataTransitionEvent;
 import automata.event.AutomataTransitionListener;
 import equivalence.StatePair;
 import gui.menu.ContextActions;
+import org.apache.http.impl.cookie.RFC6265LaxSpec;
 
 import java.util.HashSet;
 
@@ -457,23 +458,23 @@ public class AutomatonDrawer {
 			Point from = pointOnState(states[i], -Math.PI * 0.333);
 			Point to = pointOnState(states[i], -Math.PI * 0.667);
 			for (int n = 0; n < trans.length; n++) {
-				if(selfTransitionMap.containsKey(trans[n])){
+				if(selfTransitionMap.containsKey(trans[n])){  // Existing reflexive transition
 					//EDebug.print(selfTransitionMap);
-					Point storedfrom = pointOnState(states[i], (selfTransitionMap.get(trans[n])+Math.PI*.166));
-					Point storedto = pointOnState(states[i], (selfTransitionMap.get(trans[n])-Math.PI*.166));
-					CurvedArrow arrow = n == 0 ? new CurvedArrow(storedfrom, storedto, -2.0f, trans[n])
-					: new InvisibleCurvedArrow(storedfrom, storedto, -2.0f - n, trans[n]);
-
+					Point storedfrom = pointOnState(states[i], (selfTransitionMap.get(trans[n]) + REFLEXIVE_ANGLE));
+					Point storedto = pointOnState(states[i], (selfTransitionMap.get(trans[n]) - REFLEXIVE_ANGLE));
+					CurvedArrow arrow = n == 0
+					? new CurvedArrow(storedfrom, storedto, -2.0f, trans[n], true)
+					: new InvisibleCurvedArrow(storedfrom, storedto, -2.0f - n, trans[n], true);
 
 					arrow.setLabel(trans[n].getDescription());
 					arrowToTransitionMap.put(arrow, trans[n]);
 					transitionToArrowMap.put(trans[n], arrow);
-				}else{
+				}else{  // Uninitialized reflexive transition
 					//EDebug.print(selfTransitionMap);
 					selfTransitionMap.put(trans[n], -Math.PI*.5);
-					CurvedArrow arrow = n == 0 ? new CurvedArrow(from, to, -2.0f, trans[n])
-						: new InvisibleCurvedArrow(from, to, -2.0f - n, trans[n]);
-
+					CurvedArrow arrow = n == 0
+					? new CurvedArrow(from, to, -2.0f, trans[n], true)
+					: new InvisibleCurvedArrow(from, to, -2.0f - n, trans[n], true);
                     //INSERTED for TransitionGUI
                     arrow.myTransition = trans[n];
                     //END INSERTED for TransitionGUI
@@ -715,6 +716,11 @@ public class AutomatonDrawer {
 	 * the point closest to the other state.
 	 */
 	protected static final double ANGLE = Math.PI / 25.0;
+
+	/**
+	 * Angle between the arrow start point and the line intersecting the state's center & control point
+	 */
+	public static final double REFLEXIVE_ANGLE = Math.PI / 6;
 
 	/**
 	 * Whether or not the drawing objects should be redone on the next draw.
