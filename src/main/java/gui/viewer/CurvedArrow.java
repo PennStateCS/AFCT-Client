@@ -43,33 +43,6 @@ public class CurvedArrow {
 	/**
 	 * Instantiates a <CODE>CurvedArrow</CODE> object.
 	 * 
-	 * @param x1
-	 *            the x coordinate of the start point
-	 * @param y1
-	 *            the y coordinate of the start point
-	 * @param x2
-	 *            the x coordinate of the end point
-	 * @param y2
-	 *            the y coordinate of the end point
-	 * @param curvy
-	 *            the curvi-ness factor; 0 will create a straight line; 1 and -1
-	 *            are rather curvy
-	 */
-	public CurvedArrow(int x1, int y1, int x2, int y2, float curvy, Transition t) {
-		curve = new QuadCurve2D.Float();
-		start = new Point();
-		end = new Point();
-		control = new Point();
-		setStart(x1, y1);
-		setEnd(x2, y2);
-		setCurvy(curvy);
-        myTransition = t;
-		refreshCurve();
-	}
-
-	/**
-	 * Instantiates a <CODE>CurvedArrow</CODE> object.
-	 * 
 	 * @param start
 	 *            the start point
 	 * @param end
@@ -77,8 +50,13 @@ public class CurvedArrow {
 	 * @param curvy
 	 *            the curvi-ness factor; 0 will create a straight line; 1 and -1
 	 *            are rather curvy
+	 * @param t
+	 *            the curve's transition
+	 * @param reflexivity
+	 *            bool: true if curve is reflexive, false otherwise
 	 */
-	public CurvedArrow(Point start, Point end, float curvy, Transition t) {
+	public CurvedArrow(Point start, Point end, float curvy, Transition t, boolean reflexivity) {
+		isReflexive = reflexivity;
 		curve = new QuadCurve2D.Float();
 		setStart(start);
 		setEnd(end);
@@ -89,17 +67,10 @@ public class CurvedArrow {
 	}
 
 	/**
-	 * Sets the start point.
-	 * 
-	 * @param x1
-	 *            the x coordinate of the start point
-	 * @param y1
-	 *            the y coordinate of the start point
+	 * See {@link #CurvedArrow(Point, Point, float, Transition, boolean)} + reflexivity = false
 	 */
-	public void setStart(int x1, int y1) {
-		start.x = x1;
-		start.y = y1;
-		needsRefresh = true;
+	public CurvedArrow(Point start, Point end, float curvy, Transition t) {
+		this(start, end, curvy, t, false);
 	}
 
 	/**
@@ -110,20 +81,6 @@ public class CurvedArrow {
 	 */
 	public void setStart(Point start) {
 		this.start = start;
-		needsRefresh = true;
-	}
-
-	/**
-	 * Sets the end point.
-	 * 
-	 * @param x2
-	 *            the x coordinate of the end point
-	 * @param y2
-	 *            the y coordinate of the end point
-	 */
-	public void setEnd(int x2, int y2) {
-		end.x = x2;
-		end.y = y2;
 		needsRefresh = true;
 	}
 
@@ -403,7 +360,6 @@ public class CurvedArrow {
 	 * Refreshes the curve object.
 	 */
 	public void refreshCurve() {
-//        System.out.println("Curve refreshing");
 		needsRefresh = false;
 
         double lengthx = end.x - start.x;
@@ -415,34 +371,52 @@ public class CurvedArrow {
         double factorx = length == 0.0 ? 0.0 : lengthx / length;
         double factory = length == 0.0 ? 0.0 : lengthy / length;
 
+		// Control point is never adjusted; curve in its default orientation
         if (myTransition.getControl() == null){
-
             control.x = (int) (centerx + curvy * HEIGHT * factory);
             control.y = (int) (centery - curvy * HEIGHT * factorx);
             high.x = (int) (centerx + curvy * HEIGHT * factory / 2.0);
             high.y = (int) (centery - curvy * HEIGHT * factorx / 2.0);
+        }  else if (isReflexive){
+			// Control point moved from default position on reflexive arrow
+			control.x = (int) myTransition.getControl().x;
+			control.y = (int) myTransition.getControl().y;
 
-        }
-        else{
+			Point statePoint = myTransition.getFromState().getPoint();
+			// Importing constants of rendering dimensions/angles
+			double reflex_angle = AutomatonDrawer.REFLEXIVE_ANGLE;
+			double radii = StateDrawer.STATE_RADIUS;
+			// Calculating a new position for the start and end points of the arrow
+			double psi = Math.atan2(control.y - statePoint.y, control.x - statePoint.x);
+			double startAngle = psi + reflex_angle;
+			double endAngle = psi - reflex_angle;
+			// update arrow start position
+			start.x = (int) (statePoint.x + radii * Math.cos(startAngle));
+			start.y = (int) (statePoint.y + radii * Math.sin(startAngle));
+			// update arrow end position
+			end.x = (int) (statePoint.x + radii * Math.cos(endAngle));
+			end.y = (int) (statePoint.y + radii * Math.sin(endAngle));
+
+			high.x = (int) (centerx + curvy * HEIGHT * factory / 2.0);
+			high.y = (int) (centery - curvy * HEIGHT * factorx / 2.0);
+		} else{
+			// Control point moved from default position on non-reflexive arrow
             control.x = (int) myTransition.getControl().x;
             control.y = (int) myTransition.getControl().y;
 
             //take the vector from the center to the control, and take half of that
             double xt = control.x - centerx;
             double yt = centery - control.y;
-
             high.x = (int) (centerx + xt / 2); 
             high.y = (int) (centery - yt / 2);
         }
-
-            curve.setCurve((float) start.x, (float) start.y, (float) control.x,
-                    (float) control.y, (float) end.x, (float) end.y);
-
-            affineToText = new AffineTransform();
-            affineToText.translate(high.x, high.y);
-            affineToText.rotate(Math.atan2(lengthy, lengthx));
-            if (end.x < start.x)
-                affineToText.rotate(Math.PI);
+		curve.setCurve((float) start.x, (float) start.y, (float) control.x,
+				(float) control.y, (float) end.x, (float) end.y);
+		affineToText = new AffineTransform();
+		affineToText.translate(high.x, high.y);
+		affineToText.rotate(Math.atan2(lengthy, lengthx));
+		if (end.x < start.x)
+			affineToText.rotate(Math.PI);
 	}
 
 	/**
@@ -594,7 +568,9 @@ public class CurvedArrow {
     /** Color of the control point outer ring, default is white**/
     public static java.awt.Color CONTROL_POINT_OUTER_COLOR = new java.awt.Color(255, 255, 255);
 
-    public Transition myTransition;
+	public boolean isReflexive = false;
+
+	public Transition myTransition;
 
     public float[] dashPattern = {3.0f, 3.0f};
 
