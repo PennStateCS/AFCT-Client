@@ -51,6 +51,7 @@ import automata.turing.TMTransition;
 import automata.turing.TMState;
 import automata.turing.TuringMachineBuildingBlocks;
 import debug.EDebug;
+import gui.viewer.InvisibleCurvedArrow;
 
 import static gui.editor.EditorKeyBindings.CTRL_CMD_SHORTCUT_MASK;
 import static gui.editor.IconKeeper.getArrowToolIcon;
@@ -126,6 +127,7 @@ public class ArrowTool extends Tool {
                     trans.isSelected = false;
                     selectedTransition = null;
                 } else {
+					// Deselect the prior selected transition and select the clicked transition
                     if (selectedTransition != null) selectedTransition.isSelected = false;
                     trans.isSelected = true;
                     selectedTransition = trans;
@@ -515,13 +517,24 @@ public class ArrowTool extends Tool {
 
             Point myClickP = event.getPoint();
             Point2D control = ca.getCurve().getCtrlPt();
-
-            if (transitionInFlux || Math.sqrt((control.getX() - myClickP.x) * (control.getX() - myClickP.x)
-                    + (control.getY() - myClickP.y) * (control.getY() - myClickP.y)) < 15) {
-                selectedTransition.setControl(myClickP);
-                //                System.out.println("Move it damn it");
-                ca.refreshCurve();
-                transitionInFlux = true;
+			double deltaX = control.getX() - myClickP.x;
+			double deltaY = control.getY() - myClickP.y;
+			double controlToClickDistance = Math.sqrt(Math.pow(deltaX, 2) + Math.pow(deltaY, 2));
+			if (transitionInFlux || controlToClickDistance < 15) {
+				// Update the control point and transition arrow curvature
+				selectedTransition.setControl(myClickP);
+				ca.refreshCurve();
+				transitionInFlux = true;
+				// Subsequently update overlapping transition arrow curvatures
+				for (Transition overlappingTransition : getDrawer().getOverlappingTransitions(selectedTransition)){
+					CurvedArrow overlappingArrow = getDrawer().transitionToArrowMap.get(overlappingTransition);
+					Point2D overlappingControl = overlappingArrow.getCurve().getCtrlPt();
+					overlappingTransition.setControl(
+							new Point((int) overlappingControl.getX() - (int) deltaX,
+									(int) overlappingControl.getY() - (int) deltaY)
+					);
+					overlappingArrow.refreshCurve();
+				}
             }
 
         }

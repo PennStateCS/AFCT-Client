@@ -268,6 +268,24 @@ public class AutomatonDrawer {
 	}
 
 	/**
+	 * Returns an array of all transitions with the same from and to states as a given transition.
+	 *
+	 * @param trans the transition for querying overlapping transitions
+	 * @return transitions overlapping with the given transition trans (same from & to states)
+	 */
+	public Transition[] getOverlappingTransitions(Transition trans){
+		ArrayList<Transition> overlappingTransitions = new ArrayList<>();
+		for (CurvedArrow arrow : arrowToTransitionMap.keySet()){
+			Transition otherTrans = arrowToTransitionMap.get(arrow);
+			if (trans == otherTrans) continue;
+			if (trans.getFromState() != otherTrans.getFromState() ||
+					trans.getToState()   != otherTrans.getToState()) continue;
+			overlappingTransitions.add(otherTrans);
+		}
+		return overlappingTransitions.toArray(new Transition[0]);
+	}
+
+	/**
 	 * Draws a state on the automaton.
 	 * 
 	 * @param g
@@ -311,7 +329,8 @@ public class AutomatonDrawer {
             for (CurvedArrow arrow : arrows) {
                 if (arrow.myTransition.isSelected) {
                     arrow.drawHighlight(g2);
-                    arrow.drawControlPoint(g2);
+					// Don't render control points for invisible arrows
+					if (!(arrow instanceof InvisibleCurvedArrow)) arrow.drawControlPoint(g2);
                 } else {
                     arrow.draw(g2);
                 }
