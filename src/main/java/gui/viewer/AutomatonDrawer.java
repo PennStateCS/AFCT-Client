@@ -409,14 +409,12 @@ public class AutomatonDrawer {
 				Point fromI = pointOnState(states[i], angle - ANGLE);
 				Point fromJ = pointOnState(states[j], angle + Math.PI + ANGLE);
 
-				// Add curved arrows based on the rendering mode
-				Profile.transitionRendering transitionRenderingStyle = Universe.curProfile.getTransitionsRenderedAs();
-				createTransitionLabels(itoj, fromI, fromJ);
+				createTransitionLabels(itoj, fromI, fromJ, top);
 
 				// Do the same but for going in the other direction
 				fromI = pointOnState(states[i], angle + ANGLE);
 				fromJ = pointOnState(states[j], angle + Math.PI - ANGLE);
-				createTransitionLabels(jtoi, fromJ, fromI);
+				createTransitionLabels(jtoi, fromJ, fromI, bottom);
 			}
 
 			// Now handle transitions between a single state.
@@ -433,8 +431,8 @@ public class AutomatonDrawer {
 				transitionLabels.add(transition.getDescription());
 			}
 
-			GUITransition renderingTransition = new GUITransition(states[i], states[i], transitionLabels);
-			selfTransitionMap.put(renderingTransition, -Math.PI*.5);
+			GUITransition guiTransition = new GUITransition(states[i], states[i], transitionLabels);
+			selfTransitionMap.put(guiTransition, -Math.PI*.5);
 //			Point storedfrom = pointOnState(states[i], (selfTransitionMap.get(renderingTransition) + REFLEXIVE_ANGLE));
 //			Point storedto = pointOnState(states[i], (selfTransitionMap.get(renderingTransition) - REFLEXIVE_ANGLE));
 
@@ -443,11 +441,11 @@ public class AutomatonDrawer {
 					to,
 					-2.0f,
 					new ArrayList<>(Arrays.asList(trans)),
-					renderingTransition
+					guiTransition
 			);
 
 			arrowList.add(arrow);
-			transitionToArrowMap.put(renderingTransition, arrow);
+			transitionToArrowMap.put(guiTransition, arrow);
 
 			/*
 			for (int n = 0; n < trans.length; n++) {
@@ -508,7 +506,7 @@ public class AutomatonDrawer {
 //		}
 //	}
 
-	private void createTransitionLabels(Transition[] transitionList, Point start, Point end) {
+	private void createTransitionLabels(Transition[] transitionList, Point start, Point end, float curvy) {
 		if (transitionList.length < 1) {
 			return;
 		}
@@ -516,7 +514,6 @@ public class AutomatonDrawer {
 		State fromState = transitionList[0].getFromState();
 		State toState = transitionList[0].getToState();
 
-		float curvy = 0.5f;
 		ArrayList<String> transitionLabels = new ArrayList<String>();
 
         for (Transition transition : transitionList) {
