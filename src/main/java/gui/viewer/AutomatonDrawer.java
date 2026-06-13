@@ -417,7 +417,7 @@ public class AutomatonDrawer {
 				createTransitionLabels(jtoi, fromJ, fromI, bottom);
 			}
 
-			// Now handle transitions between a single state.
+			// Now handle reflexive transitions.
 			Transition[] trans = automaton.getTransitionsFromStateToState(
 					states[i], states[i]);
 			if (trans.length == 0)
@@ -478,34 +478,10 @@ public class AutomatonDrawer {
 		valid = true;
 	}
 
-//	/**
-//	 * Puts arrow transition pairs into arrowList and transitionToArrowMap based
-//	 * on the transitions in the transitionList. Importantly, this method will treat every
-//	 * transition as its own curve so that every transition label will appear stacked
-//	 * on top of each other.
-//	 * @param transitionList A transition list
-//	 * @param offset Float representing how much higher to place the next curve
-//	 * @param start The start of the arrow
-//	 * @param end The end of the arrow (the part with the pointy bit)
-//	 */
-//	private void createTransitionsStackedLabels(Transition[] transitionList, float offset, Point start, Point end) {
-//		for (int n = 0; n < transitionList.length; n++) {
-//			if(curveTransitionMap.containsKey(transitionList[n])){
-//				offset = curveTransitionMap.get(transitionList[n]);
-//			}
-//			float curvy = offset+n;
-//			CurvedArrow arrow = n == 0 ? new CurvedArrow(start, end,
-//					curvy, transitionList[n]) : new InvisibleCurvedArrow(start, end,
-//					curvy, transitionList[n]);
-//
-//
-//			arrow.setLabel(transitionList[n].getDescription());
-//
-//			arrowList.add(arrow);
-//			transitionToArrowMap.put(transitionList[n], arrow);
-//		}
-//	}
-
+	// helper method for creating GUITransitions for groups of transitions that have the same from
+	// and to states. All the transitions in parameter transitionList MUST be the same in
+	// terms of start and end. They are combined into one GUITransition to represent what needs
+	// to be rendered on the screen.
 	private void createTransitionLabels(Transition[] transitionList, Point start, Point end, float curvy) {
 		if (transitionList.length < 1) {
 			return;
@@ -529,11 +505,12 @@ public class AutomatonDrawer {
 				new ArrayList<>(Arrays.asList(transitionList)),
 				representativeTransition
 		);
-//		arrow.setLabel(transitionLabel);
+
 		arrowList.add(arrow);
 		for (Transition t: transitionList) {
 			transitionToArrowMap.put(t, arrow);
 		}
+		transitionToArrowMap.put(representativeTransition, arrow);
 	}
 
 	/**
@@ -789,7 +766,7 @@ public class AutomatonDrawer {
 	public HashMap<Transition, Float> curveTransitionMap = new HashMap<>();
 
 	/**
-	 * A list of curved arrows to transitions. This is used for
+	 * A list of all the visible, rendered arrows. This is used for
 	 * iteration over all arrows when drawing must be done
 	 */
 	public ArrayList<CurvedArrow> arrowList = new ArrayList<>();
