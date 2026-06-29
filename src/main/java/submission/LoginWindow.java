@@ -3,314 +3,308 @@ package submission;
 import gui.Globals;
 
 import javax.swing.*;
-import javax.swing.border.LineBorder;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
-import java.awt.event.WindowAdapter;
-import java.io.IOException;
-import java.util.Calendar;
-import java.util.List;
-import java.util.Map;
-import java.util.prefs.Preferences;
 
 import static gui.Globals.*;
 import static submission.AFCTClient.fixUrl;
-import static submission.SessionHandler.*;
-import static submission.SessionHandler.PREF_PASSWORD;
 
-//TODO: should this be a Dialog that block other input?
-public class LoginWindow extends JFrame {
-    private JPanel contentPane;
-    private JTextField serverTF;
-    private JTextField portTF;
-    private JTextField emailTF;
-    private JPasswordField passwordTF;
-    private JButton loginButton;
-    // TODO: replace this with better, more modern user feedback methods
-    private JTextPane result;
-    private String resultText = "";
-    private JScrollPane resultScrollPane;
+public class LoginWindow extends JDialog {
 
-    private JLabel loginResultLabel;
+    private final SessionHandler sessionHandler;
 
+    private final JTextField serverTF = new JTextField("https://10.144.18.20");
+    private final JTextField portTF = new JTextField("443");
+    private final JTextField emailTF = new JTextField();
+    private final JPasswordField passwordTF = new JPasswordField();
 
-    private JScrollPane scrollPane;
+    private final JCheckBox validateSSLCheckBox =
+            new JCheckBox("Validate SSL Certificate");
 
-    private SubmitWindow submitWindowToShow = null;
+    private final JCheckBox showPasswordCheckBox =
+            new JCheckBox("Show password");
 
-    // TODO: find out how many spaces to add here so that the window does not need to resize when other messages apper here,
-    //  also do this for SubmitWindow.java
-    private String defaultLoginResultLabelText = "<html>               </html>";
+    private final JCheckBox rememberMeCheckBox =
+            new JCheckBox("Remember Me");
 
-    public LoginWindow(SessionHandler sessionHandler) {
-        contentPane = new JPanel();
-        serverTF = new JTextField();
-        portTF = new JTextField();
-        emailTF = new JTextField();
-        passwordTF = new JPasswordField();
-        loginButton = new JButton("Login");
+    private final JButton loginButton = new JButton("Login");
+    private final JTextPane resultPane = new JTextPane();
+    private final JScrollPane resultScrollPane = new JScrollPane(resultPane);
 
-        result = new JTextPane();
-        resultScrollPane = new JScrollPane(result);
-        loginResultLabel = new JLabel(defaultLoginResultLabelText);
+    public LoginWindow(SessionHandler handler) {
+        super((Frame) null, "Login - " + Globals.APP_NAME, true);
+        this.sessionHandler = handler;
 
-        setupGui();
-        populateGui(sessionHandler);
-        setupEventHandlers();
+        buildUI();
+        populateFromSessionState();
 
-        scrollPane = new JScrollPane(contentPane);
+        pack();
+        setResizable(false);
+        setLocationRelativeTo(Globals.getActiveWindow());
 
-        this.getContentPane().add(scrollPane);
+        setDefaultCloseOperation(JDialog.DISPOSE_ON_CLOSE);
     }
 
-    public void displayLoginWindow(SessionHandler sessionHandler) {
-        this.toggleAllInputs(true);
-        if (!this.isVisible()) {
-            this.populateGui(sessionHandler);
-        }
-        loginResultLabel.setText(defaultLoginResultLabelText);
-        this.pack();
-        this.setVisible(true);
-        this.toFront();
+    // ============================================================
+    // DISPLAY
+    // ============================================================
+
+    public void displayLoginWindow() {
+        resultPane.setText("");
+        passwordTF.setText("");
+        populateFromSessionState();
+        toggleInputs(true);
+        setVisible(true); // modal => blocks until disposed/hidden
     }
 
-    public void displayLoginThenSubmission(SessionHandler sessionHandler, SubmitWindow submitWindowToShow) {
-        displayLoginWindow(sessionHandler);
-        this.submitWindowToShow = submitWindowToShow;
-    }
+    // ============================================================
+    // UI
+    // ============================================================
 
-    public void appendResult(String line) {
-        resultText += (line.endsWith("\n") ? line : (line + "\n"));
-        result.setText(resultText);
-        result.setCaretPosition(result.getDocument().getLength());
+    private void buildUI() {
+        JPanel panel = new JPanel(new GridBagLayout());
+        panel.setBorder(BorderFactory.createEmptyBorder(18, 22, 18, 22));
 
-        loginResultLabel.setText("<html>" + line + "</html>");
-    }
-
-    private void setupGui() {
-        this.setTitle("Login - " + Globals.APP_NAME);
-
-        contentPane.setLayout(new GridBagLayout());
-        GridBagConstraints c;
-        int y = 0;
-
-        int vrtInset = 15;
-        int hozInset = 20;
-
-        // Create headerLabel
-        JLabel headerLabel = new JLabel("AFCT Server - Login");
-        changeSize(headerLabel, 24);
-
-        // Add headerLabel to contentPane
-        c = setConstraints(1, 1, 0, y++, GridBagConstraints.NORTH);
-        c.fill = GridBagConstraints.NONE;
-        c.insets = new Insets(vrtInset, hozInset, vrtInset, hozInset);
-        contentPane.add(headerLabel, c);
-
-        // Add text input fields
-        c.insets = new Insets(vrtInset, hozInset, 0, hozInset);
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        c.gridy = 0;
         c.fill = GridBagConstraints.HORIZONTAL;
-        c.gridy = y++;
-        contentPane.add(createTextInputPanel(serverTF, "Server"), c);
-        c.gridy = y++;
-        contentPane.add(createTextInputPanel(portTF, "Port"), c);
-        c.gridy = y++;
-        contentPane.add(createTextInputPanel(emailTF, "Email"), c);
-        c.insets = new Insets(vrtInset, hozInset, vrtInset, hozInset);
-        c.gridy = y++;
-        contentPane.add(createTextInputPanel(passwordTF, "Password"), c);
-        //TODO: maybe add button to allow showing the password instead of just the dots.
-        //  - but this should only work/be available if the user typed their password during this session.
-        //passwordTF.setMargin(new Insets(0, 12, 0, 40));
+        c.weightx = 1;
+        c.insets = new Insets(6, 0, 6, 0);
 
-        // Add loginButton to contentPane
-        changeSize(loginButton, 16);
-        loginButton.setPreferredSize(new Dimension(360, 36));
+        JLabel header = new JLabel("AFCT Server Login");
+        boldFontAndChangeSize(header, 20);
+        header.setHorizontalAlignment(SwingConstants.CENTER);
+
+        c.insets = new Insets(0, 0, 14, 0);
+        panel.add(header, c);
+
+        c.gridy++;
+        c.insets = new Insets(6, 0, 6, 0);
+        panel.add(labeled("Server", serverTF), c);
+
+        c.gridy++;
+        panel.add(labeled("Port", portTF), c);
+
+        c.gridy++;
+        panel.add(labeled("Email", emailTF), c);
+
+        c.gridy++;
+        panel.add(labeled("Password", passwordTF), c);
+
+        // small options row (show password + SSL validation)
+        c.gridy++;
+        c.insets = new Insets(10, 0, 4, 0);
+        panel.add(buildOptionsRow(), c);
+
+        // Login button
+        c.gridy++;
+        c.insets = new Insets(12, 0, 8, 0);
+        loginButton.setPreferredSize(new Dimension(320, 38));
         loginButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        //loginButton.setMargin(new Insets(6, 12, 6, 12));
-        c = setConstraints(1, 0, 0, y++, GridBagConstraints.LINE_START);
-        //c.insets = new Insets(5, hozInset, vrtInset, hozInset);
-        c.insets = new Insets(10, hozInset, vrtInset, hozInset);
-        contentPane.add(loginButton, c);
+        panel.add(loginButton, c);
 
-        // Add result to contentPane
-//        result.setBorder(new LineBorder(new Color(210, 210, 210)));
-//        c.gridy = y++;
-//        // TODO: probably remove this before pushing to students?
-//        contentPane.add(resultScrollPane, c);
+        // Result pane with scroll
+        c.gridy++;
+        c.insets = new Insets(8, 0, 0, 0);
+        c.fill = GridBagConstraints.BOTH;
+        c.weighty = 1.0;
 
-        // Stylize loginResultLabel
-        loginResultLabel.setBackground(Color.WHITE);
-        changeSize(loginResultLabel, 16);
-        unBoldFont(loginResultLabel);
+        resultPane.setEditable(false);
+        resultPane.setFocusable(false);
+        resultPane.setContentType("text/html");
+        resultPane.setBackground(panel.getBackground());
+        resultPane.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
-        // create loginResultLabelPanel
-        JPanel loginResultLabelPanel = new JPanel(new GridBagLayout());
-        loginResultLabelPanel.setBackground(Color.WHITE);
-        loginResultLabelPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
-        // Add loginResultLabel to loginResultLabelPanel
-        GridBagConstraints c2 = setConstraints(1, 1, 0, 0);
-        c2.insets = new Insets(10, 12, 10, 12);
-        loginResultLabelPanel.add(loginResultLabel, c2);
+        // Set preferred size for wrapping
+        resultScrollPane.setPreferredSize(new Dimension(320, 80));
+        resultScrollPane.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+            BorderFactory.createEmptyBorder(2, 2, 2, 2)
+        ));
+        resultScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        resultScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
-        // Add loginResultLabelPanel to contentPane
-        c.gridy = y++;
-        contentPane.add(createInputPanel(loginResultLabelPanel, "Result", false), c);
-    }
+        panel.add(resultScrollPane, c);
 
-    public static JPanel createInputPanel(Component component, String headerText, boolean setMargin) {
-        JPanel inputPanel = new JPanel(new GridBagLayout());
-        GridBagConstraints c;
-        int y = 0;
+        // events
+        loginButton.addActionListener(e -> attemptLogin());
+        getRootPane().setDefaultButton(loginButton);
 
-        // Create headerLabel
-        JLabel headerLabel = new JLabel(headerText);
-        changeSize(headerLabel, 16);
-        // Add headerLabel to inputPanel
-        c = setConstraints(0, 0, 0, y++, GridBagConstraints.LINE_START);
-        c.insets = new Insets(0, 0, 5, 0);
-        inputPanel.add(headerLabel, c);
-
-        // Add component to inputPanel
-        c = setConstraints(1, 1, 0, y++, GridBagConstraints.LINE_START);
-        //c.fill = GridBagConstraints.HORIZONTAL;
-        changeSize(component, 16);
-        //component.setPreferredSize(new Dimension(360, 36)); // Bad way of setting this - breaks vertical centering
-        if (setMargin) {
-            ((JTextField) component).setMargin(new Insets(6, 12, 6, 12));
-        }
-        inputPanel.add(component, c);
-
-        return inputPanel;
-    }
-
-    public static JPanel createTextInputPanel(JTextField textField, String headerText) {
-        return createInputPanel(textField, headerText, true);
-    }
-
-    public static <T> JPanel createComboBoxPanel(JComboBox<T> comboBox, String headerText) {
-        comboBox.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        return createInputPanel(comboBox, headerText, false);
-    }
-
-    private void populateGui(SessionHandler sessionHandler) {
-        Preferences prefs = sessionHandler.preferences;
-        serverTF.setText(prefs.get(PREF_SERVER, defaultServer));
-        portTF.setText(prefs.get(PREF_PORT, defaultPort));
-        emailTF.setText(prefs.get(PREF_EMAIL, defaultEmail));
-        passwordTF.setText(prefs.get(PREF_PASSWORD, defaultPassword));
-    }
-
-    /**
-     * Sets action listeners for user inputs.
-     */
-    private void setupEventHandlers() {
-        handlers_windowClose();
-        handlers_login();
-    }
-
-    private void openQueuedSubmitWindow() {
-        if (submitWindowToShow != null && sessionHandler.loggedIn) {
-            submitWindowToShow.displaySubmitWindow();
-            submitWindowToShow = null;
-        }
-    }
-
-    private void handlers_windowClose() {
-        LoginWindow frame = this;
-        WindowAdapter windowListener = new WindowAdapter() {
-            @Override
-            public void windowClosing(java.awt.event.WindowEvent e) {
-                saveLoginInfo();
-                frame.dispose();
-                openQueuedSubmitWindow();
-            }
-        };
-
-        // add windowListener
-        frame.addWindowListener(windowListener);
-    }
-
-    private void saveLoginInfo() {
-        final String serverUrl = serverTF.getText();
-        final String portText = portTF.getText();
-        final String userEmail = emailTF.getText();
-        final String userPassword = new String(passwordTF.getPassword());
-        Globals.sessionHandler.saveLoginInfo(serverUrl, portText, userEmail, userPassword);
-    }
-
-    private void toggleAllInputs(boolean enable) {
-        serverTF.setEnabled(enable);
-        portTF.setEnabled(enable);
-        emailTF.setEnabled(enable);
-        passwordTF.setEnabled(enable);
-        loginButton.setEnabled(enable);
-    }
-
-    private void handlers_login() {
-        loginButton.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                // SwingWorker
-                final String serverUrl = fixUrl(serverTF.getText());
-                final String portText = portTF.getText().trim();
-                final String userEmail = emailTF.getText().trim();
-                final String userPassword = new String(passwordTF.getPassword());
-
-                toggleAllInputs(false);
-
-                Globals.sessionHandler.disableAndResetAllSubmitWindows();
-
-                appendResult("Authenticating…");
-
-                //savePreferences(serverUrl, portText, userEmail, userPassword);
-
-                new SwingWorker<Void, String>() {
-                    @Override
-                    protected Void doInBackground() {
-                        LoginResult loginResult = Globals.sessionHandler.login(serverUrl, portText, userEmail, userPassword);
-                        if (loginResult.status == LoginResult.LoginStatus.SUCCESS) {
-                            publish(colorHTMLSuccessMessage(loginResult.message));
-                        } else {
-                            publish(colorHTMLErrorMessage(loginResult.message));
-                        }
-
-                        if (loginResult.status == LoginResult.LoginStatus.SUCCESS) {
-                            // Define the time delay in milliseconds (5000ms = 5 seconds)
-                            int delay = 2000;
-
-                            // TODO - should delay be kept?
-                            delay = 500;
-                            // Create and start the Swing Timer
-                            Timer timer = new Timer(delay, new ActionListener() {
-                                @Override
-                                public void actionPerformed(ActionEvent e) {
-                                    // This code runs after the delay
-                                    dispose();
-                                    openQueuedSubmitWindow();
-                                }
-                            });
-                            timer.setRepeats(false); // Ensure the timer only runs once
-                            timer.start();
-                        }
-
-                        return null;
-                    }
-
-                    @Override
-                    protected void process(List<String> chunks) {
-                        for (String s : chunks) appendResult(s);
-                    }
-
-                    @Override
-                    protected void done() {
-                        toggleAllInputs(true);
-                    }
-                }.execute();
+        showPasswordCheckBox.setFocusPainted(false);
+        showPasswordCheckBox.addActionListener(e -> {
+            if (showPasswordCheckBox.isSelected()) {
+                passwordTF.setEchoChar((char) 0);
+            } else {
+                // restore default echo char (bullet)
+                passwordTF.setEchoChar('•');
             }
         });
+
+        validateSSLCheckBox.setFocusPainted(false);
+        rememberMeCheckBox.setFocusPainted(false);
+
+        setContentPane(panel);
+    }
+
+    private JPanel buildOptionsRow() {
+        JPanel row = new JPanel(new GridBagLayout());
+        row.setOpaque(false);
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridy = 0;
+        c.insets = new Insets(0, 0, 0, 12);
+        c.anchor = GridBagConstraints.LINE_START;
+
+        c.gridx = 0;
+        row.add(showPasswordCheckBox, c);
+
+        c.gridx = 1;
+        row.add(validateSSLCheckBox, c);
+
+        c.gridx = 2;
+        c.insets = new Insets(0, 0, 0, 0);
+        row.add(rememberMeCheckBox, c);
+
+        return row;
+    }
+
+    private JPanel labeled(String label, JComponent comp) {
+        JPanel p = new JPanel(new BorderLayout(0, 4));
+
+        JLabel l = new JLabel(label);
+        boldFont(l);
+
+        if (comp instanceof JTextField tf) {
+            tf.setMargin(new Insets(6, 10, 6, 10));
+        } else if (comp instanceof JPasswordField pf) {
+            pf.setMargin(new Insets(6, 10, 6, 10));
+        }
+
+        p.add(l, BorderLayout.NORTH);
+        p.add(comp, BorderLayout.CENTER);
+        return p;
+    }
+
+    private void toggleInputs(boolean enabled) {
+        serverTF.setEnabled(enabled);
+        portTF.setEnabled(enabled);
+        emailTF.setEnabled(enabled);
+        passwordTF.setEnabled(enabled);
+        validateSSLCheckBox.setEnabled(enabled);
+        showPasswordCheckBox.setEnabled(enabled);
+        rememberMeCheckBox.setEnabled(enabled);
+        loginButton.setEnabled(enabled);
+    }
+
+    // ============================================================
+    // LOGIN
+    // ============================================================
+
+    private void attemptLogin() {
+        final String server = fixUrl(serverTF.getText().trim());
+        final String port = portTF.getText().trim();
+        final String email = emailTF.getText().trim();
+        final String password = new String(passwordTF.getPassword());
+
+        // checkbox means "validate cert" => insecureTls = false
+        final boolean insecureTls = !validateSSLCheckBox.isSelected();
+
+        // Show which mode we're using
+        String sslMode = insecureTls ? "SSL validation: OFF" : "SSL validation: ON";
+        setStatusText("Initializing connection... (" + sslMode + ")");
+        toggleInputs(false);
+
+        new SwingWorker<LoginResult, String>() {
+            @Override
+            protected LoginResult doInBackground() {
+                try {
+                    publish("Configuring TLS settings...");
+                    Thread.sleep(100); // Brief pause so user sees status
+
+                    publish("Connecting to " + server + ":" + port + "...");
+                    Thread.sleep(100);
+
+                    publish("Authenticating user...");
+                    LoginResult result = sessionHandler.login(server, port, email, password, insecureTls);
+
+                    return result;
+                } catch (Exception ex) {
+                    return LoginResult.getErrorResult(ex.getMessage());
+                }
+            }
+
+            @Override
+            protected void process(java.util.List<String> statusMessages) {
+                // Update status with the latest message
+                if (!statusMessages.isEmpty()) {
+                    setStatusText(statusMessages.get(statusMessages.size() - 1));
+                }
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    LoginResult result = get();
+                    if (result.status == LoginResult.LoginStatus.SUCCESS) {
+                        setResultText(result.message, true);
+
+                        // Handle Remember Me
+                        if (rememberMeCheckBox.isSelected()) {
+                            sessionHandler.saveCredentials(server, port, email, password);
+                        } else {
+                            sessionHandler.clearSavedCredentials();
+                        }
+
+                        dispose();
+                    } else {
+                        setResultText(result.message, false);
+                    }
+                } catch (Exception ex) {
+                    setResultText("Login Failure: " + ex.getMessage(), false);
+                } finally {
+                    toggleInputs(true);
+                }
+            }
+        }.execute();
+    }
+
+    private void setStatusText(String message) {
+        resultPane.setText(
+            "<html><body style='text-align: center; font-family: sans-serif; font-size: 12px; padding: 4px; color: #555;'>" +
+            message +
+            "</body></html>"
+        );
+        resultPane.setCaretPosition(0);
+    }
+
+    private void setResultText(String message, boolean isSuccess) {
+        String coloredMessage = isSuccess ?
+            colorHTMLSuccessMessage(message) :
+            colorHTMLErrorMessage(message);
+
+        resultPane.setText(
+            "<html><body style='text-align: center; font-family: sans-serif; font-size: 12px; padding: 4px;'>" +
+            coloredMessage +
+            "</body></html>"
+        );
+        resultPane.setCaretPosition(0);
+    }
+
+    // ============================================================
+    // State load
+    // ============================================================
+
+    private void populateFromSessionState() {
+        // Load SSL validation preference
+        validateSSLCheckBox.setSelected(!sessionHandler.isInsecureTls());
+
+        // Load Remember Me credentials if enabled
+        if (sessionHandler.hasRememberMe()) {
+            rememberMeCheckBox.setSelected(true);
+            serverTF.setText(sessionHandler.getSavedServer());
+            portTF.setText(sessionHandler.getSavedPort());
+            emailTF.setText(sessionHandler.getSavedEmail());
+            passwordTF.setText(sessionHandler.getSavedPassword());
+        }
     }
 }
