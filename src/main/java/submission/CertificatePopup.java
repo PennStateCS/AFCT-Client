@@ -68,8 +68,18 @@ public class CertificatePopup implements ExtensionPopup {
 
 
 
-        for (X509Certificate cert : this.certificateHandler.getCertificateChain()) {
-            String commonName = cert.get(); // TODO: get the Common Name somehow
+        X509Certificate[] certChain = this.certificateHandler.getCertificateChain();
+        if (certChain == null) certChain = new X509Certificate[0];
+        for (X509Certificate cert : certChain) {
+            // Extract CN from the subject DN, fall back to full DN string
+            String dn = cert.getSubjectDN().getName();
+            String commonName = dn;
+            for (String part : dn.split(",")) {
+                if (part.trim().startsWith("CN=")) {
+                    commonName = part.trim().substring(3);
+                    break;
+                }
+            }
             CertificateTab certificateTab = new CertificateTab(commonName, this, cards);
             certificateTabPanel.add(certificateTab);
 
@@ -234,17 +244,17 @@ public class CertificatePopup implements ExtensionPopup {
 
         panel.add(setUpSubjectSection(), c);// TODO: remove
 
-        // TODO: figure this out
-        for (section : cert.sections) {
-            String sectionTitle = section.title;
-            JPanel infoSectionPanel = setUpTargetInfoSection(sectionTitle, section.elements);
-        }
+        // TODO: figure this out - needs proper type once cert.sections is defined
+        // for (CertSection section : cert.sections) {
+        //     String sectionTitle = section.title;
+        //     JPanel infoSectionPanel = setUpTargetInfoSection(sectionTitle, section.elements);
+        // }
 
         return panel;
     }
 
 
-    private JPanel setUpTargetInfoSection(String sectionTitle, [] sectionElements) {
+    private JPanel setUpTargetInfoSection(String sectionTitle, Object[] sectionElements) {
         // TODO: make this dynamic
         JPanel panel = new JPanel(new GridBagLayout());
         //panel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
@@ -267,15 +277,14 @@ public class CertificatePopup implements ExtensionPopup {
         c.gridy = y++;
         panel.add(titleLabel, c);
 
-        // TODO: figure this out
-        for (element : sectionElements) {
-            String elementValue = element.value;
-            String elementName = element.name;
-
-            c.gridy = y++;
-            JLabel value = new CopyableJLabel(elementValue);
-            addCertificateInfoLine(elementName, value, panel, c);
-        }
+        // TODO: figure this out - needs proper element type once defined
+        // for (CertElement element : sectionElements) {
+        //     String elementValue = element.value;
+        //     String elementName = element.name;
+        //     c.gridy = y++;
+        //     JLabel value = new CopyableJLabel(elementValue);
+        //     addCertificateInfoLine(elementName, value, panel, c);
+        // }
 
         return panel;
     }
