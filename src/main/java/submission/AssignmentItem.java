@@ -1,16 +1,24 @@
 package submission;
 
-// Class used as items for assignment drop-down menu
-public class AssignmentItem extends DropdownItem {
-    public String description;
+/**
+ * Represents an assignment in the submission system.
+ */
+public final class AssignmentItem {
 
-    public AssignmentItem(String id, String title) {
-        super(id, title);
-        this.description = "";
+    public final String id;
+    public final String name;
+    public final String description;
+    public final String dueDate; // For upcoming filter
+
+    public AssignmentItem(String id, String name, String description, String dueDate) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.dueDate = dueDate;
     }
 
-    public AssignmentItem(String id, String title, String description) {
-        super(id, title);
-        this.description = description;
+    @Override
+    public String toString() {
+        return name;
     }
 }

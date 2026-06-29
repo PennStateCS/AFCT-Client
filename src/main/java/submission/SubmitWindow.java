@@ -1,1109 +1,1123 @@
 package submission;
 
-import file.EncodeException;
-import file.XMLCodec;
 import gui.Globals;
 import gui.environment.Environment;
-import gui.environment.EnvironmentFrame;
 import gui.environment.Universe;
 
 import javax.swing.*;
-import javax.swing.Timer;
-import javax.swing.border.Border;
-import javax.swing.border.LineBorder;
-import javax.swing.event.HyperlinkEvent;
+import javax.swing.border.EmptyBorder;
+import javax.swing.event.TreeExpansionEvent;
+import javax.swing.event.TreeSelectionEvent;
+import javax.swing.event.TreeSelectionListener;
+import javax.swing.event.TreeWillExpandListener;
+import javax.swing.tree.*;
 import java.awt.*;
-import java.awt.event.ActionEvent;
-import java.awt.event.ActionListener;
+import java.awt.event.WindowAdapter;
+import java.awt.event.WindowEvent;
 import java.io.File;
-import java.io.IOException;
-import java.util.*;
 import java.util.List;
-import java.util.prefs.Preferences;
+import java.util.Map;
 
-import static gui.Globals.*;
-import static submission.LoginWindow.*;
-import static submission.SessionHandler.*;
-import static submission.SessionHandler.defaultPassword;
-import static submission.SubmitWindow.ComboBoxTarget.*;
+import static gui.Globals.colorHTMLErrorMessage;
+import static gui.Globals.colorHTMLSuccessMessage;
 
 public class SubmitWindow extends JFrame implements SubmissionGUI {
-    private Environment environment;
-    private JPanel contentPane;
-    // Course
-    public JComboBox<CourseItem> courseBox;
-    private JButton courseRefreshButton;
-    // Assignment
-    public JComboBox<AssignmentItem> assignmentBox;
-    private JButton assignmentRefreshButton;
-    private DetailsPanel2 assignmentDetailsPanel;
-    public JRadioButton allAssignments;
-    public JRadioButton upcomingAssignments;
-    // Problem
-    public JComboBox<ProblemItem> problemBox;
-    private JButton problemRefreshButton;
-    private DetailsPanel2 problemDetailsPanel;
-    public JRadioButton allProblems;
-    public JRadioButton uncompletedProblems;
-    // Current FIle
-    private JLabel currentFileLabel;
-    private JButton viewCurrentButton;
-    private JButton submitButton;
-    // TODO: replace this with better, more modern user feedback methods
-    private JTextPane result;
-    private String resultText = "";
-    private JScrollPane resultScrollPane;
 
-    private JTextPane feedbackTextPane;
-    private JLabel feedbackLabel;
-    private final JEditorPane feedbackEditorPane;
-    private String feedbackEditorPaneFontName;
+    private final Environment environment;
 
-    private JScrollPane scrollPane;
+    // ===============================
+    // UI
+    // ===============================
 
-    private String feedbackPrefix = "Feedback: ";
+    private JButton refreshBtn;
+    private JButton logoutBtn;
+    private JButton submitBtn;
 
-    private JButton logoutButton;
+    private JTextField fileTF;
+    private JLabel statusLabel;
 
+    // Assignment details display
+    private JTextPane assignmentDetailsPane;
+    private JScrollPane assignmentDetailsScroll;
 
-    // Tracking for optimization
-    private String selectedCourseID = null;
-    private String selectedAssignmentID = null;
-    private String selectedProblemID = null;
+    // Problem details display
+    private JTextPane problemDetailsPane;
+    private JScrollPane problemDetailsScroll;
 
-    // Placeholder for combo boxes
-    public static final String PLACEHOLDER = "— Select —";
+    // Tree
+    private JTree selectionTree;
+    private DefaultTreeModel treeModel;
+    private DefaultMutableTreeNode rootNode;
 
-    // Event guarding
-    public volatile boolean isPopulating = false;
-    private boolean populateCoursesOnceLoggedIn = false;
+    // Filter radio buttons
+    private JRadioButton allAssignmentsRadio;
+    private JRadioButton upcomingAssignmentsRadio;
+    private JRadioButton allProblemsRadio;
+    private JRadioButton unsolvedProblemsRadio;
+
+    // ===============================
+    // State
+    // ===============================
+    private volatile boolean loading = false;
+    private File selectedFile = null;
+
+    // Selected items derived from tree selection
+    private CourseItem selectedCourse = null;
+    private AssignmentItem selectedAssignment = null;
+    private ProblemItem selectedProblem = null;
 
     public SubmitWindow(Environment environment) {
+        super("AFCT Submission");
         this.environment = environment;
 
-        contentPane = new JPanel();
-        courseBox = new JComboBox<>();
-        courseRefreshButton = new JButton();
-        assignmentBox = new JComboBox<>();
-        assignmentRefreshButton = new JButton();
-        assignmentDetailsPanel = new DetailsPanel2();
-        allAssignments = new JRadioButton("All Assignments");
-        upcomingAssignments = new JRadioButton("Upcoming Assignments");
-        problemBox = new JComboBox<>();
-        problemRefreshButton = new JButton();
-        problemDetailsPanel = new DetailsPanel2();
-        allProblems = new JRadioButton("All Problems");
-        uncompletedProblems = new JRadioButton("Uncompleted Problems");
-        currentFileLabel = new JLabel("No File Selected");
-        viewCurrentButton = new JButton("View");
-        submitButton = new JButton("Submit");
-        logoutButton = new JButton("Logout");
+        setDefaultCloseOperation(DISPOSE_ON_CLOSE);
+        setMinimumSize(new Dimension(860, 560));
 
-        result = new JTextPane();
-        result.setContentType("text/html");
-        resultScrollPane = new JScrollPane(result);
+        buildUI();
+        wireEvents();
 
-        feedbackTextPane = new JTextPane();
-        feedbackTextPane.setContentType("text/html");
-        feedbackLabel = new JLabel("<html> </html>");
+        // Listen for file changes in the environment to update filename display
+        environment.addFileChangeListener(e -> updateCurrentFileDisplay());
 
-        feedbackEditorPane = new JEditorPane();
-        feedbackEditorPane.setContentType("text/html");
-        feedbackEditorPane.setEditable(false);
-        feedbackEditorPaneFontName = feedbackLabel.getFont().getFontName();
-        feedbackEditorPane.setCaretColor(new Color(0, 0, 0, 0));
-        feedbackEditorPane.setSelectedTextColor(null);
-
-        setupGui();
-        populateGui();
-        setupEventHandlers();
-
-        if (sessionHandler.loggedIn) {
-            sessionHandler.populateCourses(this);
-        } else {
-            populateCoursesOnceLoggedIn = true;
-        }
-
-        scrollPane = new JScrollPane(contentPane);
-
-        this.getContentPane().add(scrollPane);
-        this.setVisible(false);
-
-        // Just here so that the feedback panel is sized correctly when the window is created
-        appendResult(colorHTMLMessage("Initial Value", "white"));
-
-    }
-
-    public void displaySubmitWindow() {
-        // Safety measure so that the GUI doesn't stop working if courseBox is disabled when it shouldn't be
-        toggleCourseBox(true);
-
-        if (sessionHandler.loggedIn) {
-            this.refreshDialog();
-            if (populateCoursesOnceLoggedIn || courseBox.getItemCount() <= 1) {
-                populateCoursesOnceLoggedIn = false;
-                sessionHandler.populateCourses(this);
-            }
-            this.setVisible(true);
-            this.toFront();
-        } else {
-            sessionHandler.displayLoginThenSubmission(this);
-        }
-    }
-
-    @Override
-    public void refreshDialog() {
-        // TODO: maybe clear feedback label text here?
-        EnvironmentFrame frame = Universe.frameForEnvironment(this.environment);
-        this.setTitle(frame.getDescription() + " - Submit");
-        currentFileLabel.setText(frame.getDescription());
-    }
-
-    public void appendResult(String line) {
-        //resultText += (line.endsWith("\n") ? line : (line + "\n"));
-        resultText += (line.endsWith("<br>") ? line : (line + "<br>"));
-        result.setText(resultText);
-        result.setCaretPosition(result.getDocument().getLength());
-
-        feedbackTextPane.setText(line);
-        feedbackTextPane.setCaretPosition(feedbackTextPane.getDocument().getLength());
-
-        if (line.startsWith(feedbackPrefix)) {
-            line = line.substring(feedbackPrefix.length() - 1);
-            //feedbackLabel.setText("<html>" + line.substring(feedbackPrefix.length() - 1, line.length()) + "</html>");
-        }
-        feedbackLabel.setText("<html>" + line + "</html>");
-
-        feedbackEditorPane.setText("<html><body style=\"font-family: " + feedbackEditorPaneFontName + "; font-size: 12px\">" + line + "</body></html>");
-        //feedbackEditorPane.getCaret().setVisible(false);
-        //feedbackEditorPane.setCaretColor(new Color(0, 0, 0, 0));
-    }
-
-    public void logout() {
-        appendResult("");
-        //populateCoursesOnceLoggedIn = true;
-
-        selectedCourseID = null;
-        selectedAssignmentID = null;
-        selectedProblemID = null;
-    }
-
-    public void toggleSubmitButton(boolean enabled) {
-        submitButton.setEnabled(enabled);
-    }
-
-    public void toggleCourseBox(boolean enabled) {
-        courseBox.setEnabled(enabled);
-        courseRefreshButton.setEnabled(enabled);
-    }
-
-    public void toggleCourseRefreshButton(boolean enabled) {
-        courseRefreshButton.setEnabled(enabled);
-    }
-
-    public void toggleAssignmentBox(boolean enabled) {
-        assignmentBox.setEnabled(enabled);
-        assignmentRefreshButton.setEnabled(enabled);
-        if (enabled && assignmentBox.getSelectedIndex() > 0) {
-            assignmentDetailsPanel.toggle(true);
-        }
-        if (!enabled) {
-            assignmentDetailsPanel.toggle(false);
-        }
-        allAssignments.setEnabled(enabled);
-        upcomingAssignments.setEnabled(enabled);
-    }
-
-    public void toggleProblemBox(boolean enabled) {
-        problemBox.setEnabled(enabled);
-        problemRefreshButton.setEnabled(enabled);
-        if (enabled && problemBox.getSelectedIndex() > 0) {
-            problemDetailsPanel.toggle(true);
-        }
-        if (!enabled) {
-            problemDetailsPanel.toggle(false);
-        }
-        allProblems.setEnabled(enabled);
-        uncompletedProblems.setEnabled(enabled);
-    }
-
-    public enum ComboBoxTarget {
-        COURSE, ASSIGNMENT, PROBLEM
-    }
-
-    public <T> JComboBox<T> getTargetComboBox(ComboBoxTarget target) {
-        return switch (target) {
-            case COURSE -> (JComboBox<T>) courseBox;
-            case ASSIGNMENT -> (JComboBox<T>) assignmentBox;
-            case PROBLEM -> (JComboBox<T>) problemBox;
-        };
-    }
-
-    public void toggleTargetComboBox(ComboBoxTarget target, boolean enabled) {
-        switch (target) {
-            case COURSE -> toggleCourseBox(enabled);
-            case ASSIGNMENT -> toggleAssignmentBox(enabled);
-            case PROBLEM -> toggleProblemBox(enabled);
-        }
-    }
-
-    public void resetTargetComboBox(ComboBoxTarget target) {
-        switch (target) {
-            case COURSE -> setModel(courseBox, List.of(PLACEHOLDER), false);
-            case ASSIGNMENT -> setModel(assignmentBox, List.of(PLACEHOLDER), false);
-            case PROBLEM -> setModel(problemBox, List.of(PLACEHOLDER), false);
-        }
-    }
-
-    public void disableAndResetTargetComboBox(ComboBoxTarget target) {
-        toggleTargetComboBox(target, false);
-        resetTargetComboBox(target);
-    }
-
-    public void disableAndResetAllComboBoxes() {
-        // Disable and reset CourseBox
-        disableAndResetTargetComboBox(COURSE);
-        // Disable and reset AssignmentBox
-        disableAndResetTargetComboBox(ASSIGNMENT);
-        // Disable and reset ProblemBox
-        disableAndResetTargetComboBox(PROBLEM);
-    }
-
-    private void setupGui() {
-        contentPane.setLayout(new GridBagLayout());
-        GridBagConstraints c;
-        int y = 0;
-
-        int vrtInset = 15;
-        int hozInset = 20;
-
-//        // Create headerLabel
-//        JLabel headerLabel = new JLabel("AFCT Server - Submit");
-//        changeSize(headerLabel, 24);
-//
-//        // Add headerLabel to contentPane
-//        c = setConstraints(1, 1, 0, y++, GridBagConstraints.NORTH);
-//        c.fill = GridBagConstraints.NONE;
-//        c.insets = new Insets(vrtInset, hozInset, vrtInset, hozInset);
-//        contentPane.add(headerLabel, c);
-
-        // Add headerLabel to contentPane
-        c = setConstraints(1, 1, 0, y++, GridBagConstraints.NORTH);
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.insets = new Insets(vrtInset, hozInset, vrtInset, hozInset);
-        contentPane.add(createHeaderPanel(), c);
-
-        // Add combo boxes
-        c.insets = new Insets(vrtInset, hozInset, 0, hozInset);
-        c.fill = GridBagConstraints.HORIZONTAL;
-        c.gridy = y++;
-        contentPane.add(createComboBoxWithRefreshPanel(courseBox, courseRefreshButton, "Course"), c);
-        c.gridy = y++;
-        contentPane.add(createComboBoxWithTopRadioButtons(assignmentBox, assignmentRefreshButton, assignmentDetailsPanel, allAssignments, upcomingAssignments, "Assignment"), c);
-        c.insets = new Insets(vrtInset-5, hozInset, 0, hozInset);
-        c.gridy = y++;
-        contentPane.add(createComboBoxWithTopRadioButtons(problemBox, problemRefreshButton, problemDetailsPanel, allProblems, uncompletedProblems, "Problem"), c);
-
-        setPointerCursor(assignmentBox);
-        setPointerCursor(problemBox);
-
-        // Add current file info
-        c.gridy = y++;
-        contentPane.add(createCurrentFilePanel(), c);
-
-        // Add submitButton to contentPane
-        changeSize(submitButton, 16);
-        setPointerCursor(submitButton);
-        //submitButton.setPreferredSize(new Dimension(360, 36));
-        //submitButton.setMargin(new Insets(6, 12, 6, 12));
-        c = setConstraints(1, 0, 0, y++, GridBagConstraints.LINE_START);
-        //c.insets = new Insets(5, hozInset, vrtInset, hozInset);
-        c.insets = new Insets(vrtInset + 5, hozInset, vrtInset, hozInset);
-        contentPane.add(submitButton, c);
-
-        addFeedbackSection(c, y, vrtInset, hozInset);
-    }
-
-    private Component createHeaderPanel() {
-        JPanel headerPanel = new JPanel(new BorderLayout());
-
-        // Create headerLabel
-        JLabel headerLabel = new JLabel("AFCT Server - Submit", SwingConstants.CENTER);
-        changeSize(headerLabel, 24);
-
-        // Invisible spacer with same preferred width as the button
-        Component spacer = Box.createRigidArea(
-                new Dimension(logoutButton.getPreferredSize().width, 1)
-        );
-
-        headerPanel.add(spacer, BorderLayout.WEST);
-        headerPanel.add(headerLabel, BorderLayout.CENTER);
-        headerPanel.add(logoutButton, BorderLayout.EAST);
-
-        return headerPanel;
-    }
-
-    private JPanel createCurrentFilePanel() {
-        GridBagConstraints c;
-
-        // Stylize currentFileLabel
-        changeSize(currentFileLabel, 14);
-        unBoldFont(currentFileLabel);
-        //italicFont(currentFileLabel);
-
-        // Create fileLabelPanel
-        JPanel fileLabelPanel = new JPanel(new GridBagLayout());
-        fileLabelPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
-
-        // Add currentFileLabel to fileLabelPanel
-        c = setConstraints(1, 1, 0, 0);
-        c.insets = new Insets(6, 12, 6, 12);
-        fileLabelPanel.add(currentFileLabel, c);
-
-        // Create filePanel
-        JPanel filePanel = createInputPanel(fileLabelPanel, "File to Submit", false);
-
-        // Add viewCurrentButton to filePanel
-        setPointerCursor(viewCurrentButton);
-        c = setConstraints(0, 0, 1, 1);
-        changeSize(viewCurrentButton, 16);
-        filePanel.add(viewCurrentButton, c);
-
-        return filePanel;
-    }
-
-    private void addFeedbackSection(GridBagConstraints c, int y, int vrtInset, int hozInset) {
-        // Add result to contentPane
-        result.setBorder(new LineBorder(new Color(210, 210, 210)));
-        c.gridy = y++;
-        //contentPane.add(createInputPanel(resultScrollPane, "Result", false), c);
-
-        // Add feedbackTextPane to contentPane
-        c.insets = new Insets(vrtInset, hozInset, vrtInset, hozInset);
-        feedbackTextPane.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
-        feedbackTextPane.setBackground(Color.WHITE);
-        //contentPane.add(createInputPanel(feedbackTextPane, "Feedback", false), c);
-
-
-        // TODO: maybe eventually switch to feedbackTextPane so that the feedback message can be copy and pasted
-        // Stylize feedbackLabel
-        feedbackLabel.setBackground(Color.WHITE);
-        //changeSize(feedbackLabel, 14);
-        changeSize(feedbackLabel, 16);
-        unBoldFont(feedbackLabel);
-
-        // create feedbackLabelPanel
-        JPanel feedbackLabelPanel = new JPanel(new GridBagLayout());
-        feedbackLabelPanel.setBackground(Color.WHITE);
-        feedbackLabelPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
-        // Add feedbackLabel to feedbackLabelPanel
-        GridBagConstraints c2 = setConstraints(1, 1, 0, 0);
-        c2.insets = new Insets(6, 12, 6, 12);
-        //feedbackLabelPanel.add(feedbackLabel, c);
-        c2.insets = new Insets(10, 12, 10, 12);
-        feedbackLabelPanel.add(feedbackLabel, c2);
-
-        // Add feedbackLabelPanel to contentPane
-        //c.gridy = y++;
-        //contentPane.add(createInputPanel(feedbackLabelPanel, "Feedback", false), c);
-
-
-        // Handle feedbackEditorPane
-        feedbackEditorPane.addHyperlinkListener(e -> {
-            if (HyperlinkEvent.EventType.ENTERED.equals(e.getEventType())) {
-
-            } else if (HyperlinkEvent.EventType.EXITED.equals(e.getEventType())) {
-
-            } else if (HyperlinkEvent.EventType.ACTIVATED.equals(e.getEventType())) {
-                if (Desktop.isDesktopSupported()) {
-                    try {
-                        Desktop.getDesktop().browse(e.getURL().toURI());
-                    } catch (Exception ex) {
-                        ex.printStackTrace();
-                    }
-                }
+        addWindowListener(new WindowAdapter() {
+            @Override
+            public void windowClosed(WindowEvent e) {
+                Universe.unregisterSubmitDialog(environment);
             }
         });
-
-        // Add feedbackEditorPane to contentPane
-        c.gridy = y++;
-        contentPane.add(createFeedbackPanelHelper(feedbackEditorPane, -3), c);
-    }
-
-    private JPanel createFeedbackPanelHelper(Component component, int insetOffset) {
-        changeSize(component, 16);
-        unBoldFont(component);
-
-        // create feedbackPanel
-        JPanel feedbackPanel = new JPanel(new GridBagLayout());
-        feedbackPanel.setBackground(Color.WHITE);
-        feedbackPanel.setBorder(BorderFactory.createLineBorder(Color.GRAY, 1));
-        // Add component to feedbackPanel
-        GridBagConstraints c2 = setConstraints(1, 1, 0, 0);
-        c2.insets = new Insets(10, 12, 10, 12);
-        c2.insets = new Insets(10 + insetOffset, 12 + insetOffset, 10 + insetOffset, 12 + insetOffset);
-        feedbackPanel.add(component, c2);
-
-        // Create InputPanel
-        return createInputPanel(feedbackPanel, "Feedback", false);
-    }
-
-    private void addRefreshButton(JPanel inputPanel, JButton refreshButton, int y) {
-        // Add refreshButton to inputPanel
-        GridBagConstraints c;
-        c = setConstraints(0, 0, 1, y);
-        setAllInsets(c, 0);
-        Icon icon = styleRefreshButton(refreshButton);
-        //refreshButton.setPreferredSize(new Dimension(icon.getIconWidth(), icon.getIconHeight()));
-        inputPanel.add(refreshButton, c);
-    }
-
-    private <T> JPanel createComboBoxWithRefreshPanel(JComboBox<T> comboBox, JButton refreshButton, String headerText) {
-        JPanel inputPanel = createComboBoxPanel(comboBox, headerText);
-        GridBagConstraints c;
-
-        // Add refreshButton to inputPanel
-        int y = 1;
-        addRefreshButton(inputPanel, refreshButton, y);
-
-        return inputPanel;
-    }
-
-    private <T> JPanel createComboBoxWithBottomRadioButtons(JComboBox<T> comboBox, JButton refreshButton, DetailsPanel2 detailsPanel, JRadioButton radioButton1, JRadioButton radioButton2, String headerText) {
-        JPanel inputPanel = createComboBoxWithRefreshPanel(comboBox, refreshButton, headerText);
-        GridBagConstraints c;
-        int y = 2;
-
-        // Add detailsPanel
-        c = setConstraints(1, 0, 0, y++);
-        c.gridwidth = GridBagConstraints.REMAINDER;
-        //c.fill = GridBagConstraints.HORIZONTAL;
-        //changeSize(radioButton1, 14);
-        inputPanel.add(detailsPanel, c);
-
-        // Add radio buttons to a group
-        ButtonGroup buttonGroup = new ButtonGroup();
-        buttonGroup.add(radioButton1);
-        buttonGroup.add(radioButton2);
-
-        // Create buttonPanel
-        JPanel buttonPanel = new JPanel(new GridBagLayout());
-
-        // Add radioButton1 to buttonPanel
-        c = setConstraints(0.5, 0, 0, 0);
-        setPointerCursor(radioButton1);
-        changeSize(radioButton1, 14);
-        unBoldFont(radioButton1);
-        buttonPanel.add(radioButton1, c);
-
-        // Add radioButton2 to buttonPanel
-        c = setConstraints(0.5, 0, 1, 0);
-        setPointerCursor(radioButton2);
-        changeSize(radioButton2, 14);
-        unBoldFont(radioButton2);
-        buttonPanel.add(radioButton2, c);
-
-        // Add buttonPanel to inputPanel
-        c = setConstraints(0, 0, 0, y);
-        c.insets = new Insets(5, 0, 0, 0);
-        inputPanel.add(buttonPanel, c);
-
-        return inputPanel;
-    }
-
-
-    private <T> JPanel createComboBoxWithTopRadioButtons(JComboBox<T> comboBox, JButton refreshButton, DetailsPanel2 detailsPanel, JRadioButton radioButton1, JRadioButton radioButton2, String headerText) {
-        JPanel inputPanel = new JPanel(new GridBagLayout());
-        GridBagConstraints c;
-        int y = 0;
-
-        // Create headerLabel
-        JLabel headerLabel = new JLabel(headerText);
-        changeSize(headerLabel, 16);
-        // Add headerLabel to inputPanel
-        c = setConstraints(0, 0, 0, y++, GridBagConstraints.LINE_START);
-        c.insets = new Insets(0, 0, 0, 0);
-        inputPanel.add(headerLabel, c);
-
-        // Add radio buttons to a group
-        ButtonGroup buttonGroup = new ButtonGroup();
-        buttonGroup.add(radioButton1);
-        buttonGroup.add(radioButton2);
-
-        // Create buttonPanel
-        JPanel buttonPanel = new JPanel(new GridBagLayout());
-
-        // Add radioButton1 to buttonPanel
-        c = setConstraints(0.5, 0, 0, 0);
-        setPointerCursor(radioButton1);
-        changeSize(radioButton1, 14);
-        unBoldFont(radioButton1);
-        buttonPanel.add(radioButton1, c);
-
-        // Add radioButton2 to buttonPanel
-        c = setConstraints(0.5, 0, 1, 0);
-        setPointerCursor(radioButton2);
-        changeSize(radioButton2, 14);
-        unBoldFont(radioButton2);
-        buttonPanel.add(radioButton2, c);
-
-        // Add buttonPanel to inputPanel
-        c = setConstraints(0, 0, 0, y++);
-        //c.insets = new Insets(5, 0, 0, 0);
-        // TODO: maybe have this span two columns cause of refresh button?
-        //  - like the detailsPanel? i.e.:
-        //  c.gridwidth = GridBagConstraints.REMAINDER;
-        inputPanel.add(buttonPanel, c);
-
-        // Add comboBox to inputPanel
-        c = setConstraints(1, 1, 0, y++, GridBagConstraints.LINE_START);
-        changeSize(comboBox, 16);
-        inputPanel.add(comboBox, c);
-
-        // Add refreshButton to inputPanel
-        addRefreshButton(inputPanel, refreshButton, y-1);
-
-        // Add detailsPanel
-        c = setConstraints(1, 0, 0, y++);
-        c.gridwidth = GridBagConstraints.REMAINDER;
-        //c.fill = GridBagConstraints.HORIZONTAL;
-        //changeSize(radioButton1, 14);
-        inputPanel.add(detailsPanel, c);
-
-        return inputPanel;
-    }
-
-    private void populateGui() {
-        // Visuals for combo boxes
-        courseBox.setBackground(Color.WHITE);
-        assignmentBox.setBackground(Color.WHITE);
-        problemBox.setBackground(Color.WHITE);
-
-        currentFileLabel.setBackground(Color.WHITE);
-
-        // Set default renderer for combo boxes
-        DefaultListCellRenderer renderer = new DefaultListCellRenderer();
-        renderer.setBackground(Color.WHITE);
-        renderer.setOpaque(true);
-        courseBox.setRenderer(renderer);
-        assignmentBox.setRenderer(renderer);
-        problemBox.setRenderer(renderer);
-
-        // Initialize clean models with a placeholder
-        setModel(courseBox, List.of(PLACEHOLDER), false);
-        setModel(assignmentBox, List.of(PLACEHOLDER), false);
-        setModel(problemBox, List.of(PLACEHOLDER), false);
-
-        // Appropriately enable/disable interactive elements
-        toggleCourseBox(true);
-        toggleAssignmentBox(false);
-        toggleProblemBox(false);
-        toggleSubmitButton(false);
-
-        upcomingAssignments.setSelected(true);
-        uncompletedProblems.setSelected(true);
 
         refreshDialog();
     }
 
-    /** Function used to fill a drop-down menu with options
-     *   - params:
-     *       - box: drop-down menu being used to store options (must be courseBox, assignmentBox, or problemBox)
-     *       - items: a list of items used as values for the drop-down menu
-     *       - enable: should the drop-down menu be enabled or not
-     *   - return:
-     *       - void (none)
-     */
-    /**
-     * Function used to fill a drop-down menu with options.
-     *
-     * @param box drop-down menu being used to store options (must be courseBox, assignmentBox, or problemBox)
-     * @param items a list of items used as values for the drop-down menu
-     * @param enable should the drop-down menu be enabled or not
-     * @param <T> must be courseBox, assignmentBox, or problemBox
-     */
-    private <T> void setModel(JComboBox<T> box, List<String> items, boolean enable) {
-        isPopulating = true;
-        try {
-            DefaultComboBoxModel<T> model = new DefaultComboBoxModel<>();
+    // ============================================================
+    // UI
+    // ============================================================
 
-            for (String item : items) {
-                T value;
+    private void buildUI() {
+        JPanel root = new JPanel(new BorderLayout(12, 12));
+        root.setBorder(new EmptyBorder(14, 14, 14, 14));
 
-                if (box == courseBox) {
-                    value = (T) new CourseItem("", item);
-                } else if (box == assignmentBox) {
-                    value = (T) new AssignmentItem("", item);
-                    allAssignments.setEnabled(enable);
-                    upcomingAssignments.setEnabled(enable);
-                } else if (box == problemBox) {
-                    value = (T) new ProblemItem("", item);
-                    allProblems.setEnabled(enable);
-                    uncompletedProblems.setEnabled(enable);
-                } else {
-                    value = (T) (Object) item;
+        root.add(buildHeader(), BorderLayout.NORTH);
+        root.add(buildCenter(), BorderLayout.CENTER);
+        root.add(buildFooter(), BorderLayout.SOUTH);
+
+        setContentPane(root);
+    }
+
+    private JComponent buildHeader() {
+        JPanel header = new JPanel(new BorderLayout(10, 10));
+
+        JLabel title = new JLabel("AFCT Submission");
+        Globals.boldFontAndChangeSize(title, 18);
+
+        JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        refreshBtn = new JButton("Refresh");
+        logoutBtn = new JButton("Logout");
+
+        Globals.setPointerCursor(refreshBtn);
+        Globals.setPointerCursor(logoutBtn);
+
+        actions.add(refreshBtn);
+        actions.add(logoutBtn);
+
+        header.add(title, BorderLayout.WEST);
+        header.add(actions, BorderLayout.EAST);
+
+        return header;
+    }
+
+    private JComponent buildCenter() {
+        JSplitPane split = new JSplitPane(JSplitPane.HORIZONTAL_SPLIT);
+        split.setResizeWeight(0.40);
+        split.setBorder(null);
+
+        split.setLeftComponent(buildTreePanel());
+        split.setRightComponent(buildDetailsPanel());
+
+        return split;
+    }
+
+    private JComponent buildTreePanel() {
+        JPanel left = new JPanel(new BorderLayout(10, 10));
+        left.setBorder(BorderFactory.createTitledBorder("Select"));
+
+        // Filter panel at top
+        JPanel filterPanel = new JPanel();
+        filterPanel.setLayout(new BoxLayout(filterPanel, BoxLayout.Y_AXIS));
+        filterPanel.setBorder(BorderFactory.createEmptyBorder(0, 5, 10, 5));
+
+        // Assignment filters
+        JPanel assignmentFilterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 2));
+        JLabel assignmentLabel = new JLabel("Assignments:");
+        Globals.boldFont(assignmentLabel);
+
+        allAssignmentsRadio = new JRadioButton("All", true);
+        upcomingAssignmentsRadio = new JRadioButton("Upcoming");
+
+        ButtonGroup assignmentGroup = new ButtonGroup();
+        assignmentGroup.add(allAssignmentsRadio);
+        assignmentGroup.add(upcomingAssignmentsRadio);
+
+        allAssignmentsRadio.setFocusPainted(false);
+        upcomingAssignmentsRadio.setFocusPainted(false);
+
+        assignmentFilterPanel.add(assignmentLabel);
+        assignmentFilterPanel.add(allAssignmentsRadio);
+        assignmentFilterPanel.add(upcomingAssignmentsRadio);
+
+        // Problem filters
+        JPanel problemFilterPanel = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 2));
+        JLabel problemLabel = new JLabel("Problems:");
+        Globals.boldFont(problemLabel);
+
+        allProblemsRadio = new JRadioButton("All", true);
+        unsolvedProblemsRadio = new JRadioButton("Unsolved");
+
+        ButtonGroup problemGroup = new ButtonGroup();
+        problemGroup.add(allProblemsRadio);
+        problemGroup.add(unsolvedProblemsRadio);
+
+        allProblemsRadio.setFocusPainted(false);
+        unsolvedProblemsRadio.setFocusPainted(false);
+
+        problemFilterPanel.add(problemLabel);
+        problemFilterPanel.add(allProblemsRadio);
+        problemFilterPanel.add(unsolvedProblemsRadio);
+
+        filterPanel.add(assignmentFilterPanel);
+        filterPanel.add(problemFilterPanel);
+
+        // Tree
+        rootNode = new DefaultMutableTreeNode("Root");
+        treeModel = new DefaultTreeModel(rootNode);
+
+        selectionTree = new JTree(treeModel);
+        selectionTree.setRootVisible(false); // Hide root so courses appear at top level
+        selectionTree.setShowsRootHandles(true);
+        selectionTree.getSelectionModel().setSelectionMode(TreeSelectionModel.SINGLE_TREE_SELECTION);
+
+        // A slightly nicer default row height (optional)
+        selectionTree.setRowHeight(22);
+
+        // Custom renderer with icons
+        selectionTree.setCellRenderer(new SubmitTreeCellRenderer());
+
+        // Use +/- symbols for expand/collapse
+        UIManager.put("Tree.expandedIcon", createPlusMinusIcon(true));
+        UIManager.put("Tree.collapsedIcon", createPlusMinusIcon(false));
+        selectionTree.updateUI();
+
+        JScrollPane sp = new JScrollPane(selectionTree);
+
+        left.add(filterPanel, BorderLayout.NORTH);
+        left.add(sp, BorderLayout.CENTER);
+
+        return left;
+    }
+
+    private JComponent buildDetailsPanel() {
+        // Main container with vertical layout
+        JPanel container = new JPanel(new GridBagLayout());
+        GridBagConstraints containerConstraints = new GridBagConstraints();
+        containerConstraints.gridx = 0;
+        containerConstraints.weightx = 1;
+        containerConstraints.fill = GridBagConstraints.BOTH;
+        containerConstraints.insets = new Insets(0, 0, 0, 0);
+
+        // ============================================================
+        // Panel 1: Selected Assignment
+        // ============================================================
+        JPanel assignmentPanel = new JPanel(new GridBagLayout());
+        assignmentPanel.setBorder(BorderFactory.createTitledBorder("Selected Assignment"));
+
+        GridBagConstraints c1 = new GridBagConstraints();
+        c1.gridx = 0;
+        c1.gridy = 0;
+        c1.weightx = 1;
+        c1.weighty = 1;
+        c1.fill = GridBagConstraints.BOTH;
+        c1.insets = new Insets(8, 10, 8, 10);
+
+        // Assignment details section
+        assignmentDetailsPane = new JTextPane();
+        assignmentDetailsPane.setEditable(false);
+        assignmentDetailsPane.setContentType("text/html");
+        assignmentDetailsPane.setBackground(assignmentPanel.getBackground());
+        assignmentDetailsPane.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        assignmentDetailsPane.setText("<html><body style='font-family: sans-serif; padding: 4px; color: #888;'>" +
+                "<i>Select an assignment to view details</i></body></html>");
+
+        assignmentDetailsScroll = new JScrollPane(assignmentDetailsPane);
+        assignmentDetailsScroll.setPreferredSize(new Dimension(280, 100));
+        assignmentDetailsScroll.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(180, 180, 180), 1),
+            BorderFactory.createEmptyBorder(2, 2, 2, 2)
+        ));
+        assignmentDetailsScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        assignmentDetailsScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
+        assignmentPanel.add(assignmentDetailsScroll, c1);
+
+        // Add assignment panel to container
+        containerConstraints.gridy = 0;
+        containerConstraints.weighty = 0.25;
+        container.add(assignmentPanel, containerConstraints);
+
+        // ============================================================
+        // Panel 2: Selected Problem
+        // ============================================================
+        JPanel problemPanel = new JPanel(new GridBagLayout());
+        problemPanel.setBorder(BorderFactory.createTitledBorder("Selected Problem"));
+
+        GridBagConstraints c2 = new GridBagConstraints();
+        c2.gridx = 0;
+        c2.gridy = 0;
+        c2.weightx = 1;
+        c2.weighty = 1;
+        c2.fill = GridBagConstraints.BOTH;
+        c2.insets = new Insets(8, 10, 8, 10);
+
+        // Problem details section
+        problemDetailsPane = new JTextPane();
+        problemDetailsPane.setEditable(false);
+        problemDetailsPane.setContentType("text/html");
+        problemDetailsPane.setBackground(problemPanel.getBackground());
+        problemDetailsPane.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
+        problemDetailsPane.setText("<html><body style='font-family: sans-serif; padding: 4px; color: #888;'>" +
+                "<i>Select a problem to view details</i></body></html>");
+
+        problemDetailsScroll = new JScrollPane(problemDetailsPane);
+        problemDetailsScroll.setPreferredSize(new Dimension(280, 100));
+        problemDetailsScroll.setBorder(BorderFactory.createCompoundBorder(
+            BorderFactory.createLineBorder(new Color(180, 180, 180), 1),
+            BorderFactory.createEmptyBorder(2, 2, 2, 2)
+        ));
+        problemDetailsScroll.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
+        problemDetailsScroll.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
+
+        problemPanel.add(problemDetailsScroll, c2);
+
+        // Add problem panel to container
+        containerConstraints.gridy = 1;
+        containerConstraints.weighty = 0.25;
+        container.add(problemPanel, containerConstraints);
+
+        // ============================================================
+        // Panel 3: Submission (Current File + Submit Button)
+        // ============================================================
+        JPanel submissionPanel = new JPanel(new GridBagLayout());
+        submissionPanel.setBorder(BorderFactory.createTitledBorder("Submission"));
+
+        GridBagConstraints c3 = new GridBagConstraints();
+        c3.gridx = 0;
+        c3.weightx = 1;
+        c3.fill = GridBagConstraints.HORIZONTAL;
+        c3.insets = new Insets(8, 10, 0, 10);
+
+        // Current file display (read-only, shows filename)
+        fileTF = new JTextField();
+        fileTF.setEditable(false);
+        fileTF.setMargin(new Insets(6, 10, 6, 10));
+        fileTF.setForeground(new Color(60, 60, 60));
+
+        // Set initial file from environment
+        File envFile = environment.getFile();
+        if (envFile != null) {
+            selectedFile = envFile;
+            fileTF.setText(envFile.getName());
+        } else {
+            fileTF.setText("No file open");
+            fileTF.setForeground(new Color(150, 150, 150));
+        }
+
+        c3.gridy = 0;
+        submissionPanel.add(labeled("File to Submit", fileTF), c3);
+
+        // Submit button
+        submitBtn = new JButton("Submit");
+        submitBtn.setPreferredSize(new Dimension(220, 38));
+        Globals.setPointerCursor(submitBtn);
+
+        c3.gridy++;
+        c3.insets = new Insets(16, 10, 0, 10);
+        submissionPanel.add(submitBtn, c3);
+
+        // Spacer to push content to top
+        c3.gridy++;
+        c3.weighty = 1;
+        c3.fill = GridBagConstraints.BOTH;
+        c3.insets = new Insets(0, 0, 0, 0);
+        submissionPanel.add(Box.createVerticalStrut(1), c3);
+
+        // Add submission panel to container
+        containerConstraints.gridy = 2;
+        containerConstraints.weighty = 0.5;
+        container.add(submissionPanel, containerConstraints);
+
+        return container;
+    }
+
+    private JComponent buildFooter() {
+        JPanel footer = new JPanel(new BorderLayout());
+        statusLabel = new JLabel("<html>&nbsp;</html>");
+        statusLabel.setBorder(new EmptyBorder(8, 2, 2, 2));
+        Globals.changeSize(statusLabel, 13);
+        footer.add(statusLabel, BorderLayout.CENTER);
+        return footer;
+    }
+
+    private JComponent labeled(String label, JComponent comp) {
+        JPanel p = new JPanel(new BorderLayout(0, 4));
+        JLabel l = new JLabel(label);
+        Globals.boldFont(l);
+        p.add(l, BorderLayout.NORTH);
+        p.add(comp, BorderLayout.CENTER);
+        return p;
+    }
+
+    private Icon createPlusMinusIcon(boolean expanded) {
+        return new Icon() {
+            @Override
+            public void paintIcon(Component c, Graphics g, int x, int y) {
+                Graphics2D g2d = (Graphics2D) g.create();
+                g2d.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+
+                // Draw box
+                g2d.setColor(new Color(100, 100, 100));
+                g2d.drawRect(x + 2, y + 2, 8, 8);
+
+                // Draw horizontal line (minus)
+                g2d.drawLine(x + 4, y + 6, x + 8, y + 6);
+
+                // Draw vertical line (plus) if collapsed
+                if (!expanded) {
+                    g2d.drawLine(x + 6, y + 4, x + 6, y + 8);
                 }
 
-                model.addElement(value);
+                g2d.dispose();
             }
 
-            box.setModel(model);
-            box.setSelectedIndex(0);
-            box.setEnabled(enable);
-        } finally {
-            isPopulating = false;
+            @Override
+            public int getIconWidth() {
+                return 12;
+            }
+
+            @Override
+            public int getIconHeight() {
+                return 12;
+            }
+        };
+    }
+
+    // ============================================================
+    // Events
+    // ============================================================
+
+    private void wireEvents() {
+        refreshBtn.addActionListener(e -> refreshDialog());
+
+        logoutBtn.addActionListener(e -> {
+            Globals.sessionHandler.logout(false);
+            dispose();
+        });
+
+        submitBtn.addActionListener(e -> attemptSubmit());
+
+        // Filter change listeners
+        allAssignmentsRadio.addActionListener(e -> reloadAssignmentsForSelectedCourse());
+        upcomingAssignmentsRadio.addActionListener(e -> reloadAssignmentsForSelectedCourse());
+        allProblemsRadio.addActionListener(e -> reloadProblemsForSelectedAssignment());
+        unsolvedProblemsRadio.addActionListener(e -> reloadProblemsForSelectedAssignment());
+
+        // Lazy load on expand (best UX)
+        selectionTree.addTreeWillExpandListener(new TreeWillExpandListener() {
+            @Override
+            public void treeWillExpand(TreeExpansionEvent event) {
+                DefaultMutableTreeNode node = nodeFromPath(event.getPath());
+                Object uo = node.getUserObject();
+
+                if (uo instanceof CourseItem) {
+                    loadAssignmentsIntoNode((CourseItem) uo, node);
+                } else if (uo instanceof AssignmentItem) {
+                    loadProblemsIntoNode((AssignmentItem) uo, node);
+                }
+            }
+
+            @Override
+            public void treeWillCollapse(TreeExpansionEvent event) {
+                // no-op
+            }
+        });
+
+        // Track selection (so Submit knows what’s chosen)
+        selectionTree.addTreeSelectionListener(new TreeSelectionListener() {
+            @Override
+            public void valueChanged(TreeSelectionEvent e) {
+                DefaultMutableTreeNode node = nodeFromPath(e.getNewLeadSelectionPath());
+                updateSelectionStateFromNode(node);
+            }
+        });
+    }
+
+    // ============================================================
+    // Display / Universe hook
+    // ============================================================
+
+    public void displaySubmitWindow() {
+        setVisible(true);
+        toFront();
+
+        // Ensure current file from environment is loaded
+        updateCurrentFileDisplay();
+    }
+
+    @Override
+    public void refreshDialog() {
+        loadCourses();
+    }
+
+    // ============================================================
+    // Tree + Selection State
+    // ============================================================
+
+    private void clearSelectionState() {
+        selectedCourse = null;
+        selectedAssignment = null;
+        selectedProblem = null;
+        updateAssignmentDetails(null);
+        updateProblemDetails(null);
+    }
+
+    private void updateSelectionStateFromNode(DefaultMutableTreeNode node) {
+        clearSelectionState();
+
+        if (node == null) {
+            updateAssignmentDetails(null);
+            updateProblemDetails(null);
+            return;
+        }
+
+        Object uo = node.getUserObject();
+
+        if (uo instanceof ProblemItem) {
+            selectedProblem = (ProblemItem) uo;
+
+            DefaultMutableTreeNode parent = (DefaultMutableTreeNode) node.getParent();
+            if (parent != null && parent.getUserObject() instanceof AssignmentItem) {
+                selectedAssignment = (AssignmentItem) parent.getUserObject();
+
+                DefaultMutableTreeNode grand = (DefaultMutableTreeNode) parent.getParent();
+                if (grand != null && grand.getUserObject() instanceof CourseItem) {
+                    selectedCourse = (CourseItem) grand.getUserObject();
+                }
+            }
+
+            // Update both assignment and problem details
+            updateAssignmentDetails(selectedAssignment);
+            updateProblemDetails(selectedProblem);
+
+        } else if (uo instanceof AssignmentItem) {
+            selectedAssignment = (AssignmentItem) uo;
+
+            DefaultMutableTreeNode parent = (DefaultMutableTreeNode) node.getParent();
+            if (parent != null && parent.getUserObject() instanceof CourseItem) {
+                selectedCourse = (CourseItem) parent.getUserObject();
+            }
+
+            // Show assignment details, clear problem details
+            updateAssignmentDetails(selectedAssignment);
+            updateProblemDetails(null);
+
+        } else if (uo instanceof CourseItem) {
+            selectedCourse = (CourseItem) uo;
+
+            // Clear both assignment and problem details when course is selected
+            updateAssignmentDetails(null);
+            updateProblemDetails(null);
+        } else {
+            // Clear both details for other selections
+            updateAssignmentDetails(null);
+            updateProblemDetails(null);
         }
     }
 
-    /**
-     * Sets action listeners for user inputs.
-     */
-    private void setupEventHandlers() {
-        handlers_course();
-        handlers_assignment();
-        handlers_problem();
-        handlers_file();
-        handlers_submit();
-        handlers_logout();
-    }
+    private void updateProblemDetails(ProblemItem problem) {
+        if (problem == null) {
+            // Show placeholder text when no problem is selected
+            problemDetailsPane.setText(
+                "<html><body style='font-family: sans-serif; padding: 4px; color: #888;'>" +
+                "<i>Select a problem to view details</i></body></html>"
+            );
+        } else {
+            String title = problem.name != null ? problem.name : "Untitled Problem";
+            String description = problem.description != null && !problem.description.isBlank()
+                ? problem.description
+                : "No description available.";
 
-    private void handlers_course() {
-        SubmitWindow submitWindow = this;
-        courseBox.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (isPopulating) return;
+            // Format as HTML for better display
+            String html = String.format(
+                "<html><body style='font-family: sans-serif; padding: 4px;'>" +
+                "<h3 style='margin: 0 0 8px 0; color: #2c3e50;'>%s</h3>" +
+                "<p style='margin: 0; color: #34495e;'>%s</p>" +
+                "</body></html>",
+                escapeHtml(title),
+                escapeHtml(description)
+            );
 
-                // If the user's selection does not change, return
-                CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
-                if (selectedCourse == null) return;
-                if (Objects.equals(selectedCourse.id, selectedCourseID)) return;
-
-                selectedCourseID = selectedCourse.id;
-                selectedAssignmentID = null;
-                selectedProblemID = null;
-                assignmentDetailsPanel.disableDetailsPanel();
-                problemDetailsPanel.disableDetailsPanel();
-                toggleSubmitButton(false);
-
-                // User selected initial box with no value
-                if (courseBox.getSelectedIndex() <= 0) {
-                    // Reset inputs appropriately
-                    setModel(assignmentBox, List.of(PLACEHOLDER), false);
-                    setModel(problemBox, List.of(PLACEHOLDER), false);
-                    return;
-                }
-
-                // User chose a valid course
-                //appendResult("Selected course: " + selectedCourse);
-                //appendResult("");
-                //appendResult("Loading assignments for selected course…");
-                // Load assignments for selected course
-                Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse);
-            }
-        });
-
-        courseRefreshButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                selectedCourseID = null;
-                selectedAssignmentID = null;
-                selectedProblemID = null;
-                toggleSubmitButton(false);
-                //appendResult("Re-loading all courses...");
-                Globals.sessionHandler.populateCourses(submitWindow, true);
-            }
-        });
-    }
-
-    private void handlers_assignment() {
-        SubmitWindow submitWindow = this;
-        assignmentBox.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (isPopulating) return;
-
-                // If the user's selection does not change, return
-                AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
-                if (selectedAssignment == null) return;
-                if (Objects.equals(selectedAssignment.id, selectedAssignmentID)) return;
-
-                selectedAssignmentID = selectedAssignment.id;
-                selectedProblemID = null;
-                problemDetailsPanel.disableDetailsPanel();
-                toggleSubmitButton(false);
-
-                // User selected initial box with no value
-                if (assignmentBox.getSelectedIndex() <= 0) {
-                    // Reset inputs appropriately
-                    setModel(problemBox, List.of(PLACEHOLDER), false);
-                    assignmentDetailsPanel.disableDetailsPanel();
-                    return;
-                }
-
-                // User chose a valid assignment
-                assignmentDetailsPanel.setDetailsText(selectedAssignment.description);
-                assignmentDetailsPanel.toggle(true);
-                //appendResult("Selected assignment: " + assignmentBox.getSelectedItem());
-                //appendResult("");
-                //appendResult("Loading problems for selected assignment…");
-                // Load problems for selected assignment
-                Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
-            }
-        });
-
-        // Assignment refresh button
-        assignmentRefreshButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                selectedAssignmentID = null;
-                selectedProblemID = null;
-                toggleSubmitButton(false);
-                //appendResult("Re-loading all assignments...");
-                CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
-                if (selectedCourse != null) {
-                    Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse, true);
-                }
-            }
-        });
-
-        // "All Assignments" button (radio button 1 of 2)
-        allAssignments.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                selectedAssignmentID = null;
-                selectedProblemID = null;
-                toggleSubmitButton(false);
-                //appendResult("Loading all assignments...");
-                CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
-                if (selectedCourse != null) {
-                    Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse);
-                }
-            }
-        });
-
-        // "Upcoming Assignments" button (radio button 2 of 2)
-        upcomingAssignments.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                selectedAssignmentID = null;
-                selectedProblemID = null;
-                toggleSubmitButton(false);
-                //appendResult("Loading upcoming assignments...");
-                CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
-                if (selectedCourse != null) {
-                    Globals.sessionHandler.populateAssignments(submitWindow, selectedCourse);
-                }
-            }
-        });
-    }
-
-    private void handlers_problem() {
-        SubmitWindow submitWindow = this;
-        problemBox.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                if (isPopulating) return;
-
-                // If the user's selection does not change, return
-                ProblemItem selectedProblem = (ProblemItem) problemBox.getSelectedItem();
-                if (selectedProblem == null) return;
-                if (Objects.equals(selectedProblem.id, selectedProblemID)) return;
-                selectedProblemID = selectedProblem.id;
-
-                // User selected initial box with no value
-                if (problemBox.getSelectedIndex() <= 0) {
-                    // Reset inputs appropriately
-                    toggleSubmitButton(false);
-                    problemDetailsPanel.disableDetailsPanel();
-                    return;
-                }
-
-
-                // User chose a valid assignment
-                problemDetailsPanel.setDetailsText(selectedProblem.description);
-                problemDetailsPanel.toggle(true);
-                toggleSubmitButton(true);
-                //appendResult("Selected problem: " + parseProblemTitle(selectedProblem.toString()));
-                //appendResult("");
-            }
-        });
-
-        // Problem refresh button
-        problemRefreshButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                selectedProblemID = null;
-                //appendResult("Re-loading all problems...");
-                AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
-                if (selectedAssignment != null) {
-                    Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment, true);
-                }
-            }
-        });
-
-        // "All Problems" button (radio button 1 of 2)
-        allProblems.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                selectedProblemID = null;
-                toggleSubmitButton(false);
-                //appendResult("Loading all problems...");
-                AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
-                if (selectedAssignment != null) {
-                    Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
-                }
-            }
-        });
-
-        // "Uncompleted Problems" button (radio button 2 of 2)
-        uncompletedProblems.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                selectedProblemID = null;
-                toggleSubmitButton(false);
-                //appendResult("Loading uncompleted problems...");
-                AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
-                if (selectedAssignment != null) {
-                    Globals.sessionHandler.populateProblems(submitWindow, selectedAssignment);
-                }
-            }
-        });
-    }
-
-    private void handlers_file() {
-        SubmitWindow submitWindow = this;
-        viewCurrentButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                JFrame automataFrame = Universe.frameForEnvironment(environment);
-
-                // TODO: should this be LEFT OR RIGHT?
-                //  - maybe should add an option to the prefs menu that lets you choose any Position?
-                positionFrameNearWindow(automataFrame, Position.LEFT, submitWindow);
-//                automataFrame.setLocationRelativeTo(submitWindow);
-//
-//                int newX = submitWindow.getX() + submitWindow.getWidth();
-//                int newY = submitWindow.getY();
-//                automataFrame.setLocation(newX, newY);
-
-
-
-                //automataFrame.setLocationRelativeTo(automataFrame);
-
-
-
-
-                Universe.frameForEnvironment(environment).toFront();
-            }
-        });
-    }
-
-    private void handlers_submit() {
-        SubmitWindow submitWindow = this;
-        submitButton.addActionListener(new ActionListener()
-        {
-            @Override
-            public void actionPerformed(ActionEvent e)
-            {
-                submitButton.setEnabled(false);
-                AFCTClient client = Globals.sessionHandler.getClient();
-
-                if (client == null) {
-                    // TODO - maybe put the fact that the user was trying to submit into a queue, then once logged in again, auto submit
-                    return;
-                }
-                if (assignmentBox.getSelectedIndex() <= 0) {
-                    JOptionPane.showMessageDialog(contentPane, "No assignment selected", "Please select an assignment to submit.", JOptionPane.WARNING_MESSAGE);
-                    submitButton.setEnabled(true);
-                    return;
-                }
-                if (problemBox.getSelectedIndex() <= 0) {
-                    JOptionPane.showMessageDialog(contentPane, "No problem selected", "Please select a problem to submit.", JOptionPane.WARNING_MESSAGE);
-                    submitButton.setEnabled(true);
-                    return;
-                }
-
-                // Automatically select the current file
-                File selectedFile = createTempFile();
-                if (selectedFile == null) {
-                    submitButton.setEnabled(true);
-                    return;
-                }
-
-                appendResult("Submitting…");
-
-                new SwingWorker<Void, String>() {
-                    @Override
-                    protected Void doInBackground() {
-                        try {
-                            AssignmentItem assignment = (AssignmentItem) assignmentBox.getSelectedItem();
-                            ProblemItem problem = (ProblemItem) problemBox.getSelectedItem();
-
-                            assert assignment != null;
-                            assert problem != null;
-
-                            // Create a timer that waits 10 seconds before showing a message to the user.
-                            // Define the time delay in milliseconds (1000ms = 1 second)
-                            int delay = 10_000; // 10 secs
-                            // Create and start the Swing Timer
-                            Timer timer = new Timer(delay, e1 -> {
-                                // This code runs after the delay
-                                String link = getAssignmentLink(client);
-                                String message = getSlowSubmissionCheckMessage_afterSomeWait(link);
-                                // added to stop the timer from setting the text after a submission is complete
-                                if (feedbackEditorPane.getText().contains("Submitting")) {
-                                    publish(message);
-                                }
-                            });
-                            timer.setRepeats(false); // Ensure the timer only runs once
-                            timer.start();
-
-                            Map<String, Object> submission = client.createSubmission(
-                                    assignment.id,
-                                    problem.id,
-                                    "Submission from GUI",
-                                    selectedFile
-                            );
-                            // added to stop the timer from setting the text after a submission is complete
-                            timer.stop();
-
-                            //publish("Submission successful!");
-                            //publish("Data: " + submission);
-                            //publish("ID: " + submission.get("id"));
-                            publish("Submitted At: " + submission.get("submittedAt"));
-                            //publish("Grade: " + submission.get("grade"));
-                            String feedback = (String) submission.get("feedback");
-                            if (submission.get("correct") == null) {
-                                //publish(feedbackPrefix + colorHTMLErrorMessage("Error: Invalid feedback given by server!"));
-                                throw new IOException("Invalid feedback given by server!");
-                            }
-                            boolean correct = (boolean) submission.get("correct");
-                            publish(feedbackPrefix + colorSuccessFailMessage(feedback, correct));
-                            if (correct) {
-                                // Keep submitted problem selected if the "All Problems" radio button is selected
-                                if (allProblems.isSelected()) {
-                                    Globals.sessionHandler.populateProblems(submitWindow, assignment, true, true);
-                                } else {
-                                    selectedProblemID = null;
-                                    Globals.sessionHandler.populateProblems(submitWindow, assignment, true);
-                                }
-                            }
-                        } catch (IOException ex) {
-                            // TODO: print the response from the server to stderr
-                            if (ex.getMessage().equalsIgnoreCase("read timed out")) {
-                                String link = getAssignmentLink(client);
-                                publish(getSlowSubmissionCheckMessage_goToDashboard(link));
-                            } else {
-                                publish(colorHTMLErrorMessage("Submission failed: " + ex.getMessage()));
-                            }
-                        }
-                        //publish("");
-                        return null;
-                    }
-
-                    @Override
-                    protected void process(List<String> chunks) {
-                        for (String s : chunks) appendResult(s);
-                    }
-
-                    @Override
-                    protected void done() {
-                        submitButton.setEnabled(true);
-                    }
-                }.execute();
-            }
-        });
-    }
-
-    private String getSlowSubmissionCheckMessage_clickToViewStatus(String link) {
-        return colorHTMLWarningMessage("Your submission is taking a while to check...")
-                + "<br>"
-                + "<a href=\"" + link + "\">Click here</a>"
-                + colorHTMLWarningMessage(" to view the status of your submission in the AFCT Dashboard.");
-    }
-
-    private String getSlowSubmissionCheckMessage_afterSomeWait(String link) {
-        // TODO: which part of the text should be the link?
-        return colorHTMLWarningMessage("Your submission is taking a while to check...")
-                + "<br>"
-                + colorHTMLWarningMessage("When completed, you can view the status of your submission in the ")
-                + "<a href=\"" + link + "\">AFCT Dashboard</a>";
-    }
-
-    private String getSlowSubmissionCheckMessage_goToDashboard_old1(String link) {
-        return colorHTMLWarningMessage("Your submission is taking a while to check...")
-                + "<br>"
-                + colorHTMLWarningMessage("The status of your submission will be updated on the ")
-                + "<a href=\"" + link + "\">AFCT Dashboard</a>"
-                + colorHTMLWarningMessage(" when complete.");
-    }
-
-    private String getSlowSubmissionCheckMessage_goToDashboard_old2(String link) {
-        String color = "#cc4125";
-        return colorHTMLMessage("Your submission is taking a while to check...", color)
-                + "<br>"
-                + colorHTMLMessage("The status of your submission will be updated on the ", color)
-                + "<a href=\"" + link + "\">AFCT Dashboard</a>"
-                + colorHTMLMessage(" when complete.", color);
-    }
-
-    private String getSlowSubmissionCheckMessage_goToDashboard(String link) {
-        String color = "#cc4125";
-        return colorHTMLMessage("The status of your submission will be updated on the ", color)
-                + "<a href=\"" + link + "\">AFCT Dashboard</a>"
-                + colorHTMLMessage(" when complete.", color);
-    }
-
-    private void handlers_logout() {
-        SubmitWindow submitWindow = this;
-        logoutButton.addActionListener(new ActionListener() {
-            @Override
-            public void actionPerformed(ActionEvent e) {
-                submitWindow.setVisible(false);
-                Globals.sessionHandler.logout();
-                // TODO: make the login window appear over where the submit window was
-                Globals.sessionHandler.displayLoginThenSubmission(submitWindow);
-            }
-        });
-    }
-
-    public String getAssignmentLink(AFCTClient client) {
-        CourseItem selectedCourse = (CourseItem) courseBox.getSelectedItem();
-        AssignmentItem selectedAssignment = (AssignmentItem) assignmentBox.getSelectedItem();
-
-        assert selectedCourse != null;
-        assert selectedAssignment != null;
-        assert client != null;
-        String url = client.getBaseUrl() + "/dashboard/courses/" + selectedCourse.id + "/" + selectedAssignment.id;
-        return url;
-    }
-
-    private File createTempFile() {
-        // Try to create a temp file for the file that the user was working with
-        try{
-            // Create a temp file and encode the user's JFLAP program as the file
-            File f = File.createTempFile("jflap", ".jff");
-            XMLCodec x = new XMLCodec();
-            x.encode(this.environment.getObject(), f, null);
-            return f;
-        } catch (IOException e) {
-            JOptionPane.showMessageDialog(null, "Error creating temp file: " + e.getMessage());
-        } catch (EncodeException e) {
-            JOptionPane.showMessageDialog(null, "Error saving temp file: " + e.getMessage());
+            problemDetailsPane.setText(html);
+            problemDetailsPane.setCaretPosition(0);
         }
+    }
+
+    private void updateAssignmentDetails(AssignmentItem assignment) {
+        if (assignment == null) {
+            // Show placeholder text when no assignment is selected
+            assignmentDetailsPane.setText(
+                "<html><body style='font-family: sans-serif; padding: 4px; color: #888;'>" +
+                "<i>Select an assignment to view details</i></body></html>"
+            );
+        } else {
+            String title = assignment.name != null ? assignment.name : "Untitled Assignment";
+            String description = assignment.description != null && !assignment.description.isBlank()
+                ? assignment.description
+                : "No description available.";
+
+            // Format as HTML for better display
+            String html = String.format(
+                "<html><body style='font-family: sans-serif; padding: 4px;'>" +
+                "<h3 style='margin: 0 0 8px 0; color: #2c3e50;'>%s</h3>" +
+                "<p style='margin: 0; color: #34495e;'>%s</p>" +
+                "</body></html>",
+                escapeHtml(title),
+                escapeHtml(description)
+            );
+
+            assignmentDetailsPane.setText(html);
+            assignmentDetailsPane.setCaretPosition(0);
+        }
+    }
+
+    private String escapeHtml(String text) {
+        if (text == null) return "";
+        return text.replace("&", "&amp;")
+                   .replace("<", "&lt;")
+                   .replace(">", "&gt;")
+                   .replace("\"", "&quot;")
+                   .replace("\n", "<br>");
+    }
+
+    private DefaultMutableTreeNode nodeFromPath(TreePath path) {
+        if (path == null) return null;
+        Object last = path.getLastPathComponent();
+        if (last instanceof DefaultMutableTreeNode) return (DefaultMutableTreeNode) last;
         return null;
     }
 
-    /**
-     * Parser for the problem title, created due to the check mark
-     *
-     * @param title the title of the selected problem that is being parsed
-     * @return (String): the title with the check mark removed
-     */
-    private String parseProblemTitle(String title) {
-        String parsedTitle = title.stripTrailing();
-        parsedTitle = parsedTitle.endsWith(" \u2714") ? parsedTitle.substring(0, parsedTitle.length()-2) : parsedTitle;
-        return parsedTitle;
+    private void clearTree() {
+        rootNode.removeAllChildren();
+        treeModel.reload();
+    }
+
+    private void setBusy(boolean isBusy, String message) {
+        loading = isBusy;
+        setControlsEnabled(!isBusy);
+        setStatus(true, message);
+    }
+
+    private void setControlsEnabled(boolean enabled) {
+        selectionTree.setEnabled(enabled);
+        submitBtn.setEnabled(enabled);
+        refreshBtn.setEnabled(enabled);
+        logoutBtn.setEnabled(enabled);
+    }
+
+    // ============================================================
+    // Data loading
+    // ============================================================
+
+    private void loadCourses() {
+        if (loading) return;
+
+        setBusy(true, "Loading courses…");
+        clearTree();
+        clearSelectionState();
+
+        new SwingWorker<List<Map<String, Object>>, Void>() {
+            private String err;
+
+            @Override
+            protected List<Map<String, Object>> doInBackground() {
+                try {
+                    AFCTClient client = Globals.sessionHandler.requireAuthenticated();
+                    if (client == null) {
+                        err = "Login cancelled.";
+                        return null;
+                    }
+
+                    String email = Globals.sessionHandler.getUserEmail();
+                    if (email == null || email.isBlank()) {
+                        err = "No email found. Please log in again.";
+                        return null;
+                    }
+
+                    return client.getCourses(email);
+                } catch (Exception ex) {
+                    err = ex.getMessage();
+                    return null;
+                }
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    if (err != null) {
+                        setStatus(false, err);
+                        return;
+                    }
+
+                    List<Map<String, Object>> raw = get();
+                    if (raw == null) {
+                        setStatus(false, "Unable to load courses.");
+                        return;
+                    }
+
+                    for (Map<String, Object> c : raw) {
+                        String id = String.valueOf(c.get("id"));
+                        String title = String.valueOf(c.getOrDefault("name", "Untitled Course"));
+
+                        CourseItem course = new CourseItem(id, title);
+                        DefaultMutableTreeNode courseNode = new DefaultMutableTreeNode(course);
+
+                        // Add a placeholder child so it shows an expand handle
+                        courseNode.add(new DefaultMutableTreeNode(new Placeholder("Expand to load assignments…")));
+                        rootNode.add(courseNode);
+                    }
+
+                    treeModel.reload();
+
+                    if (rootNode.getChildCount() == 0) {
+                        setStatus(false, "No courses found.");
+                    } else {
+                        setStatus(true, "Courses loaded. Expand a course to view assignments.");
+                    }
+
+                } catch (Exception ex) {
+                    setStatus(false, ex.getMessage());
+                } finally {
+                    setControlsEnabled(true);
+                    loading = false;
+                }
+            }
+        }.execute();
+    }
+
+    private void loadAssignmentsIntoNode(CourseItem course, DefaultMutableTreeNode courseNode) {
+        loadAssignmentsIntoNode(course, courseNode, false);
+    }
+
+    private void loadAssignmentsIntoNode(CourseItem course, DefaultMutableTreeNode courseNode, boolean forceReload) {
+        if (loading) return;
+
+        // If already loaded (children are AssignmentItem), skip unless forcing reload
+        if (!forceReload && hasRealChildren(courseNode, AssignmentItem.class)) return;
+
+        setBusy(true, "Loading assignments…");
+
+        new SwingWorker<List<Map<String, Object>>, Void>() {
+            private String err;
+
+            @Override
+            protected List<Map<String, Object>> doInBackground() {
+                try {
+                    AFCTClient client = Globals.sessionHandler.requireAuthenticated();
+                    if (client == null) {
+                        err = "Login cancelled.";
+                        return null;
+                    }
+                    return client.getAssignments(course.id);
+                } catch (Exception ex) {
+                    err = ex.getMessage();
+                    return null;
+                }
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    if (err != null) {
+                        setStatus(false, err);
+                        return;
+                    }
+
+                    List<Map<String, Object>> raw = get();
+                    if (raw == null) {
+                        setStatus(false, "Unable to load assignments.");
+                        return;
+                    }
+
+                    courseNode.removeAllChildren();
+
+                    if (raw.isEmpty()) {
+                        courseNode.add(new DefaultMutableTreeNode(new Placeholder("No assignments.")));
+                    } else {
+                        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                        boolean upcomingOnly = upcomingAssignmentsRadio.isSelected();
+                        int displayedCount = 0;
+
+                        for (Map<String, Object> a : raw) {
+                            String id = String.valueOf(a.get("id"));
+                            String title = String.valueOf(a.getOrDefault("title", "Untitled Assignment"));
+                            String description = String.valueOf(a.getOrDefault("description", ""));
+                            String dueDateStr = a.get("dueDate") != null ? String.valueOf(a.get("dueDate")) : null;
+
+                            // Apply upcoming filter
+                            boolean isUpcoming = false;
+                            if (dueDateStr != null && !dueDateStr.equals("null")) {
+                                try {
+                                    // Remove trailing 'Z' if present
+                                    if (dueDateStr.endsWith("Z")) {
+                                        dueDateStr = dueDateStr.substring(0, dueDateStr.length() - 1);
+                                    }
+                                    java.time.LocalDateTime dueDate = java.time.LocalDateTime.parse(dueDateStr);
+                                    isUpcoming = dueDate.isAfter(now);
+                                } catch (Exception e) {
+                                    // If date parsing fails, treat as not upcoming
+                                    isUpcoming = false;
+                                }
+                            }
+
+                            // Skip if filtering for upcoming and this isn't upcoming
+                            if (upcomingOnly && !isUpcoming) {
+                                continue;
+                            }
+
+                            displayedCount++;
+                            AssignmentItem assignment = new AssignmentItem(id, title, description, dueDateStr);
+                            DefaultMutableTreeNode aNode = new DefaultMutableTreeNode(assignment);
+
+                            // placeholder child to show expand handle
+                            aNode.add(new DefaultMutableTreeNode(new Placeholder("Expand to load problems…")));
+                            courseNode.add(aNode);
+                        }
+
+                        if (displayedCount == 0) {
+                            String msg = upcomingOnly ? "No upcoming assignments." : "No assignments.";
+                            courseNode.add(new DefaultMutableTreeNode(new Placeholder(msg)));
+                        }
+                    }
+
+                    treeModel.reload(courseNode);
+                    setStatus(true, "Assignments loaded. Expand an assignment to view problems.");
+
+                } catch (Exception ex) {
+                    setStatus(false, ex.getMessage());
+                } finally {
+                    setControlsEnabled(true);
+                    loading = false;
+                }
+            }
+        }.execute();
+    }
+
+    private void loadProblemsIntoNode(AssignmentItem assignment, DefaultMutableTreeNode assignmentNode) {
+        loadProblemsIntoNode(assignment, assignmentNode, false);
+    }
+
+    private void loadProblemsIntoNode(AssignmentItem assignment, DefaultMutableTreeNode assignmentNode, boolean forceReload) {
+        if (loading) return;
+
+        // If already loaded (children are ProblemItem), skip unless forcing reload
+        if (!forceReload && hasRealChildren(assignmentNode, ProblemItem.class)) return;
+
+        setBusy(true, "Loading problems…");
+
+        new SwingWorker<List<Map<String, Object>>, Void>() {
+            private String err;
+
+            @Override
+            protected List<Map<String, Object>> doInBackground() {
+                try {
+                    AFCTClient client = Globals.sessionHandler.requireAuthenticated();
+                    if (client == null) {
+                        err = "Login cancelled.";
+                        return null;
+                    }
+                    return client.getProblems(assignment.id);
+                } catch (Exception ex) {
+                    err = ex.getMessage();
+                    return null;
+                }
+            }
+
+            @Override
+            protected void done() {
+                try {
+                    if (err != null) {
+                        setStatus(false, err);
+                        return;
+                    }
+
+                    List<Map<String, Object>> raw = get();
+                    if (raw == null) {
+                        setStatus(false, "Unable to load problems.");
+                        return;
+                    }
+
+                    assignmentNode.removeAllChildren();
+
+                    if (raw.isEmpty()) {
+                        assignmentNode.add(new DefaultMutableTreeNode(new Placeholder("No problems.")));
+                    } else {
+                        boolean unsolvedOnly = unsolvedProblemsRadio.isSelected();
+                        int displayedCount = 0;
+
+                        for (Map<String, Object> p : raw) {
+                            String id = String.valueOf(p.get("id"));
+                            String title = String.valueOf(p.getOrDefault("title", "Untitled Problem"));
+
+                            // Get description, handling null properly
+                            Object descObj = p.get("description");
+                            String description = (descObj != null && !String.valueOf(descObj).equals("null"))
+                                ? String.valueOf(descObj)
+                                : "";
+
+                            boolean solved = p.get("solved") != null && (Boolean) p.get("solved");
+
+                            // Skip if filtering for unsolved and this is solved
+                            if (unsolvedOnly && solved) {
+                                continue;
+                            }
+
+                            displayedCount++;
+
+                            // Create problem item with original title (checkmark added in toString)
+                            ProblemItem problem = new ProblemItem(id, title, description, solved);
+                            assignmentNode.add(new DefaultMutableTreeNode(problem));
+                        }
+
+                        if (displayedCount == 0) {
+                            String msg = unsolvedOnly ? "No unsolved problems." : "No problems.";
+                            assignmentNode.add(new DefaultMutableTreeNode(new Placeholder(msg)));
+                        }
+                    }
+
+                    treeModel.reload(assignmentNode);
+                    setStatus(true, "Ready. Select a problem and submit.");
+
+                } catch (Exception ex) {
+                    setStatus(false, ex.getMessage());
+                } finally {
+                    setControlsEnabled(true);
+                    loading = false;
+                }
+            }
+        }.execute();
+    }
+
+    private boolean hasRealChildren(DefaultMutableTreeNode node, Class<?> clazz) {
+        if (node == null || node.getChildCount() == 0) return false;
+        for (int i = 0; i < node.getChildCount(); i++) {
+            Object uo = ((DefaultMutableTreeNode) node.getChildAt(i)).getUserObject();
+            if (clazz.isInstance(uo)) return true;
+        }
+        return false;
+    }
+
+    // ============================================================
+    // Filter reload helpers
+    // ============================================================
+
+    private void reloadAssignmentsForSelectedCourse() {
+        // Find the currently selected or expanded course node
+        TreePath selectedPath = selectionTree.getSelectionPath();
+        DefaultMutableTreeNode selectedNode = nodeFromPath(selectedPath);
+
+        // Try to find a course node from the selection
+        DefaultMutableTreeNode courseNode = null;
+        CourseItem course = null;
+
+        if (selectedNode != null) {
+            Object uo = selectedNode.getUserObject();
+            if (uo instanceof CourseItem) {
+                courseNode = selectedNode;
+                course = (CourseItem) uo;
+            } else if (uo instanceof AssignmentItem) {
+                courseNode = (DefaultMutableTreeNode) selectedNode.getParent();
+                if (courseNode != null && courseNode.getUserObject() instanceof CourseItem) {
+                    course = (CourseItem) courseNode.getUserObject();
+                }
+            } else if (uo instanceof ProblemItem) {
+                DefaultMutableTreeNode assignmentNode = (DefaultMutableTreeNode) selectedNode.getParent();
+                if (assignmentNode != null) {
+                    courseNode = (DefaultMutableTreeNode) assignmentNode.getParent();
+                    if (courseNode != null && courseNode.getUserObject() instanceof CourseItem) {
+                        course = (CourseItem) courseNode.getUserObject();
+                    }
+                }
+            }
+        }
+
+        // If no course found, try to find any expanded course
+        if (course == null) {
+            for (int i = 0; i < rootNode.getChildCount(); i++) {
+                DefaultMutableTreeNode node = (DefaultMutableTreeNode) rootNode.getChildAt(i);
+                if (selectionTree.isExpanded(new TreePath(node.getPath()))) {
+                    if (node.getUserObject() instanceof CourseItem) {
+                        courseNode = node;
+                        course = (CourseItem) node.getUserObject();
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Reload if we found a course
+        if (course != null && courseNode != null) {
+            loadAssignmentsIntoNode(course, courseNode, true);
+        }
+    }
+
+    private void reloadProblemsForSelectedAssignment() {
+        // Find the currently selected or expanded assignment node
+        TreePath selectedPath = selectionTree.getSelectionPath();
+        DefaultMutableTreeNode selectedNode = nodeFromPath(selectedPath);
+
+        DefaultMutableTreeNode assignmentNode = null;
+        AssignmentItem assignment = null;
+
+        if (selectedNode != null) {
+            Object uo = selectedNode.getUserObject();
+            if (uo instanceof AssignmentItem) {
+                assignmentNode = selectedNode;
+                assignment = (AssignmentItem) uo;
+            } else if (uo instanceof ProblemItem) {
+                assignmentNode = (DefaultMutableTreeNode) selectedNode.getParent();
+                if (assignmentNode != null && assignmentNode.getUserObject() instanceof AssignmentItem) {
+                    assignment = (AssignmentItem) assignmentNode.getUserObject();
+                }
+            }
+        }
+
+        // If no assignment found, try to find any expanded assignment
+        if (assignment == null) {
+            for (int i = 0; i < rootNode.getChildCount(); i++) {
+                DefaultMutableTreeNode courseNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
+                for (int j = 0; j < courseNode.getChildCount(); j++) {
+                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) courseNode.getChildAt(j);
+                    if (selectionTree.isExpanded(new TreePath(node.getPath()))) {
+                        if (node.getUserObject() instanceof AssignmentItem) {
+                            assignmentNode = node;
+                            assignment = (AssignmentItem) node.getUserObject();
+                            break;
+                        }
+                    }
+                }
+                if (assignment != null) break;
+            }
+        }
+
+        // Reload if we found an assignment
+        if (assignment != null && assignmentNode != null) {
+            loadProblemsIntoNode(assignment, assignmentNode, true);
+        }
+    }
+
+    // ============================================================
+    // File selection
+    // ============================================================
+
+    private void updateCurrentFileDisplay() {
+        File envFile = environment.getFile();
+
+        // Check if file exists (saved file)
+        if (envFile != null && envFile.exists()) {
+            selectedFile = envFile;
+            fileTF.setText(envFile.getName());
+            fileTF.setForeground(new Color(60, 60, 60));
+        }
+        // Check if file is set but not saved yet (unsaved document)
+        else if (envFile != null) {
+            selectedFile = envFile;
+            // Get the display name from the environment frame
+            String displayName = getEnvironmentDisplayName();
+            fileTF.setText(displayName);
+            fileTF.setForeground(new Color(60, 60, 60));
+        }
+        // No file at all
+        else {
+            selectedFile = null;
+            fileTF.setText("No file open");
+            fileTF.setForeground(new Color(150, 150, 150));
+        }
+    }
+
+    private String getEnvironmentDisplayName() {
+        // Try to get the display name from the environment's frame
+        try {
+            gui.environment.EnvironmentFrame frame = gui.environment.Universe.frameForEnvironment(environment);
+            if (frame != null) {
+                String desc = frame.getDescription();
+                // Remove the dirty marker (*) if present
+                if (desc != null && desc.startsWith("*")) {
+                    desc = desc.substring(1);
+                }
+                return desc != null ? desc : "Unsaved document";
+            }
+        } catch (Exception e) {
+            // Fallback if we can't get the frame
+        }
+
+        // Fallback: try to get filename from the file object
+        File envFile = environment.getFile();
+        if (envFile != null) {
+            return envFile.getName();
+        }
+
+        return "Unsaved document";
+    }
+
+    // ============================================================
+    // Submit (UI stub)
+    // ============================================================
+
+    private void attemptSubmit() {
+        if (selectedProblem == null) {
+            setStatus(false, "Please select a problem in the tree.");
+            return;
+        }
+        if (selectedAssignment == null || selectedCourse == null) {
+            setStatus(false, "Selection is incomplete. Please re-select the problem.");
+            return;
+        }
+        if (selectedFile == null || !selectedFile.exists()) {
+            setStatus(false, "No file is currently open. Please open a file in the editor.");
+            return;
+        }
+
+        String msg = "Submit is not wired yet.\n\n" +
+                "Selected:\n" +
+                "Course: " + selectedCourse + "\n" +
+                "Assignment: " + selectedAssignment + "\n" +
+                "Problem: " + selectedProblem + "\n" +
+                "File: " + selectedFile.getName() + "\n\n" +
+                "Next step: add AFCTClient.submit(...) and call it here.";
+
+        JOptionPane.showMessageDialog(this, msg, "Submit", JOptionPane.INFORMATION_MESSAGE);
+        setStatus(true, "Submission UI ready (submit endpoint not wired).");
+    }
+
+    // ============================================================
+    // Status
+    // ============================================================
+
+    private void setStatus(boolean success, String message) {
+        if (message == null || message.isBlank()) {
+            statusLabel.setText("<html>&nbsp;</html>");
+            return;
+        }
+        String coloredMessage = success
+                ? colorHTMLSuccessMessage(message)
+                : colorHTMLErrorMessage(message);
+        statusLabel.setText("<html>" + coloredMessage + "</html>");
     }
 }

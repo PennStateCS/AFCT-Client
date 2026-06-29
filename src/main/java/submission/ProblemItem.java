@@ -1,16 +1,24 @@
 package submission;
 
-// Class used as items for problem drop-down menu
-public class ProblemItem extends DropdownItem {
-    public String description;
+/**
+ * Represents a problem in the submission system.
+ */
+public final class ProblemItem {
 
-    public ProblemItem(String id, String title) {
-        super(id, title);
-        this.description = "";
+    public final String id;
+    public final String name;
+    public final String description;
+    public final boolean solved; // For unsolved filter
+
+    public ProblemItem(String id, String name, String description, boolean solved) {
+        this.id = id;
+        this.name = name;
+        this.description = description;
+        this.solved = solved;
     }
 
-    public ProblemItem(String id, String title, String description) {
-        super(id, title);
-        this.description = description;
+    @Override
+    public String toString() {
+        return solved ? name + " ✔" : name;
     }
 }

@@ -1,8 +1,20 @@
 package submission;
 
-// Class used as items for course drop-down menu
-public class CourseItem extends DropdownItem {
-    public CourseItem(String id, String title) {
-        super(id, title);
+/**
+ * Represents a course in the submission system.
+ */
+public final class CourseItem {
+
+    public final String id;
+    public final String name;
+
+    public CourseItem(String id, String name) {
+        this.id = id;
+        this.name = name;
+    }
+
+    @Override
+    public String toString() {
+        return name;
     }
 }

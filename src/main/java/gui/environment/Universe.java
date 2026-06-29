@@ -238,16 +238,17 @@ public class Universe {
      *
      * @param environment the environment to unregister the submit dialog from
      */
-    public static void unregisterSubmitDialog(Environment environment) {
-        if (environmentToSubmitDialog.containsKey(environment)) {
-            SubmissionGUI d = submitDialogForEnvironment(environment);
-            environmentToSubmitDialog.remove(environment);
-            d.dispose();
-//            try {
-//                ((JFrame) d).dispose();
-//            } catch (ClassCastException e) {
-//                ((JDialog) d).dispose();
-//            }
-        }
-    }
+	public static void unregisterSubmitDialog(Environment environment) {
+
+		SubmissionGUI dialog = environmentToSubmitDialog.remove(environment);
+
+		if (dialog == null) return;
+
+		if (dialog instanceof JFrame frame) {
+			frame.dispose();
+		} else if (dialog instanceof JDialog jDialog) {
+			jDialog.dispose();
+		}
+	}
+
 }
