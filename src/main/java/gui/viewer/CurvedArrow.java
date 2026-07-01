@@ -62,11 +62,13 @@ public class CurvedArrow {
 			ArrayList<Transition> associatedTransitions,
 			GUITransition transitionForRendering
 	) {
-		isReflexive = fromState == toState;
 		curve = new QuadCurve2D.Float();
 		setStart(start);
 		setEnd(end);
 		this.representativeTransition = transitionForRendering;
+		this.fromState = transitionForRendering.getFromState();
+		this.toState = transitionForRendering.getToState();
+		isReflexive = fromState == toState;
 		control = new Point();
 		setCurvy(curvy);
         myTransitions = associatedTransitions;
@@ -319,8 +321,9 @@ public class CurvedArrow {
 		// Will the label appear to be upside down?
 		boolean upsideDown = end.x < start.x;
 		float dx = (float) bounds.getWidth() / 2.0f;
-		float dy = (curvy < 0.0f) ^ upsideDown ? metrics.getAscent() : -metrics
-				.getDescent();
+		// add 4 to the descent so that the commas aren't touching the line
+		float dy = (curvy < 0.0f) ^ upsideDown ? (metrics.getAscent()) : -metrics
+				.getDescent() - 4;
 
 		g2.setColor(color);
 
@@ -548,6 +551,13 @@ public class CurvedArrow {
 		return toState;
 	}
 
+	public Point getStartPoint() {
+		return this.start;
+	}
+
+	public Point getEndPoint() {
+		return this.end;
+	}
 
 	/** The start, end, and single control points. */
 	protected Point start, end, control;
@@ -633,6 +643,8 @@ public class CurvedArrow {
 
 	public ArrayList<Transition> myTransitions;
 
+	/** The actual transition that is rendered on screen. The special GUITransition will contain
+	 * information on all the transitions labels that are included in this arrow */
 	public GUITransition representativeTransition;
 
     public float[] dashPattern = {3.0f, 3.0f};
