@@ -422,8 +422,18 @@ public class AutomatonDrawer {
 					states[i], states[i]);
 			if (trans.length == 0)
 				continue;
-			Point from = pointOnState(states[i], -Math.PI * 0.333);
-			Point to = pointOnState(states[i], -Math.PI * 0.667);
+
+			// if this is a newly added reflexive transition, we perform a
+			// calculation to find where on the state to place the transition so
+			// that it has the greatest space around it from other transitions
+//			if (selfTransitionMap.containsKey()) {
+//
+//			}
+			double angle = -getAngleFarthestAwayFromTransitions(automaton, states[i]);
+			Point from = pointOnState(states[i], angle + Math.PI * .1667);
+			Point to = pointOnState(states[i], angle - Math.PI * .1667);
+//			Point from = pointOnState(states[i], Math.PI * 0.333);
+//			Point to = pointOnState(states[i], Math.PI * 0.667);
 
 			ArrayList<String> transitionLabels = new ArrayList<String>();
 
@@ -485,49 +495,53 @@ public class AutomatonDrawer {
 	}
 
 	/**
-	 * Finds the point on a state where the angular distance (distance in degrees)
+	 * Finds the angle on a state where the angular distance (distance in degrees)
 	 * is greatest between any two transitions. If there are no transitions on the
-	 * state, the top of the state will be chosen.
+	 * state, the top of the state (pi/2 radians) will be chosen.
 	 * @param a The automaton that contains the state
 	 * @param state The state in which you want to find the point on
-	 * @return Point object representing the point on the circumference of the state
+	 * @return double representing the angle in radians on the circumference of the state
 	 * that has the greatest angular distance.
 	 */
-	private Point getPointFarthestAwayFromTransitions(Automaton a, State state) {
-		// for every transition that touches this state, get the point at they
+	private double getAngleFarthestAwayFromTransitions(Automaton a, State state) {
+		// for every transition that touches this state, get the point that they
 		// touch the state at
 		HashSet<Point> transitionPointsSet = new HashSet<>();
 
 		Transition[] outBound = a.getTransitionsFromState(state);
 		Transition[] inBound = a.getTransitionsToState(state);
 
-		if (outBound.length + inBound.length < 1) {
-			// If there are no transitions then return the top
-			// of the state. We will handle if there is only one
-			// transition later on
-			return pointOnState(state, Math.PI/2);
-		}
-
 		// add the start points for every outbound arrow
 		for (Transition t : outBound) {
 			CurvedArrow arrow = transitionToArrowMap.get(t);
-			transitionPointsSet.add(arrow.getStartPoint());
+			// due to how the code is structured, the user's newly added transitions
+			// are already in outBound/inBound, but since they haven't been rendered
+			// yet, they won't have a corresponding curved arrow
+			if (arrow != null) {
+				transitionPointsSet.add(arrow.getStartPoint());
+			}
 		}
 
 		// add the end points for every inbound arrow
 		for (Transition t: inBound) {
 			CurvedArrow arrow = transitionToArrowMap.get(t);
-			transitionPointsSet.add(arrow.getEndPoint());
+			if (arrow != null) {
+				transitionPointsSet.add(arrow.getEndPoint());
+			}
 		}
 
-		// TODO: handle if there is only one point
 		ArrayList<Point> transitionPointsList = new ArrayList<>(transitionPointsSet);
+
+		// If there are no transitions then return the top
+		// of the state.
+		if (transitionPointsList.isEmpty()) {
+			return Math.PI/2.0;
+		}
 
 		// handle if there is only one transition
 		if (transitionPointsList.size() == 1) {
 			double angle = angleOnState(state, transitionPointsList.getFirst());
-			double farthestAway = angle + Math.PI;
-			return pointOnState(state, farthestAway);
+            return angle + Math.PI;
 		}
 
 		// convert all these points to angles on a circle
@@ -540,7 +554,7 @@ public class AutomatonDrawer {
 		// find the midpoint the two points that have the largest
 		// distance between them in terms of angle
 		double largestDistance = 0;
-		Point resultingMidPoint = pointOnState(state, Math.PI/2);;
+		double midPointAngle = Math.PI/2.0;
 
 		for (int i = 0; i < sortedAngles.size(); i++) {
 			// go to the next one in the list or wrap around if you are at the end
@@ -558,13 +572,12 @@ public class AutomatonDrawer {
 			if (longestSectorAngle > largestDistance) {
 				largestDistance = longestSectorAngle;
 
-				double midPointAngle = Math.min(currentAngle, nextAngle)
-						+ (longestSectorAngle/2);
-				resultingMidPoint = pointOnState(state, midPointAngle);
+				midPointAngle = Math.min(currentAngle, nextAngle)
+						+ (longestSectorAngle/2.0);
 			}
 		}
 
-		return resultingMidPoint;
+		return midPointAngle;
 	}
 
 	/**
@@ -811,7 +824,7 @@ public class AutomatonDrawer {
 	/**
 	 * Angle between the arrow start point and the line intersecting the state's center & control point
 	 */
-	public static final double REFLEXIVE_ANGLE = Math.PI / 6;
+	public static final double REFLEXIVE_ANGLE = Math.PI / 6.0;
 
 	/**
 	 * Whether or not the drawing objects should be redone on the next draw.
@@ -828,7 +841,7 @@ public class AutomatonDrawer {
 	private Rectangle cachedBounds = null;
 	
 	/**
-	 * A map of self transitions mapped to their angle of appearance.
+	 * A map of states mapped to what angle their self transitions
 	 */
 	public HashMap<Transition, Double> selfTransitionMap = new HashMap<>();
 	
