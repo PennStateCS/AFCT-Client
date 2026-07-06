@@ -356,9 +356,7 @@ public class AFCTClient {
     // Submissions (multipart/form-data)
     // ================================================================
     @SuppressWarnings("unchecked")
-    public Map<String, Object> createSubmission(String assignmentId, String problemId, String content, File file) throws IOException {
-        // TODO: this looks like it does not actually submit the courseID as part of the submission.
-        //      Is this true? and if so - why? is it a mistake?
+    public Map<String, Object> createSubmission(String courseId, String assignmentId, String problemId, File file) throws IOException {
         ensureAuth();
 
         String boundary = "----JavaBoundary" + System.currentTimeMillis();
@@ -372,9 +370,9 @@ public class AFCTClient {
         conn.setDoOutput(true);
 
         try (DataOutputStream out = new DataOutputStream(conn.getOutputStream())) {
+            writeFormField(out, "courseId", courseId, boundary);
             writeFormField(out, "assignmentId", assignmentId, boundary);
             writeFormField(out, "problemId", problemId, boundary);
-            writeFormField(out, "content", content, boundary);
             if (file != null && file.exists()) {
                 writeFileField(out, "file", file, boundary);
             }
@@ -383,7 +381,8 @@ public class AFCTClient {
 
         int status = conn.getResponseCode();
         String body = readBody(conn);
-        if (status != 201) {
+        // Server returns 202 Accepted on success
+        if (status < 200 || status >= 300) {
             throw httpError("POST /api/submissions", status, body);
         }
         return parseJson(body, Map.class);
