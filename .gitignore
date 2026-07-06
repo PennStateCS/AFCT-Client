@@ -1,6 +1,7 @@
 ### General ###
 target/
 dependency-reduced-pom.xml
+logs/
 
 ### IntelliJ IDEA ###
 .idea/

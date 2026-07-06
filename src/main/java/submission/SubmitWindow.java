@@ -79,9 +79,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // Submission queue (for offline/deferred submit)
     private final Deque<QueuedSubmission> submissionQueue = new ArrayDeque<>();
 
-    // Logging
-    private static final DateTimeFormatter LOG_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final Path LOG_PATH = Paths.get(System.getProperty("user.home"), "afct-submission.log");
+    // Logging — writes to <project>/logs/submissions-YYYY-MM-DD.log
+    private static final DateTimeFormatter LOG_FMT  = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final DateTimeFormatter DATE_FMT  = DateTimeFormatter.ofPattern("yyyy-MM-dd");
+    private static final Path LOG_DIR = Paths.get(System.getProperty("user.dir"), "logs");
 
     // Selected items derived from tree selection
     private CourseItem selectedCourse = null;
@@ -336,11 +337,19 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         c3.fill = GridBagConstraints.HORIZONTAL;
         c3.insets = new Insets(8, 10, 0, 10);
 
-        // Current file display (read-only, shows filename)
+        // Current file display — click to browse
         fileTF = new JTextField();
         fileTF.setEditable(false);
         fileTF.setMargin(new Insets(6, 10, 6, 10));
         fileTF.setForeground(new Color(60, 60, 60));
+        fileTF.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
+        fileTF.setToolTipText("Click to choose a file");
+        fileTF.addMouseListener(new java.awt.event.MouseAdapter() {
+            @Override
+            public void mouseClicked(java.awt.event.MouseEvent e) {
+                browseForFile();
+            }
+        });
 
         // Set initial file from environment
         File envFile = environment.getFile();
@@ -348,7 +357,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             selectedFile = envFile;
             fileTF.setText(envFile.getName());
         } else {
-            fileTF.setText("No file open");
+            fileTF.setText("Click to choose a file…");
             fileTF.setForeground(new Color(150, 150, 150));
         }
 
@@ -1075,6 +1084,23 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // File selection
     // ============================================================
 
+    private void browseForFile() {
+        JFileChooser chooser = new JFileChooser();
+        // Start in the directory of the currently selected file, or user home
+        if (selectedFile != null && selectedFile.getParentFile() != null) {
+            chooser.setCurrentDirectory(selectedFile.getParentFile());
+        }
+        chooser.setDialogTitle("Choose file to submit");
+        chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
+        int result = chooser.showOpenDialog(this);
+        if (result == JFileChooser.APPROVE_OPTION) {
+            File chosen = chooser.getSelectedFile();
+            selectedFile = chosen;
+            fileTF.setText(chosen.getName());
+            fileTF.setForeground(new Color(60, 60, 60));
+        }
+    }
+
     private void updateCurrentFileDisplay() {
         File envFile = environment.getFile();
 
@@ -1092,10 +1118,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             fileTF.setText(displayName);
             fileTF.setForeground(new Color(60, 60, 60));
         }
-        // No file at all
+        // No file at all — show clickable prompt
         else {
             selectedFile = null;
-            fileTF.setText("No file open");
+            fileTF.setText("Click to choose a file…");
             fileTF.setForeground(new Color(150, 150, 150));
         }
     }
@@ -1177,7 +1203,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     }
                     AFCTClient client = Globals.sessionHandler.requireAuthenticated();
                     if (client == null) { err = "Login cancelled."; return null; }
-                    return client.createSubmission(qs.assignmentId, qs.problemId, "", qs.file);
+                    return client.createSubmission(qs.courseId, qs.assignmentId, qs.problemId, qs.file);
                 } catch (Exception ex) {
                     err = ex.getMessage();
                     return null;
@@ -1215,7 +1241,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         try {
             AFCTClient client = Globals.sessionHandler.requireAuthenticated();
             if (client == null) { log("SUBMIT_SKIP", "no client for " + qs.problemName); return; }
-            Map<String, Object> result = client.createSubmission(qs.assignmentId, qs.problemId, "", qs.file);
+            Map<String, Object> result = client.createSubmission(qs.courseId, qs.assignmentId, qs.problemId, qs.file);
             String id = (result != null && result.containsKey("id")) ? String.valueOf(result.get("id")) : "?";
             log("SUBMIT_OK", "submissionId=" + id + " problem=" + qs.problemName);
         } catch (Exception ex) {
@@ -1258,10 +1284,13 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // ============================================================
 
     private void log(String event, String detail) {
-        String line = "[" + LocalDateTime.now().format(LOG_FMT) + "] " + event + ": " + detail;
+        LocalDateTime now = LocalDateTime.now();
+        String line = "[" + now.format(LOG_FMT) + "] " + event + ": " + detail;
         System.out.println(line);
         try {
-            Files.writeString(LOG_PATH, line + System.lineSeparator(),
+            Files.createDirectories(LOG_DIR);
+            Path logFile = LOG_DIR.resolve("submissions-" + now.format(DATE_FMT) + ".log");
+            Files.writeString(logFile, line + System.lineSeparator(),
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException ex) {
             System.err.println("Log write failed: " + ex.getMessage());
