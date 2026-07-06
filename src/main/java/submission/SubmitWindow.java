@@ -41,6 +41,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private JButton refreshBtn;
     private JButton logoutBtn;
     private JButton submitBtn;
+    private JButton queueBtn;
 
     private JTextField fileTF;
     private JLabel statusLabel;
@@ -69,6 +70,18 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // ===============================
     private volatile boolean loading = false;
     private File selectedFile = null;
+
+    // Refresh cooldown
+    private long lastRefreshMs = 0;
+    private static final int REFRESH_COOLDOWN_MS = 30_000;
+    private Timer refreshCooldownTimer;
+
+    // Submission queue (for offline/deferred submit)
+    private final Deque<QueuedSubmission> submissionQueue = new ArrayDeque<>();
+
+    // Logging
+    private static final DateTimeFormatter LOG_FMT = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
+    private static final Path LOG_PATH = Paths.get(System.getProperty("user.home"), "afct-submission.log");
 
     // Selected items derived from tree selection
     private CourseItem selectedCourse = null;
@@ -342,14 +355,23 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         c3.gridy = 0;
         submissionPanel.add(labeled("File to Submit", fileTF), c3);
 
-        // Submit button
+        // Submit + Queue buttons side by side
         submitBtn = new JButton("Submit");
-        submitBtn.setPreferredSize(new Dimension(220, 38));
+        submitBtn.setPreferredSize(new Dimension(0, 38));
         Globals.setPointerCursor(submitBtn);
+
+        queueBtn = new JButton("Queue");
+        queueBtn.setPreferredSize(new Dimension(0, 38));
+        queueBtn.setToolTipText("Save this submission to send later");
+        Globals.setPointerCursor(queueBtn);
+
+        JPanel btnRow = new JPanel(new GridLayout(1, 2, 8, 0));
+        btnRow.add(submitBtn);
+        btnRow.add(queueBtn);
 
         c3.gridy++;
         c3.insets = new Insets(16, 10, 0, 10);
-        submissionPanel.add(submitBtn, c3);
+        submissionPanel.add(btnRow, c3);
 
         // Spacer to push content to top
         c3.gridy++;
@@ -423,7 +445,17 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // ============================================================
 
     private void wireEvents() {
-        refreshBtn.addActionListener(e -> refreshDialog());
+        refreshBtn.addActionListener(e -> {
+            long now = System.currentTimeMillis();
+            if (now - lastRefreshMs < REFRESH_COOLDOWN_MS) {
+                long remaining = (REFRESH_COOLDOWN_MS - (now - lastRefreshMs)) / 1000;
+                setStatus(false, "Please wait " + remaining + "s before refreshing again.");
+                return;
+            }
+            lastRefreshMs = now;
+            refreshDialog();
+            startRefreshCooldown();
+        });
 
         logoutBtn.addActionListener(e -> {
             Globals.sessionHandler.logout(false);
@@ -431,6 +463,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         });
 
         submitBtn.addActionListener(e -> attemptSubmit());
+        queueBtn.addActionListener(e -> attemptQueue());
 
         // Filter change listeners
         allAssignmentsRadio.addActionListener(e -> reloadAssignmentsForSelectedCourse());
@@ -636,8 +669,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private void setControlsEnabled(boolean enabled) {
         selectionTree.setEnabled(enabled);
         submitBtn.setEnabled(enabled);
-        refreshBtn.setEnabled(enabled);
+        queueBtn.setEnabled(enabled);
         logoutBtn.setEnabled(enabled);
+        // Refresh respects its own cooldown — only re-enable if cooldown has expired
+        if (enabled) {
+            long elapsed = System.currentTimeMillis() - lastRefreshMs;
+            refreshBtn.setEnabled(elapsed >= REFRESH_COOLDOWN_MS);
+        } else {
+            refreshBtn.setEnabled(false);
+        }
     }
 
     // ============================================================
@@ -1086,33 +1126,167 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     }
 
     // ============================================================
-    // Submit (UI stub)
+    // Submit
     // ============================================================
 
     private void attemptSubmit() {
-        if (selectedProblem == null) {
-            setStatus(false, "Please select a problem in the tree.");
-            return;
-        }
-        if (selectedAssignment == null || selectedCourse == null) {
-            setStatus(false, "Selection is incomplete. Please re-select the problem.");
-            return;
-        }
-        if (selectedFile == null || !selectedFile.exists()) {
-            setStatus(false, "No file is currently open. Please open a file in the editor.");
-            return;
-        }
+        if (!validateSelection()) return;
 
-        String msg = "Submit is not wired yet.\n\n" +
-                "Selected:\n" +
-                "Course: " + selectedCourse + "\n" +
-                "Assignment: " + selectedAssignment + "\n" +
-                "Problem: " + selectedProblem + "\n" +
-                "File: " + selectedFile.getName() + "\n\n" +
-                "Next step: add AFCTClient.submit(...) and call it here.";
+        // First drain any previously queued submissions
+        drainQueue();
 
-        JOptionPane.showMessageDialog(this, msg, "Submit", JOptionPane.INFORMATION_MESSAGE);
-        setStatus(true, "Submission UI ready (submit endpoint not wired).");
+        // Then submit the current file
+        doSubmit(new QueuedSubmission(selectedCourse.id, selectedAssignment.id,
+                selectedProblem.id, selectedFile,
+                selectedCourse.name, selectedAssignment.name, selectedProblem.name));
+    }
+
+    private void attemptQueue() {
+        setStatus(false, "Queue button not yet linked.");
+    }
+
+    /** Sends all previously queued submissions before the current one. */
+    private void drainQueue() {
+        while (!submissionQueue.isEmpty()) {
+            QueuedSubmission qs = submissionQueue.peek();
+            log("DRAIN_QUEUE", "sending queued submission for problem=" + qs.problemName);
+            doSubmitSync(qs); // synchronous — called from background thread via doSubmit's worker
+            submissionQueue.poll();
+        }
+    }
+
+    /** Kicks off a background submission for a single QueuedSubmission. */
+    private void doSubmit(QueuedSubmission qs) {
+        setControlsEnabled(false);
+        setStatus(true, "Submitting…");
+        log("SUBMIT_START", "course=" + qs.courseName + " assignment=" + qs.assignmentName
+                + " problem=" + qs.problemName + " file=" + qs.file.getName());
+
+        new SwingWorker<Map<String, Object>, Void>() {
+            private String err;
+
+            @Override
+            protected Map<String, Object> doInBackground() {
+                try {
+                    // Drain queue first (synchronous, same background thread)
+                    while (!submissionQueue.isEmpty()) {
+                        QueuedSubmission queued = submissionQueue.peek();
+                        log("DRAIN_START", "problem=" + queued.problemName);
+                        doSubmitSync(queued);
+                        submissionQueue.poll();
+                    }
+                    AFCTClient client = Globals.sessionHandler.requireAuthenticated();
+                    if (client == null) { err = "Login cancelled."; return null; }
+                    return client.createSubmission(qs.assignmentId, qs.problemId, "", qs.file);
+                } catch (Exception ex) {
+                    err = ex.getMessage();
+                    return null;
+                }
+            }
+
+            @Override
+            protected void done() {
+                setControlsEnabled(true);
+                if (err != null) {
+                    log("SUBMIT_FAIL", err);
+                    setStatus(false, "Submission failed: " + err);
+                    return;
+                }
+                try {
+                    Map<String, Object> result = get();
+                    if (result != null) {
+                        String id = result.containsKey("id") ? String.valueOf(result.get("id")) : "?";
+                        log("SUBMIT_OK", "submissionId=" + id + " problem=" + qs.problemName);
+                        setStatus(true, "Submitted successfully! (id: " + id + ")");
+                    } else {
+                        log("SUBMIT_FAIL", "null response");
+                        setStatus(false, "Submission failed — no response from server.");
+                    }
+                } catch (Exception ex) {
+                    log("SUBMIT_ERROR", ex.getMessage());
+                    setStatus(false, "Submission error: " + ex.getMessage());
+                }
+            }
+        }.execute();
+    }
+
+    /** Synchronous submit — call only from a background thread. */
+    private void doSubmitSync(QueuedSubmission qs) {
+        try {
+            AFCTClient client = Globals.sessionHandler.requireAuthenticated();
+            if (client == null) { log("SUBMIT_SKIP", "no client for " + qs.problemName); return; }
+            Map<String, Object> result = client.createSubmission(qs.assignmentId, qs.problemId, "", qs.file);
+            String id = (result != null && result.containsKey("id")) ? String.valueOf(result.get("id")) : "?";
+            log("SUBMIT_OK", "submissionId=" + id + " problem=" + qs.problemName);
+        } catch (Exception ex) {
+            log("SUBMIT_FAIL", "problem=" + qs.problemName + " error=" + ex.getMessage());
+        }
+    }
+
+    private boolean validateSelection() {
+        if (selectedProblem == null) { setStatus(false, "Please select a problem in the tree."); return false; }
+        if (selectedAssignment == null || selectedCourse == null) { setStatus(false, "Selection incomplete — re-select the problem."); return false; }
+        if (selectedFile == null || !selectedFile.exists()) { setStatus(false, "No file open. Open a file in the editor first."); return false; }
+        return true;
+    }
+
+    // ============================================================
+    // Refresh cooldown
+    // ============================================================
+
+    private void startRefreshCooldown() {
+        refreshBtn.setEnabled(false);
+        refreshBtn.setText("Refresh (30s)");
+        if (refreshCooldownTimer != null) refreshCooldownTimer.stop();
+        final int[] remaining = {30};
+        refreshCooldownTimer = new Timer(1000, null);
+        refreshCooldownTimer.addActionListener(e -> {
+            remaining[0]--;
+            if (remaining[0] <= 0) {
+                refreshCooldownTimer.stop();
+                refreshBtn.setEnabled(true);
+                refreshBtn.setText("Refresh");
+            } else {
+                refreshBtn.setText("Refresh (" + remaining[0] + "s)");
+            }
+        });
+        refreshCooldownTimer.start();
+    }
+
+    // ============================================================
+    // Logging
+    // ============================================================
+
+    private void log(String event, String detail) {
+        String line = "[" + LocalDateTime.now().format(LOG_FMT) + "] " + event + ": " + detail;
+        System.out.println(line);
+        try {
+            Files.writeString(LOG_PATH, line + System.lineSeparator(),
+                    StandardOpenOption.CREATE, StandardOpenOption.APPEND);
+        } catch (IOException ex) {
+            System.err.println("Log write failed: " + ex.getMessage());
+        }
+    }
+
+    // ============================================================
+    // QueuedSubmission
+    // ============================================================
+
+    private static class QueuedSubmission {
+        final String courseId, assignmentId, problemId;
+        final File file;
+        final String courseName, assignmentName, problemName;
+
+        QueuedSubmission(String courseId, String assignmentId, String problemId,
+                         File file, String courseName, String assignmentName, String problemName) {
+            this.courseId = courseId;
+            this.assignmentId = assignmentId;
+            this.problemId = problemId;
+            this.file = file;
+            this.courseName = courseName;
+            this.assignmentName = assignmentName;
+            this.problemName = problemName;
+        }
     }
 
     // ============================================================
