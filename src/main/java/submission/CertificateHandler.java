@@ -57,7 +57,7 @@ public class CertificateHandler {
     public X509Certificate[] getCertificateChain() {
         return chain;
     }
-
+    // auth lol
     public String getAuthType() {
         return authType;
     }
