@@ -3,7 +3,6 @@ package submission;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonSyntaxException;
-import gui.Globals;
 
 import javax.net.ssl.HttpsURLConnection;
 import java.io.*;
@@ -20,20 +19,16 @@ import static gui.Globals.stringToJson;
 public class AFCTClient {
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    static {
-        // Install a global CookieManager so HttpURLConnection automatically stores
-        // and sends cookies across requests — same behaviour as a browser.
-        CookieHandler.setDefault(new CookieManager(null, CookiePolicy.ACCEPT_ALL));
-    }
+    /** All client endpoints live under this prefix (except /api/health). */
+    private static final String API_PREFIX = "/api/client/v1";
 
     private final String baseUrl;
-    private String token;           // JWT token, if server returns one
-    private String sessionCookie;   // kept for reference; CookieManager handles actual sending
+    private String token;           // bearer token from POST /auth/login
     private int connectTimeoutMs = 15000;
     private int readTimeoutMs = 30000;
     private boolean useHTTPS = false;
 
-    /** Cache of problems per assignment, populated by getAssignments() from student-grades. */
+    /** Cache of problems per assignment, populated by getAssignments() (problems come embedded). */
     private final Map<String, List<Map<String, Object>>> assignmentProblemsCache = new java.util.HashMap<>();
 
     public AFCTClient(String baseUrl) {
@@ -91,144 +86,13 @@ public class AFCTClient {
     // ================================================================
     // Auth
     // ================================================================
+    /**
+     * Logs in via POST /api/client/v1/auth/login and stores the bearer token.
+     * The token has a sliding 30-day expiry; every authenticated call renews it.
+     */
+    @SuppressWarnings("unchecked")
     public String login(String email, String password) throws IOException {
-        // Step 1: Get CSRF token + its full cookie from NextAuth
-        String[] csrf = fetchCsrfTokenAndCookie();
-        String csrfToken = csrf[0];
-        String csrfCookie = csrf[1]; // full "name=hash|signature" value
-        System.out.println("[AFCTClient] CSRF token: " + csrfToken);
-        System.out.println("[AFCTClient] CSRF cookie: " + csrfCookie);
-
-        // Step 2: Sign in via NextAuth credentials provider
-        String callbackUrl = baseUrl + "/";
-        String formBody = "email=" + urlEncode(email)
-                + "&password=" + urlEncode(password)
-                + "&csrfToken=" + urlEncode(csrfToken)
-                + "&callbackUrl=" + urlEncode(callbackUrl)
-                + "&json=true";
-
-        URL url = new URL(baseUrl + "/api/auth/callback/credentials");
-        HttpURLConnection conn = openConnection(url);
-        conn.setConnectTimeout(connectTimeoutMs);
-        conn.setReadTimeout(readTimeoutMs);
-        conn.setRequestMethod("POST");
-        conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
-        conn.setInstanceFollowRedirects(false); // handle redirect manually
-        // CookieManager automatically sends the CSRF cookie set by /api/auth/csrf
-        conn.setDoOutput(true);
-
-        try (OutputStream os = conn.getOutputStream()) {
-            os.write(formBody.getBytes(StandardCharsets.UTF_8));
-        }
-
-        int status = conn.getResponseCode();
-        System.out.println("[AFCTClient] NextAuth callback status: " + status);
-        conn.getHeaderFields().forEach((k, v) -> System.out.println("  " + k + ": " + v));
-
-        // Capture session cookies from the callback response
-        captureSetCookieHeaders(conn);
-
-        String body = readBody(conn);
-        System.out.println("[AFCTClient] NextAuth callback body: " + body);
-
-        // NextAuth returns 302 redirect on success (or 200 with json=true)
-        if (status == 401 || status == 403) {
-            Globals.sessionHandler.clearStartTime();
-            throw new IOException("Invalid email or password.");
-        }
-
-        // 302 to an error page = wrong credentials; 302 elsewhere = success
-        if (status == 302) {
-            String location = conn.getHeaderField("location");
-            if (location != null && location.contains("error=")) {
-                Globals.sessionHandler.clearStartTime();
-                throw new IOException("Invalid email or password.");
-            }
-        } else if (status == 401 || status == 403) {
-            Globals.sessionHandler.clearStartTime();
-            throw new IOException("Invalid email or password.");
-        }
-
-        // Dump cookie store so we can see what was captured
-        CookieManager cm = (CookieManager) CookieHandler.getDefault();
-        System.out.println("[AFCTClient] Cookie store after login:");
-        for (HttpCookie c : cm.getCookieStore().getCookies()) {
-            System.out.println("  " + c.getName() + "=" + c.getValue().substring(0, Math.min(20, c.getValue().length())) + "...");
-        }
-
-        Globals.sessionHandler.updateStartTime();
-        // CookieManager stores the session-token cookie automatically
-        this.token = "cookie-session"; // sentinel value — real auth is via cookies
-
-        return this.token;
-    }
-
-    /** Returns [csrfToken, fullCsrfCookie] where fullCsrfCookie is "name=hash|signature". */
-    private String[] fetchCsrfTokenAndCookie() throws IOException {
-        URL url = new URL(baseUrl + "/api/auth/csrf");
-        HttpURLConnection conn = openConnection(url);
-        conn.setConnectTimeout(connectTimeoutMs);
-        conn.setReadTimeout(readTimeoutMs);
-        conn.setRequestMethod("GET");
-        int status = conn.getResponseCode();
-
-        // Capture the full CSRF cookie from the Set-Cookie header
-        String csrfCookie = null;
-        List<String> setCookies = conn.getHeaderFields().get("Set-Cookie");
-        System.out.println("[AFCTClient] CSRF endpoint Set-Cookie: " + setCookies);
-        if (setCookies != null) {
-            for (String c : setCookies) {
-                String nameValue = c.split(";")[0];
-                if (nameValue.contains("csrf-token")) {
-                    csrfCookie = nameValue;
-                    break;
-                }
-            }
-        }
-
-        String body = readBody(conn);
-        if (status != 200) throw new IOException("Failed to fetch CSRF token: HTTP " + status);
-        Map<String, Object> res = parseJson(body, Map.class);
-        String csrfToken = (String) res.get("csrfToken");
-
-        if (csrfCookie == null) {
-            // Fallback: construct it from the token (may not have signature but worth trying)
-            csrfCookie = "next-auth.csrf-token=" + csrfToken;
-        }
-
-        return new String[]{csrfToken, csrfCookie};
-    }
-
-    private void captureSetCookieHeaders(HttpURLConnection conn) {
-        List<String> cookies = conn.getHeaderFields().get("Set-Cookie");
-        if (cookies != null && !cookies.isEmpty()) {
-            StringBuilder sb = new StringBuilder();
-            for (String c : cookies) {
-                if (sb.length() > 0) sb.append("; ");
-                sb.append(c.split(";")[0]);
-            }
-            // Append to existing cookies if any
-            if (this.sessionCookie != null && !this.sessionCookie.isBlank()) {
-                this.sessionCookie += "; " + sb;
-            } else {
-                this.sessionCookie = sb.toString();
-            }
-            System.out.println("[AFCTClient] Cookies so far: " + this.sessionCookie);
-        }
-    }
-
-    private static String urlEncode(String s) {
-        try {
-            return java.net.URLEncoder.encode(s, "UTF-8");
-        } catch (Exception e) {
-            return s;
-        }
-    }
-
-    @SuppressWarnings("unused")
-    private String loginLegacy(String email, String password) throws IOException {
-        // Kept for reference — /api/public/login returns user but no session cookie
-        URL url = new URL(baseUrl + "/api/public/login");
+        URL url = new URL(baseUrl + API_PREFIX + "/auth/login");
         HttpURLConnection conn = openConnection(url);
         conn.setConnectTimeout(connectTimeoutMs);
         conn.setReadTimeout(readTimeoutMs);
@@ -236,25 +100,82 @@ public class AFCTClient {
         conn.setRequestProperty("Content-Type", "application/json");
         conn.setDoOutput(true);
 
-        String json = String.format("{\"email\":\"%s\",\"password\":\"%s\"}", email, password);
+        Map<String, String> payload = new java.util.HashMap<>();
+        payload.put("email", email);
+        payload.put("password", password);
+        payload.put("deviceName", deviceName());
         try (OutputStream os = conn.getOutputStream()) {
-            os.write(json.getBytes(StandardCharsets.UTF_8));
+            os.write(MAPPER.writeValueAsBytes(payload));
         }
 
         int status = conn.getResponseCode();
         String body = readBody(conn);
+
+        if (status == 401) {
+            throw new IOException("Invalid email or password.");
+        }
+        if (status == 429) {
+            String retryAfter = conn.getHeaderField("Retry-After");
+            throw new IOException("Too many login attempts. Try again in "
+                    + (retryAfter != null ? retryAfter + " seconds." : "a moment."));
+        }
         if (status != 200) {
-            Globals.sessionHandler.clearStartTime();
-            throw httpError("POST /api/public/login", status, body);
+            throw httpError("POST " + API_PREFIX + "/auth/login", status, body);
         }
 
         Map<String, Object> res = parseJson(body, Map.class);
         this.token = (String) res.get("token");
-        if (this.token == null && res.containsKey("user")) {
-            this.token = "cookie-session"; // sentinel — real auth is via sessionCookie
+        if (this.token == null || this.token.isBlank()) {
+            throw new IOException("Login succeeded but no token was returned.");
         }
-
         return this.token;
+    }
+
+    /** Revokes the current token via POST /auth/logout. Best-effort. */
+    public void logout() {
+        if (!isAuthenticated()) return;
+        try {
+            URL url = new URL(baseUrl + API_PREFIX + "/auth/logout");
+            HttpURLConnection conn = openConnection(url);
+            conn.setConnectTimeout(connectTimeoutMs);
+            conn.setReadTimeout(readTimeoutMs);
+            conn.setRequestMethod("POST");
+            addAuthHeaders(conn);
+            conn.getResponseCode(); // fire and forget
+        } catch (IOException ignored) {
+        } finally {
+            this.token = null;
+        }
+    }
+
+    /**
+     * Checks whether the stored token is still valid via GET /auth/me.
+     * Returns the user object on success, null if the token is expired/revoked.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> checkToken() throws IOException {
+        if (!isAuthenticated()) return null;
+        URL url = new URL(baseUrl + API_PREFIX + "/auth/me");
+        HttpURLConnection conn = openGet(url);
+        int status = conn.getResponseCode();
+        String body = readBody(conn);
+        if (status == 401) {
+            this.token = null; // don't retry a rejected token — server logs it as a security event
+            return null;
+        }
+        if (status != 200) {
+            throw httpError("GET " + API_PREFIX + "/auth/me", status, body);
+        }
+        Map<String, Object> res = parseJson(body, Map.class);
+        return (Map<String, Object>) res.get("user");
+    }
+
+    private static String deviceName() {
+        try {
+            return java.net.InetAddress.getLocalHost().getHostName();
+        } catch (Exception e) {
+            return "afct-client";
+        }
     }
 
     public boolean isAuthenticated() {
@@ -264,18 +185,22 @@ public class AFCTClient {
     // ================================================================
     // Courses
     // ================================================================
+    /** Courses visible to the signed-in user (derived from the token — no email needed). */
     @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> getCourses(String userEmail) throws IOException {
+    public List<Map<String, Object>> getCourses() throws IOException {
         ensureAuth();
-        URL url = new URL(baseUrl + "/api/courses/userCourses/" + userEmail);
+        URL url = new URL(baseUrl + API_PREFIX + "/courses");
         HttpURLConnection conn = openGet(url);
         int status = conn.getResponseCode();
         String body = readBody(conn);
 
         if (status != 200) {
-            throw httpError("GET /api/courses/userCourses/" + userEmail, status, body);
+            throw httpError("GET " + API_PREFIX + "/courses", status, body);
         }
-        return parseJson(body, List.class);
+        // Response shape: { "courses": [ ... ] }
+        Map<String, Object> wrapper = parseJson(body, Map.class);
+        List<Map<String, Object>> courses = (List<Map<String, Object>>) wrapper.get("courses");
+        return courses != null ? courses : new java.util.ArrayList<>();
     }
 
     // ================================================================
@@ -284,25 +209,23 @@ public class AFCTClient {
     @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getAssignments(String courseId) throws IOException {
         ensureAuth();
-        // /api/courses/{id}/assignments is ADMIN/FACULTY only.
-        // /api/courses/{id}/student-grades is accessible to enrolled students and
-        // returns the same assignment fields plus embedded problems.
-        URL url = new URL(baseUrl + "/api/courses/" + courseId + "/student-grades");
+        URL url = new URL(baseUrl + API_PREFIX + "/courses/" + courseId + "/assignments");
         HttpURLConnection conn = openGet(url);
         int status = conn.getResponseCode();
         String body = readBody(conn);
 
         if (status != 200) {
-            throw httpError("GET /api/courses/[id]/student-grades", status, body);
+            throw httpError("GET " + API_PREFIX + "/courses/{id}/assignments", status, body);
         }
 
-        // Response shape: { "assignments": [ { id, title, description, dueDate, problems: [...] } ] }
+        // Response shape: { timezone, serverTime, assignments: [ { id, title, description,
+        //   dueDate, allowLateSubmissions, lateCutoff, problems: [...] } ] }
         Map<String, Object> wrapper = parseJson(body, Map.class);
         List<Map<String, Object>> assignments = (List<Map<String, Object>>) wrapper.get("assignments");
         if (assignments == null) assignments = new java.util.ArrayList<>();
 
         // Cache embedded problems so getProblems() can serve them without a second network call.
-        // Also add a "solved" boolean (true when the latest submission status is "CORRECT").
+        // "solved" = full marks on the problem (grade == maxPoints).
         assignmentProblemsCache.clear();
         for (Map<String, Object> a : assignments) {
             String assignmentId = String.valueOf(a.get("id"));
@@ -311,8 +234,11 @@ public class AFCTClient {
                 List<Map<String, Object>> enriched = new java.util.ArrayList<>();
                 for (Map<String, Object> p : problems) {
                     Map<String, Object> copy = new java.util.HashMap<>(p);
-                    String st = String.valueOf(copy.getOrDefault("status", ""));
-                    copy.put("solved", "CORRECT".equalsIgnoreCase(st));
+                    Object grade = copy.get("grade");
+                    Object maxPoints = copy.get("maxPoints");
+                    boolean solved = grade instanceof Number && maxPoints instanceof Number
+                            && ((Number) grade).doubleValue() >= ((Number) maxPoints).doubleValue();
+                    copy.put("solved", solved);
                     enriched.add(copy);
                 }
                 assignmentProblemsCache.put(assignmentId, enriched);
@@ -325,38 +251,32 @@ public class AFCTClient {
     // ================================================================
     // Problems
     // ================================================================
-    @SuppressWarnings("unchecked")
     public List<Map<String, Object>> getProblems(String assignmentId) throws IOException {
         ensureAuth();
 
-        // Return from cache populated by getAssignments() if available.
+        // Problems arrive embedded in the assignments response; there is no separate
+        // problems endpoint in the client API. getAssignments() populates this cache.
         List<Map<String, Object>> cached = assignmentProblemsCache.get(assignmentId);
         if (cached != null) {
-            System.out.println("[AFCTClient] getProblems(" + assignmentId + "): serving " + cached.size() + " problems from cache");
             return cached;
         }
-
-        // Fallback: dedicated problems endpoint (may require instructor role on some servers).
-        URL url = new URL(baseUrl + "/api/assignments/" + assignmentId + "/problems");
-        HttpURLConnection conn = openGet(url);
-        int status = conn.getResponseCode();
-        String body = readBody(conn);
-
-        if (status != 200) {
-            throw httpError("GET /api/assignments/[id]/problems", status, body);
-        }
-        return parseJson(body, List.class);
+        throw new IOException("Problems not loaded yet — refresh the course to reload assignments.");
     }
 
     // ================================================================
     // Submissions (multipart/form-data)
     // ================================================================
+    /**
+     * Uploads a solution via POST /api/client/v1/submissions (multipart).
+     * Returns { submissionId, status: "PENDING" } on 202 — poll {@link #getSubmission}
+     * for the result. courseId is derived server-side from the assignment.
+     */
     @SuppressWarnings("unchecked")
     public Map<String, Object> createSubmission(String courseId, String assignmentId, String problemId, File file) throws IOException {
         ensureAuth();
 
         String boundary = "----JavaBoundary" + System.currentTimeMillis();
-        URL url = new URL(baseUrl + "/api/submissions");
+        URL url = new URL(baseUrl + API_PREFIX + "/submissions");
         HttpURLConnection conn = openConnection(url);
         conn.setConnectTimeout(connectTimeoutMs);
         conn.setReadTimeout(readTimeoutMs);
@@ -366,7 +286,6 @@ public class AFCTClient {
         conn.setDoOutput(true);
 
         try (DataOutputStream out = new DataOutputStream(conn.getOutputStream())) {
-            writeFormField(out, "courseId", courseId, boundary);
             writeFormField(out, "assignmentId", assignmentId, boundary);
             writeFormField(out, "problemId", problemId, boundary);
             if (file != null && file.exists()) {
@@ -377,11 +296,60 @@ public class AFCTClient {
 
         int status = conn.getResponseCode();
         String body = readBody(conn);
+        if (status == 429) {
+            String retryAfter = conn.getHeaderField("Retry-After");
+            throw new IOException("Resubmit cooldown active. Try again in "
+                    + (retryAfter != null ? retryAfter + " seconds." : "a moment."));
+        }
         // Server returns 202 Accepted on success
         if (status < 200 || status >= 300) {
-            throw httpError("POST /api/submissions", status, body);
+            throw httpError("POST " + API_PREFIX + "/submissions", status, body);
         }
         return parseJson(body, Map.class);
+    }
+
+    /**
+     * Fetches one submission's result: { id, status, correct, grade, feedback }.
+     * status moves PENDING → PROCESSING → COMPLETED | FAILED; correct/grade/feedback
+     * are null until evaluation finishes.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getSubmission(String submissionId) throws IOException {
+        ensureAuth();
+        URL url = new URL(baseUrl + API_PREFIX + "/submissions/" + submissionId);
+        HttpURLConnection conn = openGet(url);
+        int status = conn.getResponseCode();
+        String body = readBody(conn);
+        if (status != 200) {
+            throw httpError("GET " + API_PREFIX + "/submissions/{id}", status, body);
+        }
+        return parseJson(body, Map.class);
+    }
+
+    /**
+     * Polls {@link #getSubmission} until the submission reaches COMPLETED or FAILED,
+     * or the timeout elapses. Returns the last submission state seen.
+     * Blocking — call from a background thread.
+     */
+    public Map<String, Object> waitForResult(String submissionId, Duration timeout) throws IOException {
+        Instant deadline = Instant.now().plus(timeout);
+        long delayMs = 1000;
+        Map<String, Object> sub = getSubmission(submissionId);
+        while (Instant.now().isBefore(deadline)) {
+            String status = String.valueOf(sub.get("status"));
+            if ("COMPLETED".equals(status) || "FAILED".equals(status)) {
+                return sub;
+            }
+            try {
+                Thread.sleep(delayMs);
+            } catch (InterruptedException e) {
+                Thread.currentThread().interrupt();
+                return sub;
+            }
+            delayMs = Math.min(delayMs * 2, 5000); // gentle backoff, capped at 5s
+            sub = getSubmission(submissionId);
+        }
+        return sub;
     }
 
     // ================================================================
@@ -393,14 +361,6 @@ public class AFCTClient {
         conn.setReadTimeout(readTimeoutMs);
         conn.setRequestMethod("GET");
         addAuthHeaders(conn);
-
-        // Debug: show which cookies CookieManager will send to this URL
-        try {
-            CookieManager cm = (CookieManager) CookieHandler.getDefault();
-            List<HttpCookie> cookies = cm.getCookieStore().get(url.toURI());
-            System.out.println("[AFCTClient] GET " + url.getPath() + " — cookies: " + cookies);
-        } catch (Exception ignored) {}
-
         return conn;
     }
 
@@ -460,12 +420,11 @@ public class AFCTClient {
         }
     }
 
-    /** Adds Authorization header for JWT auth. Cookie-based auth is handled automatically by CookieManager. */
+    /** Adds the bearer token. Every endpoint except login/health requires it. */
     private void addAuthHeaders(HttpURLConnection conn) {
-        if (token != null && !token.isBlank() && !token.equals("cookie-session")) {
+        if (token != null && !token.isBlank()) {
             conn.setRequestProperty("Authorization", "Bearer " + token);
         }
-        // Session cookies (NextAuth) are sent automatically by the global CookieManager
     }
 
     private HttpURLConnection openConnection(URL url) throws IOException {
