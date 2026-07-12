@@ -712,13 +712,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         return null;
                     }
 
-                    String email = Globals.sessionHandler.getUserEmail();
-                    if (email == null || email.isBlank()) {
-                        err = "No email found. Please log in again.";
-                        return null;
-                    }
-
-                    return client.getCourses(email);
+                    // The client API derives the user from the bearer token
+                    return client.getCourses();
                 } catch (Exception ex) {
                     err = ex.getMessage();
                     return null;
@@ -1188,7 +1183,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         log("SUBMIT_START", "course=" + qs.courseName + " assignment=" + qs.assignmentName
                 + " problem=" + qs.problemName + " file=" + qs.file.getName());
 
-        new SwingWorker<Map<String, Object>, Void>() {
+        new SwingWorker<Map<String, Object>, String>() {
             private String err;
 
             @Override
@@ -1203,11 +1198,26 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     }
                     AFCTClient client = Globals.sessionHandler.requireAuthenticated();
                     if (client == null) { err = "Login cancelled."; return null; }
-                    return client.createSubmission(qs.courseId, qs.assignmentId, qs.problemId, qs.file);
+
+                    // Upload (202 Accepted), then poll for the graded result
+                    Map<String, Object> accepted = client.createSubmission(qs.courseId, qs.assignmentId, qs.problemId, qs.file);
+                    if (accepted == null || accepted.get("submissionId") == null) {
+                        err = "No submission id returned by server.";
+                        return null;
+                    }
+                    String submissionId = String.valueOf(accepted.get("submissionId"));
+                    log("SUBMIT_ACCEPTED", "submissionId=" + submissionId + " problem=" + qs.problemName);
+                    publish("Submitted — waiting for grading…");
+                    return client.waitForResult(submissionId, java.time.Duration.ofMinutes(2));
                 } catch (Exception ex) {
                     err = ex.getMessage();
                     return null;
                 }
+            }
+
+            @Override
+            protected void process(java.util.List<String> messages) {
+                if (!messages.isEmpty()) setStatus(true, messages.get(messages.size() - 1));
             }
 
             @Override
@@ -1220,13 +1230,32 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 }
                 try {
                     Map<String, Object> result = get();
-                    if (result != null) {
-                        String id = result.containsKey("id") ? String.valueOf(result.get("id")) : "?";
-                        log("SUBMIT_OK", "submissionId=" + id + " problem=" + qs.problemName);
-                        setStatus(true, "Submitted successfully! (id: " + id + ")");
-                    } else {
+                    if (result == null) {
                         log("SUBMIT_FAIL", "null response");
                         setStatus(false, "Submission failed — no response from server.");
+                        return;
+                    }
+
+                    String id = String.valueOf(result.getOrDefault("id", "?"));
+                    String status = String.valueOf(result.get("status"));
+                    log("SUBMIT_RESULT", "submissionId=" + id + " status=" + status
+                            + " problem=" + qs.problemName);
+
+                    if ("COMPLETED".equals(status)) {
+                        boolean correct = Boolean.TRUE.equals(result.get("correct"));
+                        Object feedback = result.get("feedback");
+                        if (correct) {
+                            setStatus(true, "Correct! Submission accepted (id: " + id + ")");
+                        } else {
+                            String fb = (feedback != null && !"null".equals(String.valueOf(feedback)))
+                                    ? " Counterexample: " + feedback : "";
+                            setStatus(false, "Incorrect." + fb);
+                        }
+                    } else if ("FAILED".equals(status)) {
+                        setStatus(false, "Grading failed — please resubmit.");
+                    } else {
+                        // Still PENDING/PROCESSING after the polling window
+                        setStatus(true, "Submitted (id: " + id + "). Grading is taking longer than usual — refresh later for the result.");
                     }
                 } catch (Exception ex) {
                     log("SUBMIT_ERROR", ex.getMessage());
@@ -1242,7 +1271,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             AFCTClient client = Globals.sessionHandler.requireAuthenticated();
             if (client == null) { log("SUBMIT_SKIP", "no client for " + qs.problemName); return; }
             Map<String, Object> result = client.createSubmission(qs.courseId, qs.assignmentId, qs.problemId, qs.file);
-            String id = (result != null && result.containsKey("id")) ? String.valueOf(result.get("id")) : "?";
+            String id = (result != null && result.containsKey("submissionId")) ? String.valueOf(result.get("submissionId")) : "?";
             log("SUBMIT_OK", "submissionId=" + id + " problem=" + qs.problemName);
         } catch (Exception ex) {
             log("SUBMIT_FAIL", "problem=" + qs.problemName + " error=" + ex.getMessage());

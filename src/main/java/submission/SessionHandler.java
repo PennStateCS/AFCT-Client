@@ -118,14 +118,11 @@ public class SessionHandler {
     /**
      * Returns the authenticated client, triggering a login window if not authenticated.
      * Returns null if the user cancelled login.
+     * The bearer token has a sliding 30-day expiry and every call renews it, so there
+     * is no idle-timeout check here — if the server ever returns 401, log in again.
      */
     public AFCTClient requireAuthenticated() {
-        // Check if 15 minutes have passed
-        Instant currentTime = Instant.now();
-        Duration duration = Duration.between(startTime, currentTime);
-        long minutesPassed = duration.toMinutes();
-
-        boolean needToReAuth = this.client == null || !this.client.isAuthenticated() || minutesPassed >= 14;
+        boolean needToReAuth = this.client == null || !this.client.isAuthenticated();
 
         if (needToReAuth) {
             // Try to re-login automatically
@@ -207,7 +204,13 @@ public class SessionHandler {
     public void logout(boolean forceManualReLogin) {
         preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
         this.loggedIn = false;
+
+        // Revoke the bearer token server-side (best-effort, non-blocking)
+        final AFCTClient oldClient = this.client;
         this.client = null;
+        if (oldClient != null) {
+            new Thread(oldClient::logout, "afct-logout").start();
+        }
 
         // Hide all submit windows
         for (SubmitWindow submitWindow : submitWindows) {
