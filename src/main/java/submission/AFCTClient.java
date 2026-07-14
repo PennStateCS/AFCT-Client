@@ -332,10 +332,20 @@ public class AFCTClient {
      * Blocking — call from a background thread.
      */
     public Map<String, Object> waitForResult(String submissionId, Duration timeout) throws IOException {
+        return waitForResult(submissionId, timeout, null);
+    }
+
+    /**
+     * Same as {@link #waitForResult(String, Duration)} but reports every polled state
+     * to {@code onUpdate} (called on the polling thread).
+     */
+    public Map<String, Object> waitForResult(String submissionId, Duration timeout,
+                                             java.util.function.Consumer<Map<String, Object>> onUpdate) throws IOException {
         Instant deadline = Instant.now().plus(timeout);
         long delayMs = 1000;
         Map<String, Object> sub = getSubmission(submissionId);
         while (Instant.now().isBefore(deadline)) {
+            if (onUpdate != null) onUpdate.accept(sub);
             String status = String.valueOf(sub.get("status"));
             if ("COMPLETED".equals(status) || "FAILED".equals(status)) {
                 return sub;

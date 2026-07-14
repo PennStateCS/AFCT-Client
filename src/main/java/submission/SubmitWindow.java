@@ -12,6 +12,8 @@ import javax.swing.event.TreeSelectionListener;
 import javax.swing.event.TreeWillExpandListener;
 import javax.swing.tree.*;
 import java.awt.*;
+import java.awt.event.ComponentAdapter;
+import java.awt.event.ComponentEvent;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -22,8 +24,6 @@ import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
-import java.util.ArrayDeque;
-import java.util.Deque;
 import java.util.List;
 import java.util.Map;
 
@@ -38,10 +38,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // UI
     // ===============================
 
+    private JButton infoBtn;
     private JButton refreshBtn;
     private JButton logoutBtn;
     private JButton submitBtn;
-    private JButton queueBtn;
 
     private JTextField fileTF;
     private JLabel statusLabel;
@@ -76,8 +76,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private static final int REFRESH_COOLDOWN_MS = 30_000;
     private Timer refreshCooldownTimer;
 
-    // Submission queue (for offline/deferred submit)
-    private final Deque<QueuedSubmission> submissionQueue = new ArrayDeque<>();
+    // Submissions tracked this session, newest first (shown in the info dropdown)
+    private final java.util.List<TrackedSubmission> trackedSubmissions =
+            java.util.Collections.synchronizedList(new java.util.ArrayList<>());
+    private static final int MAX_TRACKED = 20;
+
+    // Submissions dialog (draggable, toggled by the Submissions button)
+    private JDialog submissionsDialog;
+    private javax.swing.table.DefaultTableModel submissionsModel;
+    private Timer submissionsTicker;
 
     // Logging — writes to <project>/logs/submissions-YYYY-MM-DD.log
     private static final DateTimeFormatter LOG_FMT  = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
@@ -134,12 +141,16 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         Globals.boldFontAndChangeSize(title, 18);
 
         JPanel actions = new JPanel(new FlowLayout(FlowLayout.RIGHT, 8, 0));
+        infoBtn = new JButton("Submissions");
+        infoBtn.setToolTipText("Show this session's submissions and their queue status");
         refreshBtn = new JButton("Refresh");
         logoutBtn = new JButton("Logout");
 
+        Globals.setPointerCursor(infoBtn);
         Globals.setPointerCursor(refreshBtn);
         Globals.setPointerCursor(logoutBtn);
 
+        actions.add(infoBtn);
         actions.add(refreshBtn);
         actions.add(logoutBtn);
 
@@ -364,23 +375,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         c3.gridy = 0;
         submissionPanel.add(labeled("File to Submit", fileTF), c3);
 
-        // Submit + Queue buttons side by side
+        // Submit button — full width
         submitBtn = new JButton("Submit");
         submitBtn.setPreferredSize(new Dimension(0, 38));
         Globals.setPointerCursor(submitBtn);
 
-        queueBtn = new JButton("Queue");
-        queueBtn.setPreferredSize(new Dimension(0, 38));
-        queueBtn.setToolTipText("Save this submission to send later");
-        Globals.setPointerCursor(queueBtn);
-
-        JPanel btnRow = new JPanel(new GridLayout(1, 2, 8, 0));
-        btnRow.add(submitBtn);
-        btnRow.add(queueBtn);
-
         c3.gridy++;
         c3.insets = new Insets(16, 10, 0, 10);
-        submissionPanel.add(btnRow, c3);
+        submissionPanel.add(submitBtn, c3);
 
         // Spacer to push content to top
         c3.gridy++;
@@ -466,13 +468,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             startRefreshCooldown();
         });
 
+        infoBtn.addActionListener(e -> toggleSubmissionsDialog());
+
         logoutBtn.addActionListener(e -> {
             Globals.sessionHandler.logout(false);
             dispose();
         });
 
         submitBtn.addActionListener(e -> attemptSubmit());
-        queueBtn.addActionListener(e -> attemptQueue());
 
         // Filter change listeners
         allAssignmentsRadio.addActionListener(e -> reloadAssignmentsForSelectedCourse());
@@ -601,18 +604,48 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             );
         } else {
             String title = problem.name != null ? problem.name : "Untitled Problem";
-            String description = problem.description != null && !problem.description.isBlank()
-                ? problem.description
-                : "No description available.";
 
-            // Format as HTML for better display
+            // Description paragraph — only when the server actually sent one
+            String descriptionHtml = "";
+            if (problem.description != null && !problem.description.isBlank()) {
+                descriptionHtml = "<p style='margin: 0 0 8px 0; color: #000000;'>"
+                        + escapeHtml(problem.description) + "</p>";
+            }
+
+            // Metadata line: type · points · grade
+            StringBuilder meta = new StringBuilder();
+            if (problem.type != null) meta.append("Type: ").append(escapeHtml(problem.type));
+            if (problem.maxPoints >= 0) {
+                if (meta.length() > 0) meta.append(" &nbsp;·&nbsp; ");
+                meta.append("Points: ").append(problem.maxPoints);
+            }
+            if (problem.grade >= 0) {
+                if (meta.length() > 0) meta.append(" &nbsp;·&nbsp; ");
+                meta.append("Grade: ").append(problem.grade)
+                    .append(problem.maxPoints >= 0 ? " / " + problem.maxPoints : "");
+            }
+            String metaHtml = meta.length() > 0
+                ? "<p style='margin: 0 0 6px 0; color: #000000;'>" + meta + "</p>" : "";
+
+            // Submissions used line, colored by how many attempts remain
+            String subsHtml = "";
+            if (problem.submissionCount >= 0 && problem.maxSubmissions > 0) {
+                int left = problem.attemptsLeft();
+                String color = left == 0 ? "#c0392b" : (left == 1 ? "#e67e22" : "#27ae60");
+                String warn = left == 0 ? " — limit reached!" : (left == 1 ? " — last attempt!" : "");
+                subsHtml = String.format(
+                    "<p style='margin: 0; color: %s;'><b>Submissions used: %d / %d%s</b></p>",
+                    color, problem.submissionCount, problem.maxSubmissions, warn);
+            } else if (problem.submissionCount >= 0) {
+                subsHtml = "<p style='margin: 0; color: #000000;'>Submissions used: "
+                        + problem.submissionCount + " (no limit)</p>";
+            }
+
             String html = String.format(
                 "<html><body style='font-family: sans-serif; padding: 4px;'>" +
-                "<h3 style='margin: 0 0 8px 0; color: #2c3e50;'>%s</h3>" +
-                "<p style='margin: 0; color: #34495e;'>%s</p>" +
+                "<h3 style='margin: 0 0 8px 0; color: #000000;'>%s</h3>%s%s%s" +
                 "</body></html>",
-                escapeHtml(title),
-                escapeHtml(description)
+                escapeHtml(title), descriptionHtml, metaHtml, subsHtml
             );
 
             problemDetailsPane.setText(html);
@@ -636,8 +669,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             // Format as HTML for better display
             String html = String.format(
                 "<html><body style='font-family: sans-serif; padding: 4px;'>" +
-                "<h3 style='margin: 0 0 8px 0; color: #2c3e50;'>%s</h3>" +
-                "<p style='margin: 0; color: #34495e;'>%s</p>" +
+                "<h3 style='margin: 0 0 8px 0; color: #000000;'>%s</h3>" +
+                "<p style='margin: 0; color: #000000;'>%s</p>" +
                 "</body></html>",
                 escapeHtml(title),
                 escapeHtml(description)
@@ -678,7 +711,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private void setControlsEnabled(boolean enabled) {
         selectionTree.setEnabled(enabled);
         submitBtn.setEnabled(enabled);
-        queueBtn.setEnabled(enabled);
         logoutBtn.setEnabled(enabled);
         // Refresh respects its own cooldown — only re-enable if cooldown has expired
         if (enabled) {
@@ -928,7 +960,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             String id = String.valueOf(p.get("id"));
                             String title = String.valueOf(p.getOrDefault("title", "Untitled Problem"));
 
-                            // Get description, handling null properly
+                            // Get description, handling null properly (the client API may omit it)
                             Object descObj = p.get("description");
                             String description = (descObj != null && !String.valueOf(descObj).equals("null"))
                                 ? String.valueOf(descObj)
@@ -943,8 +975,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
                             displayedCount++;
 
+                            Object typeObj = p.get("type");
+                            String type = (typeObj != null && !"null".equals(String.valueOf(typeObj)))
+                                ? String.valueOf(typeObj) : null;
+
                             // Create problem item with original title (checkmark added in toString)
-                            ProblemItem problem = new ProblemItem(id, title, description, solved);
+                            ProblemItem problem = new ProblemItem(id, title, description, solved,
+                                    type, asInt(p.get("maxPoints")), asInt(p.get("maxSubmissions")),
+                                    asInt(p.get("submissionCount")), asInt(p.get("grade")));
                             assignmentNode.add(new DefaultMutableTreeNode(problem));
                         }
 
@@ -965,6 +1003,16 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 }
             }
         }.execute();
+    }
+
+    /** Parses a JSON number field, returning -1 when missing or non-numeric. */
+    private static int asInt(Object value) {
+        if (value instanceof Number) return ((Number) value).intValue();
+        try {
+            return Integer.parseInt(String.valueOf(value));
+        } catch (Exception e) {
+            return -1;
+        }
     }
 
     private boolean hasRealChildren(DefaultMutableTreeNode node, Class<?> clazz) {
@@ -1153,49 +1201,33 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private void attemptSubmit() {
         if (!validateSelection()) return;
 
-        // First drain any previously queued submissions
-        drainQueue();
-
-        // Then submit the current file
         doSubmit(new QueuedSubmission(selectedCourse.id, selectedAssignment.id,
                 selectedProblem.id, selectedFile,
                 selectedCourse.name, selectedAssignment.name, selectedProblem.name));
     }
 
-    private void attemptQueue() {
-        setStatus(false, "Queue button not yet linked.");
-    }
-
-    /** Sends all previously queued submissions before the current one. */
-    private void drainQueue() {
-        while (!submissionQueue.isEmpty()) {
-            QueuedSubmission qs = submissionQueue.peek();
-            log("DRAIN_QUEUE", "sending queued submission for problem=" + qs.problemName);
-            doSubmitSync(qs); // synchronous — called from background thread via doSubmit's worker
-            submissionQueue.poll();
-        }
-    }
-
-    /** Kicks off a background submission for a single QueuedSubmission. */
+    /**
+     * Kicks off a background submission. Only the Submit button is disabled,
+     * and only until the server accepts the upload (202) — grading is polled
+     * in the background so the user can keep browsing other assignments.
+     * Progress lives in the Submissions dropdown; the status bar announces
+     * the result when it lands.
+     */
     private void doSubmit(QueuedSubmission qs) {
-        setControlsEnabled(false);
+        submitBtn.setEnabled(false);
         setStatus(true, "Submitting…");
         log("SUBMIT_START", "course=" + qs.courseName + " assignment=" + qs.assignmentName
                 + " problem=" + qs.problemName + " file=" + qs.file.getName());
 
+        final TrackedSubmission ts = track(qs);
+
         new SwingWorker<Map<String, Object>, String>() {
             private String err;
+            private volatile boolean uploadAccepted = false;
 
             @Override
             protected Map<String, Object> doInBackground() {
                 try {
-                    // Drain queue first (synchronous, same background thread)
-                    while (!submissionQueue.isEmpty()) {
-                        QueuedSubmission queued = submissionQueue.peek();
-                        log("DRAIN_START", "problem=" + queued.problemName);
-                        doSubmitSync(queued);
-                        submissionQueue.poll();
-                    }
                     AFCTClient client = Globals.sessionHandler.requireAuthenticated();
                     if (client == null) { err = "Login cancelled."; return null; }
 
@@ -1207,8 +1239,18 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     }
                     String submissionId = String.valueOf(accepted.get("submissionId"));
                     log("SUBMIT_ACCEPTED", "submissionId=" + submissionId + " problem=" + qs.problemName);
-                    publish("Submitted — waiting for grading…");
-                    return client.waitForResult(submissionId, java.time.Duration.ofMinutes(2));
+                    uploadAccepted = true;
+                    ts.update("In grading queue (PENDING)");
+
+                    // Upload accepted — unlock the UI and keep polling in the background
+                    publish("\"" + qs.problemName + "\" submitted — grading in background. "
+                            + "Keep working; see the Submissions button for progress.");
+
+                    return client.waitForResult(submissionId, java.time.Duration.ofMinutes(2), sub -> {
+                        String st = String.valueOf(sub.get("status"));
+                        if ("PROCESSING".equals(st)) ts.update("Grading (PROCESSING)");
+                        else if ("PENDING".equals(st)) ts.update("In grading queue (PENDING)");
+                    });
                 } catch (Exception ex) {
                     err = ex.getMessage();
                     return null;
@@ -1217,22 +1259,35 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
             @Override
             protected void process(java.util.List<String> messages) {
+                // First publish means the upload was accepted: re-enable Submit
+                // and reflect the used attempt right away.
+                submitBtn.setEnabled(true);
+                bumpSubmissionCount(qs.problemId);
                 if (!messages.isEmpty()) setStatus(true, messages.get(messages.size() - 1));
             }
 
             @Override
             protected void done() {
-                setControlsEnabled(true);
+                submitBtn.setEnabled(true);
                 if (err != null) {
-                    log("SUBMIT_FAIL", err);
-                    setStatus(false, "Submission failed: " + err);
+                    if (uploadAccepted) {
+                        // The submission itself went through — only fetching the result failed
+                        log("RESULT_FETCH_FAIL", err);
+                        ts.update("Submitted — result unavailable (" + err + ")");
+                        setStatus(false, "\"" + qs.problemName + "\" was submitted, but the result couldn't be fetched: " + err);
+                    } else {
+                        log("SUBMIT_FAIL", err);
+                        ts.finish("Failed: " + err);
+                        setStatus(false, "Submission failed (" + qs.problemName + "): " + err);
+                    }
                     return;
                 }
                 try {
                     Map<String, Object> result = get();
                     if (result == null) {
                         log("SUBMIT_FAIL", "null response");
-                        setStatus(false, "Submission failed — no response from server.");
+                        ts.finish("Failed — no response");
+                        setStatus(false, "Submission failed (" + qs.problemName + ") — no response from server.");
                         return;
                     }
 
@@ -1245,43 +1300,61 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         boolean correct = Boolean.TRUE.equals(result.get("correct"));
                         Object feedback = result.get("feedback");
                         if (correct) {
-                            setStatus(true, "Correct! Submission accepted (id: " + id + ")");
+                            ts.finish("Correct ✔");
+                            setStatus(true, "Correct! \"" + qs.problemName + "\" accepted (id: " + id + ")");
                         } else {
+                            ts.finish("Incorrect ✘");
                             String fb = (feedback != null && !"null".equals(String.valueOf(feedback)))
                                     ? " Counterexample: " + feedback : "";
-                            setStatus(false, "Incorrect." + fb);
+                            setStatus(false, "Incorrect: \"" + qs.problemName + "\"." + fb);
                         }
                     } else if ("FAILED".equals(status)) {
-                        setStatus(false, "Grading failed — please resubmit.");
+                        ts.finish("Grading failed");
+                        setStatus(false, "Grading failed for \"" + qs.problemName + "\" — please resubmit.");
                     } else {
                         // Still PENDING/PROCESSING after the polling window
-                        setStatus(true, "Submitted (id: " + id + "). Grading is taking longer than usual — refresh later for the result.");
+                        ts.update("Still grading — check later");
+                        setStatus(true, "\"" + qs.problemName + "\" (id: " + id + ") is taking longer than usual — check the Submissions button later.");
                     }
                 } catch (Exception ex) {
                     log("SUBMIT_ERROR", ex.getMessage());
-                    setStatus(false, "Submission error: " + ex.getMessage());
+                    ts.finish("Error: " + ex.getMessage());
+                    setStatus(false, "Submission error (" + qs.problemName + "): " + ex.getMessage());
                 }
             }
         }.execute();
     }
 
-    /** Synchronous submit — call only from a background thread. */
-    private void doSubmitSync(QueuedSubmission qs) {
-        try {
-            AFCTClient client = Globals.sessionHandler.requireAuthenticated();
-            if (client == null) { log("SUBMIT_SKIP", "no client for " + qs.problemName); return; }
-            Map<String, Object> result = client.createSubmission(qs.courseId, qs.assignmentId, qs.problemId, qs.file);
-            String id = (result != null && result.containsKey("submissionId")) ? String.valueOf(result.get("submissionId")) : "?";
-            log("SUBMIT_OK", "submissionId=" + id + " problem=" + qs.problemName);
-        } catch (Exception ex) {
-            log("SUBMIT_FAIL", "problem=" + qs.problemName + " error=" + ex.getMessage());
-        }
+    /** Increments the locally cached attempt count for a problem and refreshes the panel. EDT-safe. */
+    private void bumpSubmissionCount(String problemId) {
+        Runnable r = () -> {
+            if (selectedProblem != null && selectedProblem.id.equals(problemId)
+                    && selectedProblem.submissionCount >= 0) {
+                selectedProblem.submissionCount++;
+                updateProblemDetails(selectedProblem);
+            }
+        };
+        if (SwingUtilities.isEventDispatchThread()) r.run();
+        else SwingUtilities.invokeLater(r);
     }
 
     private boolean validateSelection() {
         if (selectedProblem == null) { setStatus(false, "Please select a problem in the tree."); return false; }
         if (selectedAssignment == null || selectedCourse == null) { setStatus(false, "Selection incomplete — re-select the problem."); return false; }
         if (selectedFile == null || !selectedFile.exists()) { setStatus(false, "No file open. Open a file in the editor first."); return false; }
+        if (selectedProblem.attemptsLeft() == 0) {
+            setStatus(false, "Submission limit reached (" + selectedProblem.submissionCount + "/"
+                    + selectedProblem.maxSubmissions + ") for this problem.");
+            return false;
+        }
+        if (selectedProblem.attemptsLeft() == 1) {
+            int choice = JOptionPane.showConfirmDialog(this,
+                    "This is your LAST attempt for \"" + selectedProblem.name + "\" ("
+                    + selectedProblem.submissionCount + "/" + selectedProblem.maxSubmissions
+                    + " used).\nSubmit anyway?",
+                    "Last attempt", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
+            if (choice != JOptionPane.YES_OPTION) return false;
+        }
         return true;
     }
 
@@ -1323,6 +1396,120 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException ex) {
             System.err.println("Log write failed: " + ex.getMessage());
+        }
+    }
+
+    // ============================================================
+    // Submission info dropdown
+    // ============================================================
+
+    /** One submission tracked for the info dropdown. Worker threads update status; the EDT reads it. */
+    private static class TrackedSubmission {
+        final String fileName;
+        final String problemName;
+        final long startMs = System.currentTimeMillis();
+        volatile String status = "Uploading…";
+        volatile boolean done = false;
+        volatile long endMs = -1;
+
+        TrackedSubmission(String fileName, String problemName) {
+            this.fileName = fileName;
+            this.problemName = problemName;
+        }
+
+        void update(String status) {
+            this.status = status;
+        }
+
+        void finish(String finalStatus) {
+            this.status = finalStatus;
+            this.done = true;
+            this.endMs = System.currentTimeMillis();
+        }
+
+        /** Time from upload until grading finished (still counting if not done). */
+        String elapsed() {
+            long end = done ? endMs : System.currentTimeMillis();
+            long secs = Math.max(0, (end - startMs) / 1000);
+            return String.format("%d:%02d", secs / 60, secs % 60);
+        }
+    }
+
+    private TrackedSubmission track(QueuedSubmission qs) {
+        TrackedSubmission ts = new TrackedSubmission(qs.file.getName(), qs.problemName);
+        trackedSubmissions.add(0, ts);
+        while (trackedSubmissions.size() > MAX_TRACKED) {
+            trackedSubmissions.remove(trackedSubmissions.size() - 1);
+        }
+        return ts;
+    }
+
+    /** Toggles the submissions dialog: open if closed, close if open. */
+    private void toggleSubmissionsDialog() {
+        if (submissionsDialog != null && submissionsDialog.isVisible()) {
+            submissionsDialog.setVisible(false);
+            return;
+        }
+        boolean firstOpen = submissionsDialog == null;
+        if (firstOpen) {
+            buildSubmissionsDialog();
+        }
+        refreshSubmissionsTable();
+
+        // First open: drop it just under the button. After that it keeps
+        // wherever the user dragged it (title bar drag).
+        if (firstOpen) {
+            Point p = infoBtn.getLocationOnScreen();
+            int x = Math.max(0, p.x + infoBtn.getWidth() - submissionsDialog.getWidth());
+            submissionsDialog.setLocation(x, p.y + infoBtn.getHeight() + 6);
+        }
+        submissionsDialog.setVisible(true);
+    }
+
+    /** Builds the non-modal, draggable dialog listing this session's submissions. */
+    private void buildSubmissionsDialog() {
+        submissionsDialog = new JDialog(this, "Submissions", false);
+        submissionsDialog.setDefaultCloseOperation(WindowConstants.HIDE_ON_CLOSE);
+
+        String[] cols = {"File", "Problem", "Status", "In queue"};
+        submissionsModel = new javax.swing.table.DefaultTableModel(cols, 0) {
+            @Override
+            public boolean isCellEditable(int row, int col) { return false; }
+        };
+
+        JTable table = new JTable(submissionsModel);
+        table.setRowHeight(22);
+        table.setFillsViewportHeight(true);
+        table.getTableHeader().setReorderingAllowed(false);
+        table.getColumnModel().getColumn(0).setPreferredWidth(140);
+        table.getColumnModel().getColumn(1).setPreferredWidth(140);
+        table.getColumnModel().getColumn(2).setPreferredWidth(170);
+        table.getColumnModel().getColumn(3).setPreferredWidth(60);
+
+        JScrollPane sp = new JScrollPane(table);
+        sp.setPreferredSize(new Dimension(520, 180));
+        submissionsDialog.setContentPane(sp);
+        submissionsDialog.pack();
+
+        // Tick every second while visible so "In queue" counts up live
+        submissionsTicker = new Timer(1000, e -> refreshSubmissionsTable());
+        submissionsDialog.addComponentListener(new ComponentAdapter() {
+            @Override public void componentShown(ComponentEvent e) { submissionsTicker.start(); }
+            @Override public void componentHidden(ComponentEvent e) { submissionsTicker.stop(); }
+        });
+    }
+
+    private void refreshSubmissionsTable() {
+        if (submissionsModel == null) return;
+        submissionsModel.setRowCount(0);
+        synchronized (trackedSubmissions) {
+            if (trackedSubmissions.isEmpty()) {
+                submissionsModel.addRow(new Object[]{"—", "—", "No submissions this session", "—"});
+            } else {
+                for (TrackedSubmission ts : trackedSubmissions) {
+                    submissionsModel.addRow(new Object[]{ts.fileName, ts.problemName, ts.status, ts.elapsed()});
+                }
+            }
         }
     }
 
