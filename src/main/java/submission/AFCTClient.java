@@ -27,12 +27,34 @@ public class AFCTClient {
     private int connectTimeoutMs = 15000;
     private int readTimeoutMs = 60_000; // TODO: add a way to get the appropriate timeout from the server
     private boolean useHTTPS = false;
+    /**
+     * When true, HTTPS connections skip certificate/hostname validation (self-signed
+     * servers). When false, connections use the JVM's normal trust store and will
+     * fail on an untrusted or mismatched certificate — this must be respected per
+     * connection, since a bearer token is sent over it.
+     */
+    private final boolean insecureTls;
 
     /** Cache of problems per assignment, populated by getAssignments() (problems come embedded). */
     private final Map<String, List<Map<String, Object>>> assignmentProblemsCache = new java.util.HashMap<>();
 
+    /**
+     * The course's IANA timezone and the server's clock, as of the last getAssignments() call.
+     * dueDate/lateCutoff are UTC on the wire — callers should render them in this timezone —
+     * and serverTime lets callers compare against the server's clock instead of the local
+     * machine's, which may be skewed or in a different zone.
+     */
+    private String lastAssignmentsTimezone;
+    private Instant lastAssignmentsServerTime;
+
+    /** Equivalent to {@code AFCTClient(baseUrl, true)} — kept for source compatibility. */
     public AFCTClient(String baseUrl) {
+        this(baseUrl, true);
+    }
+
+    public AFCTClient(String baseUrl, boolean insecureTls) {
         String url = fixUrl(baseUrl);
+        this.insecureTls = insecureTls;
 
         if (baseUrl.trim().startsWith("https://") || url.endsWith("443")) {
             this.useHTTPS = true;
@@ -50,10 +72,10 @@ public class AFCTClient {
      */
     AFCTClient(String baseUrl, boolean insecureTls, Duration connectTimeout, Duration readTimeout,
                int maxRetries, long baseBackoffMs) {
-        this(baseUrl);
+        this(baseUrl, insecureTls);
         this.connectTimeoutMs = (int) connectTimeout.toMillis();
         this.readTimeoutMs = (int) readTimeout.toMillis();
-        // insecureTls, maxRetries, baseBackoffMs stored for future use
+        // maxRetries, baseBackoffMs stored for future use
     }
 
     public static String fixUrl(String baseUrl) {
@@ -198,6 +220,9 @@ public class AFCTClient {
         int status = conn.getResponseCode();
         String body = readBody(conn);
 
+        if (status == 401) {
+            throw handleUnauthorized("GET " + API_PREFIX + "/courses");
+        }
         if (status != 200) {
             throw httpError("GET " + API_PREFIX + "/courses", status, body);
         }
@@ -218,6 +243,9 @@ public class AFCTClient {
         int status = conn.getResponseCode();
         String body = readBody(conn);
 
+        if (status == 401) {
+            throw handleUnauthorized("GET " + API_PREFIX + "/courses/{id}/assignments");
+        }
         if (status != 200) {
             throw httpError("GET " + API_PREFIX + "/courses/{id}/assignments", status, body);
         }
@@ -227,6 +255,22 @@ public class AFCTClient {
         Map<String, Object> wrapper = parseJson(body, Map.class);
         List<Map<String, Object>> assignments = (List<Map<String, Object>>) wrapper.get("assignments");
         if (assignments == null) assignments = new java.util.ArrayList<>();
+
+        // Cache the course timezone and the server's clock so callers can render dueDate/
+        // lateCutoff correctly and run "is this upcoming" checks without trusting the
+        // local machine's clock.
+        Object tz = wrapper.get("timezone");
+        this.lastAssignmentsTimezone = tz != null ? String.valueOf(tz) : null;
+        Object serverTimeStr = wrapper.get("serverTime");
+        if (serverTimeStr != null) {
+            try {
+                this.lastAssignmentsServerTime = Instant.parse(String.valueOf(serverTimeStr));
+            } catch (Exception e) {
+                this.lastAssignmentsServerTime = null;
+            }
+        } else {
+            this.lastAssignmentsServerTime = null;
+        }
 
         // Cache embedded problems so getProblems() can serve them without a second network call.
         // "solved" = full marks on the problem (grade == maxPoints).
@@ -250,6 +294,24 @@ public class AFCTClient {
         }
 
         return assignments;
+    }
+
+    /**
+     * The course's IANA timezone as of the last getAssignments() call, or null if not
+     * yet fetched. Use this to render dueDate/lateCutoff (which arrive as UTC).
+     */
+    public String getLastAssignmentsTimezone() {
+        return lastAssignmentsTimezone;
+    }
+
+    /**
+     * The server's clock as of the last getAssignments() call, or null if not yet
+     * fetched. Prefer this over Instant.now()/LocalDateTime.now() for "is this due
+     * date upcoming" checks — the docs call this out specifically so callers don't
+     * have to trust the local machine's clock.
+     */
+    public Instant getLastAssignmentsServerTime() {
+        return lastAssignmentsServerTime;
     }
 
     // ================================================================
@@ -300,6 +362,9 @@ public class AFCTClient {
 
         int status = conn.getResponseCode();
         String body = readBody(conn);
+        if (status == 401) {
+            throw handleUnauthorized("POST " + API_PREFIX + "/submissions");
+        }
         if (status == 429) {
             String retryAfter = conn.getHeaderField("Retry-After");
             throw new IOException("Resubmit cooldown active. Try again in "
@@ -324,6 +389,9 @@ public class AFCTClient {
         HttpURLConnection conn = openGet(url);
         int status = conn.getResponseCode();
         String body = readBody(conn);
+        if (status == 401) {
+            throw handleUnauthorized("GET " + API_PREFIX + "/submissions/{id}");
+        }
         if (status != 200) {
             throw httpError("GET " + API_PREFIX + "/submissions/{id}", status, body);
         }
@@ -390,6 +458,18 @@ public class AFCTClient {
         }
     }
 
+    /**
+     * Clears the stored token on a 401 so isAuthenticated() reports false and the next
+     * requireAuthenticated() call triggers a fresh login instead of silently resending
+     * a rejected token (the server logs repeated invalid-token requests as a security
+     * event, so this must not be retried in a loop).
+     */
+    private IOException handleUnauthorized(String label) {
+        this.token = null;
+        System.err.println("HTTP ERROR 401 on " + label + " — token cleared, re-login required");
+        return new IOException("Your session has expired. Please log in again.");
+    }
+
     private static IOException httpError(String label, int status, String body) {
         String pretty = tryPretty(body);
         System.err.println("HTTP ERROR " + status + " on " + label);
@@ -449,9 +529,12 @@ public class AFCTClient {
     private HttpURLConnection openConnection(URL url) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
-        // Apply trust-all SSL directly on each HTTPS connection so it cannot be
-        // bypassed by timing or global-context ordering issues.
-        if (conn instanceof HttpsURLConnection) {
+        // Only bypass certificate/hostname validation when the user has explicitly
+        // opted into it (unchecked "Validate SSL Certificate" -> insecureTls=true),
+        // e.g. for a self-signed dev/lab server. Otherwise leave the connection on
+        // the JVM's normal trust store, since a bearer token travels over this
+        // connection and a MITM could otherwise capture it silently.
+        if (insecureTls && conn instanceof HttpsURLConnection) {
             HttpsURLConnection https = (HttpsURLConnection) conn;
             try {
                 javax.net.ssl.TrustManager[] trustAll = new javax.net.ssl.TrustManager[]{

@@ -666,19 +666,42 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 ? assignment.description
                 : "No description available.";
 
+            String dueHtml = "";
+            java.time.Instant due = assignment.dueInstant();
+            if (due != null) {
+                dueHtml = "<p style='margin: 0 0 8px 0; color: #555555;'><b>Due: "
+                        + escapeHtml(formatDueDate(due)) + "</b></p>";
+            }
+
             // Format as HTML for better display
             String html = String.format(
                 "<html><body style='font-family: sans-serif; padding: 4px;'>" +
-                "<h3 style='margin: 0 0 8px 0; color: #000000;'>%s</h3>" +
+                "<h3 style='margin: 0 0 8px 0; color: #000000;'>%s</h3>%s" +
                 "<p style='margin: 0; color: #000000;'>%s</p>" +
                 "</body></html>",
                 escapeHtml(title),
+                dueHtml,
                 escapeHtml(description)
             );
 
             assignmentDetailsPane.setText(html);
             assignmentDetailsPane.setCaretPosition(0);
         }
+    }
+
+    /** Formats a due-date Instant in the selected course's timezone (falling back to the local zone). */
+    private String formatDueDate(java.time.Instant due) {
+        java.time.ZoneId zone;
+        try {
+            zone = (selectedCourse != null && selectedCourse.timezone != null)
+                    ? java.time.ZoneId.of(selectedCourse.timezone)
+                    : java.time.ZoneId.systemDefault();
+        } catch (Exception e) {
+            zone = java.time.ZoneId.systemDefault();
+        }
+        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter
+                .ofPattern("MMM d, yyyy 'at' h:mm a z");
+        return due.atZone(zone).format(fmt);
     }
 
     private String escapeHtml(String text) {
@@ -769,8 +792,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     for (Map<String, Object> c : raw) {
                         String id = String.valueOf(c.get("id"));
                         String title = String.valueOf(c.getOrDefault("name", "Untitled Course"));
+                        Object tz = c.get("timezone");
+                        String timezone = (tz != null && !"null".equals(String.valueOf(tz))) ? String.valueOf(tz) : null;
 
-                        CourseItem course = new CourseItem(id, title);
+                        CourseItem course = new CourseItem(id, title, timezone);
                         DefaultMutableTreeNode courseNode = new DefaultMutableTreeNode(course);
 
                         // Add a placeholder child so it shows an expand handle
@@ -810,6 +835,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         new SwingWorker<List<Map<String, Object>>, Void>() {
             private String err;
+            // The server's clock as of this call (from the assignments response), used
+            // instead of the local machine's clock so "upcoming" isn't thrown off by
+            // clock skew or timezone differences. Falls back to Instant.now() if unset.
+            private java.time.Instant serverNow;
 
             @Override
             protected List<Map<String, Object>> doInBackground() {
@@ -819,7 +848,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         err = "Login cancelled.";
                         return null;
                     }
-                    return client.getAssignments(course.id);
+                    List<Map<String, Object>> result = client.getAssignments(course.id);
+                    serverNow = client.getLastAssignmentsServerTime();
+                    return result;
                 } catch (Exception ex) {
                     err = ex.getMessage();
                     return null;
@@ -845,7 +876,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     if (raw.isEmpty()) {
                         courseNode.add(new DefaultMutableTreeNode(new Placeholder("No assignments.")));
                     } else {
-                        java.time.LocalDateTime now = java.time.LocalDateTime.now();
+                        java.time.Instant now = serverNow != null ? serverNow : java.time.Instant.now();
                         boolean upcomingOnly = upcomingAssignmentsRadio.isSelected();
                         int displayedCount = 0;
 
@@ -855,16 +886,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             String description = String.valueOf(a.getOrDefault("description", ""));
                             String dueDateStr = a.get("dueDate") != null ? String.valueOf(a.get("dueDate")) : null;
 
-                            // Apply upcoming filter
+                            // Apply upcoming filter — dueDate is UTC ISO-8601, so parse as an
+                            // Instant and compare against the server's clock (not the local
+                            // machine's, and not a naive/timezone-less parse).
                             boolean isUpcoming = false;
                             if (dueDateStr != null && !dueDateStr.equals("null")) {
                                 try {
-                                    // Remove trailing 'Z' if present
-                                    if (dueDateStr.endsWith("Z")) {
-                                        dueDateStr = dueDateStr.substring(0, dueDateStr.length() - 1);
-                                    }
-                                    java.time.LocalDateTime dueDate = java.time.LocalDateTime.parse(dueDateStr);
-                                    isUpcoming = dueDate.isAfter(now);
+                                    java.time.Instant dueInstant = java.time.Instant.parse(dueDateStr);
+                                    isUpcoming = dueInstant.isAfter(now);
                                 } catch (Exception e) {
                                     // If date parsing fails, treat as not upcoming
                                     isUpcoming = false;
