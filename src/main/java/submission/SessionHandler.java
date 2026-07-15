@@ -64,15 +64,19 @@ public class SessionHandler {
         this.certificateHandler = new CertificateHandler();
         this.submitWindows = new ArrayList<>();
 
+        // Load the user's last saved SSL-validation choice so autoReAuthenticate() (which
+        // runs before the login window is ever shown) honors it instead of silently
+        // falling back to the in-memory default.
+        this.insecureTls = this.preferences.getBoolean(PREF_INSECURE_TLS, true);
+
         // Login GUI elements
         this.loginWindow = new LoginWindow(this);
 
-        // Certificate stuff
-        try {
-            CertificateHandler.enableCustomCertificateValidation();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        // NOTE: we deliberately do NOT call CertificateHandler.enableCustomCertificateValidation()
+        // here. That installs a trust-all SSLContext as the JVM-wide default, which would silently
+        // disable certificate validation for every HTTPS connection regardless of the user's
+        // "Validate SSL Certificate" choice in the login window. Certificate bypass is instead
+        // applied per-connection in AFCTClient, gated on the insecureTls flag the user actually set.
     }
 
     public SubmitWindow createNewSubmitWindow(Environment environment) {
@@ -166,7 +170,7 @@ public class SessionHandler {
         String fullUrl = (isHttps ? "https://" : "http://") + serverUrl + ":" + portText;
 
         try {
-            client = new AFCTClient(fullUrl);
+            client = new AFCTClient(fullUrl, insecureTls);
             token = client.login(userEmail, userPassword);
             if (token != null && !token.isBlank()) {
                 // Login succeeded
