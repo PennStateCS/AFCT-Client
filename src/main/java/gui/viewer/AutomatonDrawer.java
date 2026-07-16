@@ -404,7 +404,9 @@ public class AutomatonDrawer {
 					continue;
 
 				
-				// Get where points should appear to emanate from.
+				// Get where points should appear to emanate from. The ANGLE constant is added
+				// so that if there are transitions going both to and from a state the tail and heads
+				// don't touch
 				double angle = angle(states[i], states[j]);
 				Point fromI = pointOnState(states[i], angle - ANGLE);
 				Point fromJ = pointOnState(states[j], angle + Math.PI + ANGLE);
@@ -423,17 +425,14 @@ public class AutomatonDrawer {
 			if (trans.length == 0)
 				continue;
 
-			// if this is a newly added reflexive transition, we perform a
-			// calculation to find where on the state to place the transition so
-			// that it has the greatest space around it from other transitions
-//			if (selfTransitionMap.containsKey()) {
-//
-//			}
-			double angle = -getAngleFarthestAwayFromTransitions(automaton, states[i]);
-			Point from = pointOnState(states[i], angle + Math.PI * .1667);
-			Point to = pointOnState(states[i], angle - Math.PI * .1667);
-//			Point from = pointOnState(states[i], Math.PI * 0.333);
-//			Point to = pointOnState(states[i], Math.PI * 0.667);
+
+			double angle = getAngleFarthestAwayFromTransitions(automaton, states[i]);
+
+			Point from = pointOnState(states[i], angle + (Math.PI * .1666667));
+			Point to = pointOnState(states[i], angle - (Math.PI * .1666667));
+
+//			Point from = pointOnState(states[i], -Math.PI * 0.333);
+//			Point to = pointOnState(states[i], -Math.PI * 0.667);
 
 			ArrayList<String> transitionLabels = new ArrayList<String>();
 
@@ -442,7 +441,7 @@ public class AutomatonDrawer {
 			}
 
 			GUITransition guiTransition = new GUITransition(states[i], states[i], transitionLabels);
-			selfTransitionMap.put(guiTransition, -Math.PI*.5);
+			selfTransitionMap.put(guiTransition, Math.PI*.5);
 
 			CurvedArrow arrow = new CurvedArrow(
 					from,
@@ -513,6 +512,9 @@ public class AutomatonDrawer {
 
 		// add the start points for every outbound arrow
 		for (Transition t : outBound) {
+			if (t.isSelfLoop()) {
+				continue;
+			}
 			CurvedArrow arrow = transitionToArrowMap.get(t);
 			// due to how the code is structured, the user's newly added transitions
 			// are already in outBound/inBound, but since they haven't been rendered
@@ -524,6 +526,9 @@ public class AutomatonDrawer {
 
 		// add the end points for every inbound arrow
 		for (Transition t: inBound) {
+			if (t.isSelfLoop()) {
+				continue;
+			}
 			CurvedArrow arrow = transitionToArrowMap.get(t);
 			if (arrow != null) {
 				transitionPointsSet.add(arrow.getEndPoint());
@@ -535,49 +540,50 @@ public class AutomatonDrawer {
 		// If there are no transitions then return the top
 		// of the state.
 		if (transitionPointsList.isEmpty()) {
-			return Math.PI/2.0;
+			// because java is weird the y axis is inverted, so we need to return
+			// the negative version of the angle we want
+			return -Math.PI/2.0;
 		}
 
 		// handle if there is only one transition
 		if (transitionPointsList.size() == 1) {
 			double angle = angleOnState(state, transitionPointsList.getFirst());
-            return angle + Math.PI;
+            return angle + Math.PI - ANGLE;
 		}
 
 		// convert all these points to angles on a circle
-		Point centerPoint = state.getPoint();
 		List<Double> sortedAngles = transitionPointsList.stream()
-				.map(point -> angleOnState(state, centerPoint))
+				.map(point -> angleOnState(state, point))
 				.sorted() // Sorts ascending by default
 				.toList();
 
-		// find the midpoint the two points that have the largest
-		// distance between them in terms of angle
+		// Find the adjacent pair of sorted angles with the largest empty gap between them
 		double largestDistance = 0;
-		double midPointAngle = Math.PI/2.0;
+		double midPointAngle = -Math.PI/2.0;
 
 		for (int i = 0; i < sortedAngles.size(); i++) {
-			// go to the next one in the list or wrap around if you are at the end
-			int nextIndex = (i + 1) % sortedAngles.size();
 			double currentAngle = sortedAngles.get(i);
-			double nextAngle = sortedAngles.get(nextIndex);
+			double nextAngle = sortedAngles.get((i + 1) % sortedAngles.size());
 
-			// the biggest sector between is either the distance between the
-			// two angles or 2pi - the distance between two angles
-			double longestSectorAngle = Math.max(
-					Math.abs(currentAngle - nextAngle),
-					((2*Math.PI) - Math.abs(currentAngle - nextAngle))
-			);
+			// Calculate the empty gap going clockwise from currentAngle to nextAngle
+			double gap;
+			if (nextAngle >= currentAngle) {
+				gap = nextAngle - currentAngle;
+			} else {
+				// Wrap-around case (e.g., from the last sorted angle to the first sorted angle)
+				gap = (nextAngle + 2 * Math.PI) - currentAngle;
+			}
 
-			if (longestSectorAngle > largestDistance) {
-				largestDistance = longestSectorAngle;
-
-				midPointAngle = Math.min(currentAngle, nextAngle)
-						+ (longestSectorAngle/2.0);
+			if (gap > largestDistance) {
+				largestDistance = gap;
+				// The midpoint is exactly halfway through this  gap
+				midPointAngle = currentAngle + (gap / 2.0);
 			}
 		}
 
-		return midPointAngle;
+		// we subtract the constant ANGLE to make up for ANGLE being added on
+		// every non-reflexive transition
+		return midPointAngle - ANGLE;
 	}
 
 	/**
@@ -608,8 +614,8 @@ public class AutomatonDrawer {
 	private double angle(State state1, State state2) {
 		Point p1 = state1.getPoint();
 		Point p2 = state2.getPoint();
-		double x = (double) (p2.x - p1.x);
-		double y = (double) (p2.y - p1.y);
+		double x = p2.x - p1.x;
+		double y = p2.y - p1.y;
 		return Math.atan2(y, x);
 	}
 
@@ -625,9 +631,10 @@ public class AutomatonDrawer {
 	 */
 	public Point pointOnState(State state, double angle) {
 		Point point = new Point(state.getPoint());
-		double x = Math.cos(angle) * (double) StateDrawer.STATE_RADIUS;
-		double y = Math.sin(angle) * (double) StateDrawer.STATE_RADIUS;
-		point.translate((int) x, (int) y);
+		double dx = Math.cos(angle) * (double) StateDrawer.STATE_RADIUS;
+		double dy = Math.sin(angle) * (double) StateDrawer.STATE_RADIUS;
+
+		point.translate((int) dx, (int) dy);
 		return point;
 	}
 
@@ -637,7 +644,8 @@ public class AutomatonDrawer {
 	 * the state the result will be pi/2
 	 * @param state The state that the point is on
 	 * @param point The point that you want the angle of
-	 * @return in radians what angle the point would be on the state
+	 * @return in radians what angle the point would be on the state. Ranges from
+	 * 0 to 2PI.
 	 */
 	public double angleOnState(State state, Point point) {
 		Point centerPoint = state.getPoint();
@@ -645,8 +653,15 @@ public class AutomatonDrawer {
 		double deltaX = point.x - centerPoint.x;
 		double deltaY = point.y - centerPoint.y;
 
-		// Math.atan2 returns the angle in radians (-PI to PI)
-		return Math.atan2(deltaY, deltaX);
+		// Math.atan2 returns the angle in radians
+		double resultAngle = Math.atan2(deltaY, deltaX);
+
+		// translate negative angles to positive ones
+		if (resultAngle >= 0) {
+			return resultAngle;
+		} else {
+			return 2 * Math.PI + resultAngle;
+		}
 	}
 
 	/**

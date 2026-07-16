@@ -282,8 +282,9 @@ public class CurvedArrow {
 			// Will the label appear to be upside down?
 			boolean upsideDown = end.x < start.x;
 			float dx = (float) bounds.getWidth() / 2.0f;
+			// add 4 to the descent so that the commas aren't touching the line
 			float dy = (curvy < 0.0f) ^ upsideDown ? metrics.getAscent() : -metrics
-					.getDescent();
+					.getDescent() - 4;
 
 			g2.setColor(color);
 
