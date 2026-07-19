@@ -43,6 +43,10 @@ public class AFCTClient {
         return fixedUrl;
     }
 
+    public String getBaseUrl() {
+        return baseUrl;
+    }
+
     public AFCTClient timeouts(int connectMs, int readMs) {
         this.connectTimeoutMs = connectMs;
         this.readTimeoutMs = readMs;

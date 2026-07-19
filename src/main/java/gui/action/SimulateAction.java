@@ -311,7 +311,8 @@ public class SimulateAction extends AutomatonAction {
 		}
 		if (!automatonActionPermissible((Component) e.getSource()))
 			return;
-		Object input = initialInput((Component) e.getSource(), "");
+		//Object input = initialInput((Component) e.getSource(), "");
+		Object input = initialInput(automaton.getEnvironmentFrame(), "");
 		Configuration[] configs = null;
 		AutomatonSimulator simulator = getSimulator(automaton);
 	/*	if (input instanceof InputBox)
