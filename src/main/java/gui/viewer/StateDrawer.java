@@ -456,7 +456,7 @@ public class StateDrawer {
 	public static final int STATE_RADIUS = 20;
 
 	/** The base color for states. */
-	public static Color STATE_COLOR = new Color(255, 255, 150);
+	public static Color STATE_COLOR = new Color(255, 255, 255);
 	
 	/** The color of a selected state. **/
 	public static Color HIGHLIGHT_COLOR = new  Color(100, 200, 200);
