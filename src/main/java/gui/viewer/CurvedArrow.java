@@ -24,9 +24,12 @@ import java.awt.*;
 import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 import java.util.ArrayList;
+import java.util.Arrays;
 
 import automata.State;
 import automata.Transition;
+import gui.environment.Profile;
+import gui.environment.Universe;
 
 import static gui.Globals.*;
 
@@ -59,11 +62,13 @@ public class CurvedArrow {
 			ArrayList<Transition> associatedTransitions,
 			GUITransition transitionForRendering
 	) {
-		isReflexive = fromState == toState;
 		curve = new QuadCurve2D.Float();
 		setStart(start);
 		setEnd(end);
 		this.representativeTransition = transitionForRendering;
+		this.fromState = transitionForRendering.getFromState();
+		this.toState = transitionForRendering.getToState();
+		isReflexive = fromState == toState;
 		control = new Point();
 		setCurvy(curvy);
         myTransitions = associatedTransitions;
@@ -246,6 +251,22 @@ public class CurvedArrow {
 	 *            the graphics object to draw the text upon
 	 */
 	public void drawText(Graphics2D g, Color color) {
+		Profile.transitionRendering transitionRenderingStyle = Universe.curProfile.getTransitionsRenderedAs();
+
+		switch (transitionRenderingStyle) {
+			case STACKONTOP:
+				drawTextStackedLabels(g, color);
+				break;
+			case COMMADELINIATEDLIST:
+				drawTextCommaDelineated(g, color);
+				break;
+			default:
+				drawTextStackedLabels(g, color);
+				break;
+		}
+	}
+
+	private void drawTextStackedLabels(Graphics2D g, Color color) {
 		// We don't want to corrupt the graphics environs with our
 		// affine transforms!
 		Graphics2D g2 = (Graphics2D) g.create();
@@ -261,8 +282,9 @@ public class CurvedArrow {
 			// Will the label appear to be upside down?
 			boolean upsideDown = end.x < start.x;
 			float dx = (float) bounds.getWidth() / 2.0f;
+			// add 4 to the descent so that the commas aren't touching the line
 			float dy = (curvy < 0.0f) ^ upsideDown ? metrics.getAscent() : -metrics
-					.getDescent();
+					.getDescent() - 4;
 
 			g2.setColor(color);
 
@@ -279,13 +301,44 @@ public class CurvedArrow {
 					.getWidth(), bounds.getHeight());
 		}
 
-
-		// g2.drawString(label, -dx, dy);
 		g2.dispose();
-		/*
-		 * if (GRAPHICS == null) { GRAPHICS = g.create(); METRICS =
-		 * GRAPHICS.getFontMetrics(); }
-		 */
+	}
+
+	private void drawTextCommaDelineated(Graphics2D g, Color color) {
+		// We don't want to corrupt the graphics environs with our
+		// affine transforms!
+		Graphics2D g2 = (Graphics2D) g.create();
+		g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
+				RenderingHints.VALUE_ANTIALIAS_ON);
+		g2.transform(affineToText);
+
+		// create a comma delineated list from the transitions
+		ArrayList<String> labelList = representativeTransition.getTransitionLabels();
+		String renderedTransitionText = String.join(", ", labelList);
+
+		// What about the text label?
+		FontMetrics metrics = g2.getFontMetrics();
+		bounds = metrics.getStringBounds(renderedTransitionText, g2);
+		// Will the label appear to be upside down?
+		boolean upsideDown = end.x < start.x;
+		float dx = (float) bounds.getWidth() / 2.0f;
+		// add 4 to the descent so that the commas aren't touching the line
+		float dy = (curvy < 0.0f) ^ upsideDown ? (metrics.getAscent()) : -metrics
+				.getDescent() - 4;
+
+		g2.setColor(color);
+
+		for (int i = 0; i < renderedTransitionText.length(); i += CHARS_PER_STEP) {
+			String sublabel = renderedTransitionText.substring(i, Math.min(i + CHARS_PER_STEP,
+					renderedTransitionText.length()));
+			g2.drawString(sublabel, -dx, dy);
+			dx -= (float) metrics.getStringBounds(sublabel, g2).getWidth();
+		}
+
+		bounds.setRect(bounds.getX() - dx, bounds.getY() + dy, bounds
+				.getWidth(), bounds.getHeight());
+
+		g2.dispose();
 	}
 
     /**
@@ -499,6 +552,13 @@ public class CurvedArrow {
 		return toState;
 	}
 
+	public Point getStartPoint() {
+		return this.start;
+	}
+
+	public Point getEndPoint() {
+		return this.end;
+	}
 
 	/** The start, end, and single control points. */
 	protected Point start, end, control;
@@ -584,6 +644,8 @@ public class CurvedArrow {
 
 	public ArrayList<Transition> myTransitions;
 
+	/** The actual transition that is rendered on screen. The special GUITransition will contain
+	 * information on all the transitions labels that are included in this arrow */
 	public GUITransition representativeTransition;
 
     public float[] dashPattern = {3.0f, 3.0f};

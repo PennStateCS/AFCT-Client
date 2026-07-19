@@ -259,10 +259,11 @@ public class ArrowTool extends Tool {
 			showPopup(event);
 
         //reset the selectedTransition after an Undo has happened.
-        Transition[] trans = getAutomaton().getTransitions();
-        for (int i = 0; i < trans.length; i++)
-            if (trans[i].isSelected){
-                selectedTransition = trans[i];
+		ArrayList<CurvedArrow> renderedArrowList= getView().getDrawer().arrowList;
+
+        for (int i = 0; i < renderedArrowList.size(); i++)
+            if (renderedArrowList.get(i).representativeTransition.isSelected){
+                selectedTransition = renderedArrowList.get(i).representativeTransition;
                 return;
             }
 
@@ -460,7 +461,7 @@ public class ArrowTool extends Tool {
 					//curve.setCurve(curve.getX1(), curve.getY1(), p.x, p.y, curve.getX2(), curve.getY2());
 					
 //					getView().getDrawer().arrowList.put(arrow, trans[n]);
-					getView().getDrawer().transitionToArrowMap.put(trans[n], arrow);
+//					getView().getDrawer().transitionToArrowMap.put(trans[n], arrow);
 				}
 			}
 			initialPointClick.setLocation(p);
