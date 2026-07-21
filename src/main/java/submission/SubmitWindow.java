@@ -772,7 +772,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     // The client API derives the user from the bearer token
                     return client.getCourses();
                 } catch (Exception ex) {
-                    err = ex.getMessage();
+                    err = ErrorMessages.userMessage(ex, "Unable to load courses.");
                     return null;
                 }
             }
@@ -814,7 +814,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     }
 
                 } catch (Exception ex) {
-                    setStatus(false, ex.getMessage());
+                    setStatus(false, ErrorMessages.userMessage(ex, "Unable to load courses."));
                 } finally {
                     setControlsEnabled(true);
                     loading = false;
@@ -854,7 +854,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     serverNow = client.getLastAssignmentsServerTime();
                     return result;
                 } catch (Exception ex) {
-                    err = ex.getMessage();
+                    err = ErrorMessages.userMessage(ex, "Unable to load assignments.");
                     return null;
                 }
             }
@@ -926,7 +926,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     setStatus(true, "Assignments loaded. Expand an assignment to view problems.");
 
                 } catch (Exception ex) {
-                    setStatus(false, ex.getMessage());
+                    setStatus(false, ErrorMessages.userMessage(ex, "Unable to load assignments."));
                 } finally {
                     setControlsEnabled(true);
                     loading = false;
@@ -960,7 +960,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     }
                     return client.getProblems(assignment.id);
                 } catch (Exception ex) {
-                    err = ex.getMessage();
+                    err = ErrorMessages.userMessage(ex, "Unable to load problems.");
                     return null;
                 }
             }
@@ -1027,7 +1027,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     setStatus(true, "Ready. Select a problem and submit.");
 
                 } catch (Exception ex) {
-                    setStatus(false, ex.getMessage());
+                    setStatus(false, ErrorMessages.userMessage(ex, "Unable to load problems."));
                 } finally {
                     setControlsEnabled(true);
                     loading = false;
@@ -1283,7 +1283,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         else if ("PENDING".equals(st)) ts.update("In grading queue (PENDING)");
                     });
                 } catch (Exception ex) {
-                    err = ex.getMessage();
+                    err = ErrorMessages.userMessage(ex, "Unexpected submission error.");
                     return null;
                 }
             }
@@ -1348,9 +1348,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         setStatus(true, "\"" + qs.problemName + "\" (id: " + id + ") is taking longer than usual — check the Submissions button later.");
                     }
                 } catch (Exception ex) {
-                    log("SUBMIT_ERROR", ex.getMessage());
-                    ts.finish("Error: " + ex.getMessage());
-                    setStatus(false, "Submission error (" + qs.problemName + "): " + ex.getMessage());
+                    String friendly = ErrorMessages.userMessage(ex, "Unexpected submission error.");
+                    log("SUBMIT_ERROR", friendly);
+                    ts.finish("Error: " + friendly);
+                    setStatus(false, "Submission error (" + qs.problemName + "): " + friendly);
                 }
             }
         }.execute();
@@ -1426,7 +1427,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             Files.writeString(logFile, line + System.lineSeparator(),
                     StandardOpenOption.CREATE, StandardOpenOption.APPEND);
         } catch (IOException ex) {
-            System.err.println("Log write failed: " + ex.getMessage());
+            String msg = ErrorMessages.userMessage(ex, "Unable to write submission log.");
+            System.err.println("Log write failed: " + msg);
         }
     }
 

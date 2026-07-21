@@ -228,7 +228,9 @@ public class LoginWindow extends JDialog {
 
                     return result;
                 } catch (Exception ex) {
-                    return LoginResult.getErrorResult(ex.getMessage());
+                    return LoginResult.getErrorResult(
+                            ErrorMessages.userMessage(ex, "Unable to reach the server. Please try again.")
+                    );
                 }
             }
 
@@ -262,7 +264,10 @@ public class LoginWindow extends JDialog {
                         setResultText(result.message, false);
                     }
                 } catch (Exception ex) {
-                    setResultText("Login Failure: " + ex.getMessage(), false);
+                    setResultText(
+                            "Login Failure: " + ErrorMessages.userMessage(ex, "An unexpected error occurred."),
+                            false
+                    );
                 } finally {
                     toggleInputs(true);
                 }
