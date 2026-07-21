@@ -6,7 +6,6 @@ import javax.swing.*;
 import java.awt.*;
 
 import static gui.Globals.*;
-import static submission.AFCTClient.fixUrl;
 
 public class LoginWindow extends JDialog {
 
@@ -201,7 +200,7 @@ public class LoginWindow extends JDialog {
     // ============================================================
 
     private void attemptLogin() {
-        final String server = fixUrl(serverTF.getText().trim());
+        final String server = serverTF.getText().trim();
         final String port = portTF.getText().trim();
         final String email = emailTF.getText().trim();
         final String password = new String(passwordTF.getPassword());

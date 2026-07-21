@@ -157,17 +157,24 @@ public class SessionHandler {
     }
 
     public LoginResult login(String serverUrl, String portText, String userEmail, String userPassword, boolean insecureTls) {
-        // Preserve the protocol before fixUrl strips it
-        boolean isHttps = serverUrl.trim().toLowerCase().startsWith("https://");
-        serverUrl = fixUrl(serverUrl);
+        String originalServer = serverUrl == null ? "" : serverUrl.trim();
+        boolean hasHttpScheme = originalServer.regionMatches(true, 0, "http://", 0, "http://".length());
+        boolean useHttps = !hasHttpScheme; // default to HTTPS when scheme is omitted
+
+        serverUrl = fixUrl(originalServer);
         portText = portText.trim();
         userEmail = userEmail.trim();
 
         this.insecureTls = insecureTls;
         preferences.putBoolean(PREF_INSECURE_TLS, insecureTls);
 
-        // Reconstruct the full URL with protocol so AFCTClient uses the right scheme
-        String fullUrl = (isHttps ? "https://" : "http://") + serverUrl + ":" + portText;
+        if (serverUrl.isBlank()) {
+            return getErrorResult("Server is required.");
+        }
+
+        // Reconstruct the full URL with protocol so AFCTClient uses the user-selected
+        // scheme, defaulting to HTTPS when no scheme is provided.
+        String fullUrl = (useHttps ? "https://" : "http://") + serverUrl + ":" + portText;
 
         try {
             client = new AFCTClient(fullUrl, insecureTls);
