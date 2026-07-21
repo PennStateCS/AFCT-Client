@@ -7,7 +7,6 @@ import automata.fsa.FiniteStateAutomaton;
 import automata.graph.AutomatonGraph;
 import automata.graph.LayoutAlgorithm;
 import automata.graph.LayoutAlgorithmFactory;
-import automata.graph.layout.RandomLayoutAlgorithm;
 import automata.graph.layout.VertexMover;
 import gui.environment.Environment;
 import gui.environment.Universe;
@@ -19,7 +18,6 @@ import java.io.File;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Random;
-import java.util.StringJoiner;
 
 /**
  * This class is an experimental addon to the main JFLAP application intended for research purposes. The class
@@ -32,8 +30,8 @@ import java.util.StringJoiner;
 
 public class GenerateOCRDataAction extends RestrictedAction{
     final int MIN_NUMBER_STATES = 3;
-    final int MAX_NUMBER_STATES = 9;
-    final int MAX_NUMBER_TRANSITIONS = 11;
+    final int MAX_NUMBER_STATES = 7;
+    final int MAX_NUMBER_TRANSITIONS = 10;
 
     // These values are some magic numbers stolen from layoutAlgorithmAction.java
     // Do we really even need to take these into account?
@@ -142,7 +140,7 @@ public class GenerateOCRDataAction extends RestrictedAction{
     }
 
     private int initializeStates() {
-        // create from 3 to 11 states
+        // create from min to max number of states
         int numStatesForThisExample = (int) (Math.random()*(MAX_NUMBER_STATES+1-MIN_NUMBER_STATES))+MIN_NUMBER_STATES;
         for (int k = 0; k < numStatesForThisExample; k++) {
             // we will use the layout algorithms later to move the states around
@@ -182,10 +180,9 @@ public class GenerateOCRDataAction extends RestrictedAction{
                 double chance = Math.random();
                 // we will make a transition roughly 33% of the time
                 if (chance < 0.33 && numTransitions < MAX_NUMBER_TRANSITIONS) {
-                    String label = getRandomAlphaString();
-                    // TODO: change how transition rendering looks for OCR data generation
-                    for (int i = 0; i < 1; i++) {
-                        Transition t = new FSATransition(states[k],states[j], Character.toString(label.charAt(i)));
+                    ArrayList<Character> labels = getRandomAlphaCharList();
+                    for (char c : labels) {
+                        Transition t = new FSATransition(states[k], states[j], String.valueOf(c));
                         this.automaton.addTransition(t);
                         numTransitions++;
                     }
@@ -195,34 +192,25 @@ public class GenerateOCRDataAction extends RestrictedAction{
         return numTransitions;
     }
 
-    private String getRandomAlphaString() {
+    private ArrayList<Character> getRandomAlphaCharList() {
         Random random = new Random();
-        StringBuilder result = new StringBuilder();
+        ArrayList<Character> result = new ArrayList<>();
         String alphaPool = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz";
 
         int numSymbols = random.nextInt(3) + 1;
 
         for (int i = 0; i < numSymbols; i++) {
             int index = random.nextInt(alphaPool.length());
-            result.append(alphaPool.charAt(index));
+            result.add(alphaPool.charAt(index));
         }
 
-        return result.toString();
+        return result;
     }
 
     private layoutProcess chooseLayoutProcess(int numStatesForThisExample, int numTransitions) {
-        // first see if we should just use GEM if we have a high number of states/transitions
-        if (numStatesForThisExample > 4 || numTransitions > 8) {
-            return layoutProcess.THE_RANDOM_ALGORITHM_THEN_GEM;
-        }
-
-        // otherwise pick between doing the random algorithm, the random algorithm then
-        // doing GEM, or randomly picking from the other algorithms
         double chance = Math.random();
 
-        if (chance < 0.4) {
-            return layoutProcess.THE_RANDOM_ALGORITHM;
-        } else if (chance < 0.8) {
+        if (chance < 0.8) {
             return layoutProcess.THE_RANDOM_ALGORITHM_THEN_GEM;
         } else if (chance < 0.87 ) {
             return layoutProcess.CIRCLE;
