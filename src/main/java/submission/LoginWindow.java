@@ -244,14 +244,17 @@ public class LoginWindow extends JDialog {
             protected void done() {
                 try {
                     LoginResult result = get();
+                    // Respect opt-out immediately, even on failed login attempts.
+                    if (!rememberMeCheckBox.isSelected()) {
+                        sessionHandler.clearSavedCredentials();
+                    }
+
                     if (result.status == LoginResult.LoginStatus.SUCCESS) {
                         setResultText(result.message, true);
 
                         // Handle Remember Me
                         if (rememberMeCheckBox.isSelected()) {
                             sessionHandler.saveCredentials(server, port, email, password);
-                        } else {
-                            sessionHandler.clearSavedCredentials();
                         }
 
                         dispose();
