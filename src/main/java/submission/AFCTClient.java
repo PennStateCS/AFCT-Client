@@ -314,6 +314,43 @@ public class AFCTClient {
         return lastAssignmentsServerTime;
     }
 
+    /**
+     * The caller's entire course tree in one call: every visible course, each with its
+     * assignments, each assignment with its problems. Lets the UI load once and filter
+     * locally instead of fetching per course. Returns the raw wrapper
+     * { serverTime, courses: [ { ..., assignments: [ { ..., problems: [...] } ] } ] };
+     * also caches the server clock for "is this upcoming" checks.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> getTree() throws IOException {
+        ensureAuth();
+        URL url = new URL(baseUrl + API_PREFIX + "/tree");
+        HttpURLConnection conn = openGet(url);
+        int status = conn.getResponseCode();
+        String body = readBody(conn);
+
+        if (status == 401) {
+            throw handleUnauthorized("GET " + API_PREFIX + "/tree");
+        }
+        if (status != 200) {
+            throw httpError("GET " + API_PREFIX + "/tree", status, body);
+        }
+
+        Map<String, Object> wrapper = parseJson(body, Map.class);
+        if (wrapper == null) wrapper = new java.util.HashMap<>();
+
+        // Cache the server's clock so "upcoming" checks don't trust the local machine.
+        Object serverTimeStr = wrapper.get("serverTime");
+        if (serverTimeStr != null) {
+            try {
+                this.lastAssignmentsServerTime = Instant.parse(String.valueOf(serverTimeStr));
+            } catch (Exception e) {
+                this.lastAssignmentsServerTime = null;
+            }
+        }
+        return wrapper;
+    }
+
     // ================================================================
     // Problems
     // ================================================================

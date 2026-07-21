@@ -72,6 +72,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // Submission history (for the selected problem)
     private javax.swing.table.DefaultTableModel submissionHistoryModel;
     private JTable submissionHistoryTable;
+    private final HistoryCellRenderer historyCellRenderer = new HistoryCellRenderer();
+    private JScrollPane historyScrollPane; // hidden while there are no submissions
     private JLabel submissionHistoryStatus; // "No submissions", "Loading…", or an error
     private java.util.concurrent.atomic.AtomicInteger historyRequestSeq =
             new java.util.concurrent.atomic.AtomicInteger();
@@ -98,7 +100,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     // Refresh cooldown
     private long lastRefreshMs = 0;
-    private static final int REFRESH_COOLDOWN_MS = 30_000;
+    private static final int REFRESH_COOLDOWN_MS = 10_000;
     private Timer refreshCooldownTimer;
 
     // Applies the large default window size once, on the first show (see applyDefaultSize).
@@ -129,8 +131,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private final java.util.Set<String> restoreExpandedAssignmentIds = new java.util.HashSet<>();
     private boolean restoreInProgress = false;
 
+    // The whole course tree, fetched once (GET /api/client/v1/tree) and cached so the tree
+    // builds and re-filters locally without more network calls. The lazy expanders read
+    // their children from these maps; a filter toggle rebuilds the tree from them instantly.
+    private java.util.List<Map<String, Object>> treeCourseList = new java.util.ArrayList<>();
+    private final Map<String, List<Map<String, Object>>> treeAssignmentsByCourse = new java.util.HashMap<>();
+    private final Map<String, List<Map<String, Object>>> treeProblemsByAssignment = new java.util.HashMap<>();
+
     public SubmitWindow(Environment environment) {
-        super("AFCT Submission");
+        super("AFCT Submission Center");
         this.environment = environment;
 
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -172,7 +181,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         JPanel header = new JPanel(new BorderLayout(10, 10));
         header.setOpaque(false);
 
-        JLabel title = new JLabel("AFCT Submission");
+        JLabel title = new JLabel("AFCT Submission Center");
         Globals.boldFontAndChangeSize(title, 18);
         title.setForeground(TEXT_DARK);
 
@@ -217,8 +226,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     }
 
     private JComponent buildTreePanel() {
-        JPanel left = new JPanel(new BorderLayout(10, 10));
-        left.setBackground(CARD_BG);
+        JPanel left = new CardPanel(new BorderLayout(10, 10));
         left.setBorder(cardBorder());
 
         // Filter panel at top
@@ -343,8 +351,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         // ============================================================
         // Panel 1: Selected Assignment
         // ============================================================
-        JPanel assignmentPanel = new JPanel(new GridBagLayout());
-        assignmentPanel.setBackground(CARD_BG);
+        JPanel assignmentPanel = new CardPanel(new GridBagLayout());
         assignmentPanel.setBorder(cardBorder());
 
         GridBagConstraints c1 = new GridBagConstraints();
@@ -390,8 +397,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         // ============================================================
         // Panel 2: Selected Problem
         // ============================================================
-        JPanel problemPanel = new JPanel(new GridBagLayout());
-        problemPanel.setBackground(CARD_BG);
+        JPanel problemPanel = new CardPanel(new GridBagLayout());
         problemPanel.setBorder(cardBorder());
 
         GridBagConstraints c2 = new GridBagConstraints();
@@ -435,12 +441,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         // ============================================================
         // Panel 2.5: Submission History (for the selected problem)
         // ============================================================
-        JPanel historyPanel = new JPanel(new BorderLayout(0, 4));
-        historyPanel.setBackground(CARD_BG);
+        JPanel historyPanel = new CardPanel(new BorderLayout(0, 4));
         // Same inner margin as the assignment/problem panels (which inset their content 8,10,8,10).
-        historyPanel.setBorder(BorderFactory.createCompoundBorder(
-            cardBorder(),
-            BorderFactory.createEmptyBorder(8, 10, 8, 10)));
+        historyPanel.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
 
         submissionHistoryModel = new javax.swing.table.DefaultTableModel(
                 new Object[]{"Submitted", "File", "Status", "Result", "Feedback"}, 0) {
@@ -460,7 +463,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         submissionHistoryTable.setShowVerticalLines(true);
         submissionHistoryTable.setShowHorizontalLines(true);
         submissionHistoryTable.setIntercellSpacing(new Dimension(1, 1));
-        submissionHistoryTable.setDefaultRenderer(Object.class, new HistoryCellRenderer());
+        submissionHistoryTable.setDefaultRenderer(Object.class, historyCellRenderer);
         applyHistoryColumnWidths();
         JTableHeader historyHeader = submissionHistoryTable.getTableHeader();
         historyHeader.setFont(historyHeader.getFont().deriveFont(Font.BOLD, 11f));
@@ -482,13 +485,17 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         });
 
         submissionHistoryStatus = new JLabel("Select a problem to view its submission history.");
-        submissionHistoryStatus.setBorder(BorderFactory.createEmptyBorder(0, 0, 4, 0));
-        submissionHistoryStatus.setForeground(TEXT_MUTED);
+        // Indent/space to line up with the placeholder text in the cards above.
+        submissionHistoryStatus.setBorder(BorderFactory.createEmptyBorder(12, 8, 4, 0));
+        // Match the italic gray placeholder text used in the assignment/problem cards.
+        submissionHistoryStatus.setForeground(new Color(0x88, 0x88, 0x88));
+        submissionHistoryStatus.setFont(submissionHistoryStatus.getFont().deriveFont(Font.ITALIC, 14f));
 
-        JScrollPane historyScroll = new JScrollPane(submissionHistoryTable);
-        historyScroll.setPreferredSize(new Dimension(280, 120));
-        historyScroll.setBorder(BorderFactory.createLineBorder(CARD_BORDER));
-        historyScroll.getViewport().setBackground(CARD_BG);
+        historyScrollPane = new JScrollPane(submissionHistoryTable);
+        historyScrollPane.setPreferredSize(new Dimension(280, 120));
+        historyScrollPane.setBorder(BorderFactory.createLineBorder(CARD_BORDER));
+        historyScrollPane.getViewport().setBackground(CARD_BG);
+        historyScrollPane.setVisible(false); // shown once there are submissions
 
         JPanel historyNorth = new JPanel(new BorderLayout(0, 4));
         historyNorth.setOpaque(false);
@@ -496,7 +503,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         historyNorth.add(submissionHistoryStatus, BorderLayout.CENTER);
 
         historyPanel.add(historyNorth, BorderLayout.NORTH);
-        historyPanel.add(historyScroll, BorderLayout.CENTER);
+        historyPanel.add(historyScrollPane, BorderLayout.CENTER);
 
         // History takes the leftover vertical space so its table can grow.
         containerConstraints.gridy = 2;
@@ -506,8 +513,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         // ============================================================
         // Panel 3: Submission (Current File + Submit Button)
         // ============================================================
-        JPanel submissionPanel = new JPanel(new GridBagLayout());
-        submissionPanel.setBackground(CARD_BG);
+        JPanel submissionPanel = new CardPanel(new GridBagLayout());
         submissionPanel.setBorder(cardBorder());
 
         GridBagConstraints c3 = new GridBagConstraints();
@@ -542,13 +548,13 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         useOpenFileBtn = new JButton("Use open file");
         useOpenFileBtn.setToolTipText("Submit the file currently open in the editor");
-        styleSecondaryButton(useOpenFileBtn);
+        styleTintedButton(useOpenFileBtn);
         Globals.setPointerCursor(useOpenFileBtn);
         useOpenFileBtn.addActionListener(e -> useOpenFile());
 
         browseBtn = new JButton("Browse…");
         browseBtn.setToolTipText("Choose a different file to submit");
-        styleSecondaryButton(browseBtn);
+        styleTintedButton(browseBtn);
         Globals.setPointerCursor(browseBtn);
         browseBtn.addActionListener(e -> browseForFile());
 
@@ -616,9 +622,30 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     /** Subtle rounded-look card border with inner padding, matching the mockup cards. */
     private javax.swing.border.Border cardBorder() {
-        return BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(CARD_BORDER, 1),
-                BorderFactory.createEmptyBorder(4, 4, 4, 4));
+        return BorderFactory.createEmptyBorder(5, 5, 5, 5);
+    }
+
+    /** White card with rounded corners and a subtle outline, painted manually. */
+    private static class CardPanel extends JPanel {
+        private static final int ARC = 14;
+
+        CardPanel(LayoutManager lm) {
+            super(lm);
+            setOpaque(false); // we paint the rounded background ourselves
+            setBackground(CARD_BG);
+        }
+
+        @Override
+        protected void paintComponent(Graphics g) {
+            Graphics2D g2 = (Graphics2D) g.create();
+            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+            g2.setColor(getBackground());
+            g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, ARC, ARC);
+            g2.setColor(CARD_BORDER);
+            g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, ARC, ARC);
+            g2.dispose();
+            super.paintComponent(g);
+        }
     }
 
     /** Small all-caps blue section heading, like "SELECTED ASSIGNMENT" in the mockup. */
@@ -639,13 +666,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         b.setFont(b.getFont().deriveFont(Font.BOLD));
     }
 
-    /** Neutral white button with a subtle outline. */
-    private void styleSecondaryButton(JButton b) {
-        b.setBackground(Color.WHITE);
-        b.setForeground(TEXT_DARK);
+    /** Light-blue tinted button that complements the solid primary blue. */
+    private void styleTintedButton(JButton b) {
+        b.setBackground(SELECTION_BG);
+        b.setForeground(ACCENT);
         b.setFocusPainted(false);
+        b.setOpaque(true);
+        b.setFont(b.getFont().deriveFont(Font.BOLD));
         b.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(CARD_BORDER),
+                BorderFactory.createLineBorder(new Color(0xC7, 0xD7, 0xFB)),
                 BorderFactory.createEmptyBorder(5, 12, 5, 12)));
     }
 
@@ -680,6 +709,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         private Color pillFg;
         // Wrapping renderer for the Feedback column so long messages fit.
         private final JTextArea wrapArea = new JTextArea();
+        // Last measured height per cell (row -> column -> px), so a row can shrink
+        // back down after columns settle at their real widths.
+        private final java.util.Map<Integer, java.util.Map<Integer, Integer>> cellHeights =
+                new java.util.HashMap<>();
+
+        void clearHeights() {
+            cellHeights.clear();
+        }
 
         HistoryCellRenderer() {
             wrapArea.setLineWrap(true);
@@ -705,13 +742,21 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     wrapArea.setBackground(CARD_BG);
                     wrapArea.setForeground(TEXT_DARK);
                 }
-                // Size to the column width, then grow the row to fit the wrapped text.
-                // Grow-only, so the tallest cell in the row wins.
+                // Size to the column width, then fit the row to the tallest cell.
+                // Cells re-measure whenever they repaint, so rows shrink back after
+                // the columns settle at their real widths.
                 int colWidth = table.getColumnModel().getColumn(column).getWidth();
                 wrapArea.setSize(Math.max(1, colWidth), Short.MAX_VALUE);
                 int needed = Math.max(28, wrapArea.getPreferredSize().height);
-                if (needed > table.getRowHeight(row)) {
-                    table.setRowHeight(row, needed);
+                java.util.Map<Integer, Integer> rowMap =
+                        cellHeights.computeIfAbsent(row, k -> new java.util.HashMap<>());
+                rowMap.put(column, needed);
+                int desired = 28;
+                for (int h : rowMap.values()) {
+                    desired = Math.max(desired, h);
+                }
+                if (table.getRowHeight(row) != desired) {
+                    table.setRowHeight(row, desired);
                 }
                 return wrapArea;
             }
@@ -837,10 +882,12 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         submitBtn.addActionListener(e -> attemptSubmit());
 
         // Filter change listeners
-        allAssignmentsRadio.addActionListener(e -> reloadAssignmentsForSelectedCourse());
-        upcomingAssignmentsRadio.addActionListener(e -> reloadAssignmentsForSelectedCourse());
-        allProblemsRadio.addActionListener(e -> reloadProblemsForSelectedAssignment());
-        unsolvedProblemsRadio.addActionListener(e -> reloadProblemsForSelectedAssignment());
+        // Filters apply to the whole tree: rebuild it from the cached data (no network),
+        // preserving what is expanded/selected.
+        allAssignmentsRadio.addActionListener(e -> reapplyFiltersFromCache());
+        upcomingAssignmentsRadio.addActionListener(e -> reapplyFiltersFromCache());
+        allProblemsRadio.addActionListener(e -> reapplyFiltersFromCache());
+        unsolvedProblemsRadio.addActionListener(e -> reapplyFiltersFromCache());
 
         // Lazy load on expand (best UX)
         selectionTree.addTreeWillExpandListener(new TreeWillExpandListener() {
@@ -1168,13 +1215,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         final int seq = historyRequestSeq.incrementAndGet();
         submissionHistoryModel.setRowCount(0);
         submissionHistoryTable.setRowHeight(28); // reset per-row heights from wrapped text
+        historyCellRenderer.clearHeights();
+        setHistoryTableVisible(false);
 
         if (problem == null || selectedAssignment == null) {
-            submissionHistoryStatus.setText("Select a problem to view its submission history.");
+            setHistoryStatus("Select a problem to view its submission history.", false);
             return;
         }
 
-        submissionHistoryStatus.setText("Loading submission history…");
+        setHistoryStatus("Loading submission history…", false);
         final String assignmentId = selectedAssignment.id;
         final String problemId = problem.id;
 
@@ -1192,12 +1241,12 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 try {
                     List<Map<String, Object>> subs = get();
                     if (subs == null) {
-                        submissionHistoryStatus.setText("Sign in to view submission history.");
+                        setHistoryStatus("Sign in to view submission history.", false);
                         return;
                     }
                     populateSubmissionHistory(subs);
                 } catch (Exception ex) {
-                    submissionHistoryStatus.setText("Could not load submission history.");
+                    setHistoryStatus("Could not load submission history.", false);
                 }
             }
         }.execute();
@@ -1209,13 +1258,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         boolean group = selectedAssignment != null && selectedAssignment.isGroup;
         submissionHistoryModel.setRowCount(0);
         submissionHistoryTable.setRowHeight(28); // reset per-row heights from wrapped text
+        historyCellRenderer.clearHeights();
         submissionHistoryModel.setColumnIdentifiers(group
                 ? new Object[]{"Submitted", "Group Member", "File", "Status", "Result", "Feedback"}
                 : new Object[]{"Submitted", "File", "Status", "Result", "Feedback"});
         applyHistoryColumnWidths(); // columns are rebuilt above, so re-apply widths
 
         if (subs.isEmpty()) {
-            submissionHistoryStatus.setText("No submissions yet.");
+            setHistoryStatus("No submissions yet.", false);
+            setHistoryTableVisible(false);
             autoSizeSubmissionHistoryColumns();
             return;
         }
@@ -1249,8 +1300,35 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             }
         }
         int n = subs.size();
-        submissionHistoryStatus.setText(n + (n == 1 ? " submission" : " submissions"));
+        setHistoryStatus(n + (n == 1 ? " submission" : " submissions"), true);
+        setHistoryTableVisible(true);
         autoSizeSubmissionHistoryColumns();
+    }
+
+    /** Shows the history table only when there are submissions to display. */
+    private void setHistoryTableVisible(boolean visible) {
+        if (historyScrollPane != null && historyScrollPane.isVisible() != visible) {
+            historyScrollPane.setVisible(visible);
+            if (historyScrollPane.getParent() != null) {
+                historyScrollPane.getParent().revalidate();
+                historyScrollPane.getParent().repaint();
+            }
+        }
+    }
+
+    /**
+     * Sets the history status line. Placeholder/info messages use the italic gray
+     * style of the other cards' placeholders; the submission count is dark text.
+     */
+    private void setHistoryStatus(String text, boolean emphasize) {
+        submissionHistoryStatus.setText(text);
+        if (emphasize) {
+            submissionHistoryStatus.setForeground(TEXT_DARK);
+            submissionHistoryStatus.setFont(submissionHistoryStatus.getFont().deriveFont(Font.PLAIN, 14f));
+        } else {
+            submissionHistoryStatus.setForeground(new Color(0x88, 0x88, 0x88));
+            submissionHistoryStatus.setFont(submissionHistoryStatus.getFont().deriveFont(Font.ITALIC, 14f));
+        }
     }
 
     /**
@@ -1432,27 +1510,25 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // Data loading
     // ============================================================
 
+    /** Fetches the whole course tree once, caches it, and (re)builds the tree from it. */
     private void loadCourses() {
         if (loading) return;
 
         setBusy(true, "Loading courses…");
-        clearTree();
-        clearSelectionState();
 
-        new SwingWorker<List<Map<String, Object>>, Void>() {
+        new SwingWorker<Map<String, Object>, Void>() {
             private String err;
 
             @Override
-            protected List<Map<String, Object>> doInBackground() {
+            protected Map<String, Object> doInBackground() {
                 try {
                     AFCTClient client = Globals.sessionHandler.requireAuthenticated();
                     if (client == null) {
                         err = "Login cancelled.";
                         return null;
                     }
-
-                    // The client API derives the user from the bearer token
-                    return client.getCourses();
+                    // One call returns every course with its assignments and problems.
+                    return client.getTree();
                 } catch (Exception ex) {
                     err = ErrorMessages.userMessage(ex, "Unable to load courses.");
                     return null;
@@ -1468,42 +1544,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         return;
                     }
 
-                    List<Map<String, Object>> raw = get();
-                    if (raw == null) {
+                    Map<String, Object> wrapper = get();
+                    if (wrapper == null) {
                         clearRestore();
                         setStatus(false, "Unable to load courses.");
                         return;
                     }
 
-                    for (Map<String, Object> c : raw) {
-                        String id = String.valueOf(c.get("id"));
-                        String title = String.valueOf(c.getOrDefault("name", "Untitled Course"));
-                        Object tz = c.get("timezone");
-                        String timezone = (tz != null && !"null".equals(String.valueOf(tz))) ? String.valueOf(tz) : null;
-
-                        CourseItem course = new CourseItem(id, title, timezone);
-                        DefaultMutableTreeNode courseNode = new DefaultMutableTreeNode(course);
-
-                        // Add a placeholder child so it shows an expand handle
-                        courseNode.add(new DefaultMutableTreeNode(new Placeholder("Expand to load assignments…")));
-                        rootNode.add(courseNode);
-                    }
-
-                    treeModel.reload();
-
-                    if (rootNode.getChildCount() == 0) {
-                        setStatus(false, "No courses found.");
-                        clearRestore();
-                    } else {
-                        setStatus(true, "Courses loaded. Expand a course to view assignments.");
-                        // Return the tree to its pre-Refresh expanded/selected state, if any.
-                        // Deferred so the `loading` flag has been cleared before we expand
-                        // (the lazy loaders skip while loading is true).
-                        if (restoreInProgress) {
-                            SwingUtilities.invokeLater(SubmitWindow.this::pumpRestore);
-                        }
-                    }
-
+                    cacheTree(wrapper);
+                    buildTreeFromCache();
                 } catch (Exception ex) {
                     setStatus(false, ErrorMessages.userMessage(ex, "Unable to load courses."));
                 } finally {
@@ -1512,6 +1561,78 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 }
             }
         }.execute();
+    }
+
+    /** Indexes the fetched tree ({ courses: [{ assignments: [{ problems: [] }] }] }) into
+     *  the per-course / per-assignment caches the lazy expanders and filters read from. */
+    @SuppressWarnings("unchecked")
+    private void cacheTree(Map<String, Object> wrapper) {
+        treeCourseList = new java.util.ArrayList<>();
+        treeAssignmentsByCourse.clear();
+        treeProblemsByAssignment.clear();
+
+        Object coursesObj = wrapper.get("courses");
+        List<Map<String, Object>> courses =
+                (coursesObj instanceof List) ? (List<Map<String, Object>>) coursesObj : new java.util.ArrayList<>();
+        for (Map<String, Object> c : courses) {
+            treeCourseList.add(c);
+            String courseId = String.valueOf(c.get("id"));
+            Object aObj = c.get("assignments");
+            List<Map<String, Object>> assignments =
+                    (aObj instanceof List) ? (List<Map<String, Object>>) aObj : new java.util.ArrayList<>();
+            treeAssignmentsByCourse.put(courseId, assignments);
+            for (Map<String, Object> a : assignments) {
+                String aid = String.valueOf(a.get("id"));
+                Object pObj = a.get("problems");
+                List<Map<String, Object>> problems =
+                        (pObj instanceof List) ? (List<Map<String, Object>>) pObj : new java.util.ArrayList<>();
+                treeProblemsByAssignment.put(aid, problems);
+            }
+        }
+    }
+
+    /** Rebuilds the course nodes from the cached tree (collapsed, with lazy expand handles),
+     *  then restores the pre-existing expanded/selected state. No network. */
+    private void buildTreeFromCache() {
+        clearTree();
+        clearSelectionState();
+
+        for (Map<String, Object> c : treeCourseList) {
+            String id = String.valueOf(c.get("id"));
+            String title = String.valueOf(c.getOrDefault("name", "Untitled Course"));
+            Object tz = c.get("timezone");
+            String timezone = (tz != null && !"null".equals(String.valueOf(tz))) ? String.valueOf(tz) : null;
+
+            CourseItem course = new CourseItem(id, title, timezone);
+            DefaultMutableTreeNode courseNode = new DefaultMutableTreeNode(course);
+            // Placeholder so the node shows an expand handle; children build from cache on expand.
+            courseNode.add(new DefaultMutableTreeNode(new Placeholder("Expand to load assignments…")));
+            rootNode.add(courseNode);
+        }
+
+        treeModel.reload();
+
+        if (rootNode.getChildCount() == 0) {
+            setStatus(false, "No courses found.");
+            clearRestore();
+        } else {
+            setStatus(true, "Courses loaded. Expand a course to view assignments.");
+            if (restoreInProgress) {
+                SwingUtilities.invokeLater(this::pumpRestore);
+            }
+        }
+    }
+
+    /** Re-applies the current filters by rebuilding the tree from the cache (no re-fetch),
+     *  preserving the expanded branches and selection. */
+    private void reapplyFiltersFromCache() {
+        if (loading || treeCourseList.isEmpty()) return;
+        restoreCourseId = selectedCourse != null ? selectedCourse.id : null;
+        restoreAssignmentId = selectedAssignment != null ? selectedAssignment.id : null;
+        restoreProblemId = selectedProblem != null ? selectedProblem.id : null;
+        captureExpansionState();
+        restoreInProgress = !restoreExpandedCourseIds.isEmpty() || restoreCourseId != null;
+        buildTreeFromCache();
     }
 
     private void loadAssignmentsIntoNode(CourseItem course, DefaultMutableTreeNode courseNode) {
@@ -1541,9 +1662,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         err = "Login cancelled.";
                         return null;
                     }
-                    List<Map<String, Object>> result = client.getAssignments(course.id);
+                    // Served from the cached tree (fetched once); the server clock came with it.
                     serverNow = client.getLastAssignmentsServerTime();
-                    return result;
+                    return new java.util.ArrayList<>(
+                            treeAssignmentsByCourse.getOrDefault(course.id, java.util.Collections.emptyList()));
                 } catch (Exception ex) {
                     err = ErrorMessages.userMessage(ex, "Unable to load assignments.");
                     return null;
@@ -1688,7 +1810,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         err = "Login cancelled.";
                         return null;
                     }
-                    return client.getProblems(assignment.id);
+                    // Served from the cached tree (fetched once), not a network call.
+                    return new java.util.ArrayList<>(
+                            treeProblemsByAssignment.getOrDefault(assignment.id, java.util.Collections.emptyList()));
                 } catch (Exception ex) {
                     err = ErrorMessages.userMessage(ex, "Unable to load problems.");
                     return null;
@@ -1804,104 +1928,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         return false;
     }
 
-    // ============================================================
-    // Filter reload helpers
-    // ============================================================
-
-    private void reloadAssignmentsForSelectedCourse() {
-        // Find the currently selected or expanded course node
-        TreePath selectedPath = selectionTree.getSelectionPath();
-        DefaultMutableTreeNode selectedNode = nodeFromPath(selectedPath);
-
-        // Try to find a course node from the selection
-        DefaultMutableTreeNode courseNode = null;
-        CourseItem course = null;
-
-        if (selectedNode != null) {
-            Object uo = selectedNode.getUserObject();
-            if (uo instanceof CourseItem) {
-                courseNode = selectedNode;
-                course = (CourseItem) uo;
-            } else if (uo instanceof AssignmentItem) {
-                courseNode = (DefaultMutableTreeNode) selectedNode.getParent();
-                if (courseNode != null && courseNode.getUserObject() instanceof CourseItem) {
-                    course = (CourseItem) courseNode.getUserObject();
-                }
-            } else if (uo instanceof ProblemItem) {
-                DefaultMutableTreeNode assignmentNode = (DefaultMutableTreeNode) selectedNode.getParent();
-                if (assignmentNode != null) {
-                    courseNode = (DefaultMutableTreeNode) assignmentNode.getParent();
-                    if (courseNode != null && courseNode.getUserObject() instanceof CourseItem) {
-                        course = (CourseItem) courseNode.getUserObject();
-                    }
-                }
-            }
-        }
-
-        // If no course found, try to find any expanded course
-        if (course == null) {
-            for (int i = 0; i < rootNode.getChildCount(); i++) {
-                DefaultMutableTreeNode node = (DefaultMutableTreeNode) rootNode.getChildAt(i);
-                if (selectionTree.isExpanded(new TreePath(node.getPath()))) {
-                    if (node.getUserObject() instanceof CourseItem) {
-                        courseNode = node;
-                        course = (CourseItem) node.getUserObject();
-                        break;
-                    }
-                }
-            }
-        }
-
-        // Reload if we found a course
-        if (course != null && courseNode != null) {
-            loadAssignmentsIntoNode(course, courseNode, true);
-        }
-    }
-
-    private void reloadProblemsForSelectedAssignment() {
-        // Find the currently selected or expanded assignment node
-        TreePath selectedPath = selectionTree.getSelectionPath();
-        DefaultMutableTreeNode selectedNode = nodeFromPath(selectedPath);
-
-        DefaultMutableTreeNode assignmentNode = null;
-        AssignmentItem assignment = null;
-
-        if (selectedNode != null) {
-            Object uo = selectedNode.getUserObject();
-            if (uo instanceof AssignmentItem) {
-                assignmentNode = selectedNode;
-                assignment = (AssignmentItem) uo;
-            } else if (uo instanceof ProblemItem) {
-                assignmentNode = (DefaultMutableTreeNode) selectedNode.getParent();
-                if (assignmentNode != null && assignmentNode.getUserObject() instanceof AssignmentItem) {
-                    assignment = (AssignmentItem) assignmentNode.getUserObject();
-                }
-            }
-        }
-
-        // If no assignment found, try to find any expanded assignment
-        if (assignment == null) {
-            for (int i = 0; i < rootNode.getChildCount(); i++) {
-                DefaultMutableTreeNode courseNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
-                for (int j = 0; j < courseNode.getChildCount(); j++) {
-                    DefaultMutableTreeNode node = (DefaultMutableTreeNode) courseNode.getChildAt(j);
-                    if (selectionTree.isExpanded(new TreePath(node.getPath()))) {
-                        if (node.getUserObject() instanceof AssignmentItem) {
-                            assignmentNode = node;
-                            assignment = (AssignmentItem) node.getUserObject();
-                            break;
-                        }
-                    }
-                }
-                if (assignment != null) break;
-            }
-        }
-
-        // Reload if we found an assignment
-        if (assignment != null && assignmentNode != null) {
-            loadProblemsIntoNode(assignment, assignmentNode, true);
-        }
-    }
 
     // ============================================================
     // File selection
@@ -2165,10 +2191,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // ============================================================
 
     private void startRefreshCooldown() {
+        final int cooldownSecs = REFRESH_COOLDOWN_MS / 1000;
         refreshBtn.setEnabled(false);
-        refreshBtn.setText("Refresh (30s)");
+        refreshBtn.setText("Refresh (" + cooldownSecs + "s)");
         if (refreshCooldownTimer != null) refreshCooldownTimer.stop();
-        final int[] remaining = {30};
+        final int[] remaining = {cooldownSecs};
         refreshCooldownTimer = new Timer(1000, null);
         refreshCooldownTimer.addActionListener(e -> {
             remaining[0]--;
