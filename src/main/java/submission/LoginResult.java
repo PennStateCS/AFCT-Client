@@ -24,6 +24,7 @@ public class LoginResult {
     }
 
     public static LoginResult getErrorResult(String message) {
-        return new LoginResult(LoginStatus.ERROR, "Authentication Error: " + message);
+        String safe = ErrorMessages.userMessage(message, "An unexpected error occurred.");
+        return new LoginResult(LoginStatus.ERROR, "Authentication Error: " + safe);
     }
 }
