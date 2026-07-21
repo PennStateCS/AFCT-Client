@@ -614,9 +614,20 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         + escapeHtml(problem.description) + "</p>";
             }
 
-            // Metadata line: type · points · grade
+            // Metadata line: full type name, then the intrinsic FA/PDA constraints when
+            // they apply, then points and grade.
             StringBuilder meta = new StringBuilder();
-            if (problem.type != null) meta.append("Type: ").append(escapeHtml(problem.type));
+            String typeName = problem.typeFullName();
+            if (typeName != null) meta.append("Type: ").append(escapeHtml(typeName));
+            // A non-positive cap (e.g. -1) means "no limit", so only show a real cap.
+            if (problem.maxStates != null && problem.maxStates > 0) {
+                if (meta.length() > 0) meta.append(" &nbsp;·&nbsp; ");
+                meta.append("Max states: ").append(problem.maxStates);
+            }
+            if (problem.isDeterministic != null) {
+                if (meta.length() > 0) meta.append(" &nbsp;·&nbsp; ");
+                meta.append("Deterministic: ").append(problem.isDeterministic ? "Yes" : "No");
+            }
             if (problem.maxPoints >= 0) {
                 if (meta.length() > 0) meta.append(" &nbsp;·&nbsp; ");
                 meta.append("Points: ").append(problem.maxPoints);
@@ -1041,10 +1052,17 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             String type = (typeObj != null && !"null".equals(String.valueOf(typeObj)))
                                 ? String.valueOf(typeObj) : null;
 
+                            // Intrinsic FA/PDA constraints, null when not set for this problem.
+                            Object msObj = p.get("maxStates");
+                            Integer maxStates = (msObj instanceof Number) ? ((Number) msObj).intValue() : null;
+                            Object detObj = p.get("isDeterministic");
+                            Boolean isDeterministic = (detObj instanceof Boolean) ? (Boolean) detObj : null;
+
                             // Create problem item with original title (checkmark added in toString)
                             ProblemItem problem = new ProblemItem(id, title, description, solved,
                                     type, asInt(p.get("maxPoints")), asInt(p.get("maxSubmissions")),
-                                    asInt(p.get("submissionCount")), asInt(p.get("grade")));
+                                    asInt(p.get("submissionCount")), asInt(p.get("grade")),
+                                    maxStates, isDeterministic);
                             assignmentNode.add(new DefaultMutableTreeNode(problem));
                         }
 

@@ -17,8 +17,14 @@ public final class ProblemItem {
     public final int grade;            // -1 until graded
     public int submissionCount;        // mutable: bumped locally after a successful submit
 
+    /** FA/PDA state cap, or null when the problem sets no cap. */
+    public final Integer maxStates;
+    /** FA determinism requirement, or null when it does not apply. */
+    public final Boolean isDeterministic;
+
     public ProblemItem(String id, String name, String description, boolean solved,
-                       String type, int maxPoints, int maxSubmissions, int submissionCount, int grade) {
+                       String type, int maxPoints, int maxSubmissions, int submissionCount, int grade,
+                       Integer maxStates, Boolean isDeterministic) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -28,6 +34,21 @@ public final class ProblemItem {
         this.maxSubmissions = maxSubmissions;
         this.submissionCount = submissionCount;
         this.grade = grade;
+        this.maxStates = maxStates;
+        this.isDeterministic = isDeterministic;
+    }
+
+    /** The problem type's full display name, e.g. "Finite Automaton" for "FA". */
+    public String typeFullName() {
+        if (type == null) return null;
+        switch (type) {
+            case "FA":  return "Finite Automaton";
+            case "PDA": return "Pushdown Automaton";
+            case "CFG": return "Context-Free Grammar";
+            case "RE":  return "Regular Expression";
+            case "TM":  return "Turing Machine";
+            default:    return type;
+        }
     }
 
     /** Attempts remaining, or -1 if unlimited/unknown. */
