@@ -9,6 +9,12 @@ import static gui.Globals.*;
 
 public class LoginWindow extends JDialog {
 
+    // Palette shared with the Submission Center styling (cosmetic only)
+    private static final Color CARD_BG     = Color.WHITE;
+    private static final Color CARD_BORDER = new Color(0xE2, 0xE5, 0xEA);
+    private static final Color ACCENT      = new Color(0x42, 0x63, 0xEB);
+    private static final Color TEXT_DARK   = new Color(0x1F, 0x29, 0x37);
+
     private final SessionHandler sessionHandler;
 
     private final JTextField serverTF = new JTextField("https://10.144.18.20");
@@ -61,8 +67,28 @@ public class LoginWindow extends JDialog {
     // ============================================================
 
     private void buildUI() {
-        JPanel panel = new JPanel(new GridBagLayout());
+        JPanel panel = new JPanel(new GridBagLayout()) {
+            @Override
+            protected void paintComponent(Graphics g) {
+                // White rounded card, matching the Submission Center cards.
+                Graphics2D g2 = (Graphics2D) g.create();
+                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
+                g2.setColor(CARD_BG);
+                g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
+                g2.setColor(CARD_BORDER);
+                g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, 14, 14);
+                g2.dispose();
+                super.paintComponent(g);
+            }
+        };
+        panel.setOpaque(false);
+        panel.setBackground(CARD_BG);
         panel.setBorder(BorderFactory.createEmptyBorder(18, 22, 18, 22));
+
+        // Card sits on the default LAF gray, like the Submission Center window.
+        JPanel outer = new JPanel(new BorderLayout());
+        outer.setBorder(BorderFactory.createEmptyBorder(14, 14, 14, 14));
+        outer.add(panel, BorderLayout.CENTER);
 
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0;
@@ -73,6 +99,7 @@ public class LoginWindow extends JDialog {
 
         JLabel header = new JLabel("AFCT Server Login");
         boldFontAndChangeSize(header, 20);
+        header.setForeground(TEXT_DARK);
         header.setHorizontalAlignment(SwingConstants.CENTER);
 
         c.insets = new Insets(0, 0, 14, 0);
@@ -96,10 +123,16 @@ public class LoginWindow extends JDialog {
         c.insets = new Insets(10, 0, 4, 0);
         panel.add(buildOptionsRow(), c);
 
-        // Login button
+        // Login button — solid blue primary, like the Submit button
         c.gridy++;
         c.insets = new Insets(12, 0, 8, 0);
         loginButton.setPreferredSize(new Dimension(360, 38));
+        loginButton.setBackground(ACCENT);
+        loginButton.setForeground(Color.WHITE);
+        loginButton.setFocusPainted(false);
+        loginButton.setOpaque(true);
+        loginButton.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        loginButton.setFont(loginButton.getFont().deriveFont(Font.BOLD));
         loginButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         panel.add(loginButton, c);
 
@@ -112,15 +145,19 @@ public class LoginWindow extends JDialog {
         resultPane.setEditable(false);
         resultPane.setFocusable(false);
         resultPane.setContentType("text/html");
-        resultPane.setBackground(panel.getBackground());
+        // Render the HTML status text with a smaller UI font.
+        resultPane.putClientProperty(JEditorPane.HONOR_DISPLAY_PROPERTIES, Boolean.TRUE);
+        resultPane.setFont(resultPane.getFont().deriveFont(11f));
+        resultPane.setBackground(CARD_BG);
         resultPane.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
         // Set preferred size for wrapping
         resultScrollPane.setPreferredSize(new Dimension(360, 80));
         resultScrollPane.setBorder(BorderFactory.createCompoundBorder(
-            BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
+            BorderFactory.createLineBorder(CARD_BORDER, 1),
             BorderFactory.createEmptyBorder(2, 2, 2, 2)
         ));
+        resultScrollPane.getViewport().setBackground(CARD_BG);
         resultScrollPane.setVerticalScrollBarPolicy(JScrollPane.VERTICAL_SCROLLBAR_AS_NEEDED);
         resultScrollPane.setHorizontalScrollBarPolicy(JScrollPane.HORIZONTAL_SCROLLBAR_NEVER);
 
@@ -131,6 +168,7 @@ public class LoginWindow extends JDialog {
         getRootPane().setDefaultButton(loginButton);
 
         showPasswordCheckBox.setFocusPainted(false);
+        showPasswordCheckBox.setOpaque(false);
         showPasswordCheckBox.addActionListener(e -> {
             if (showPasswordCheckBox.isSelected()) {
                 passwordTF.setEchoChar((char) 0);
@@ -140,9 +178,11 @@ public class LoginWindow extends JDialog {
         });
 
         validateSSLCheckBox.setFocusPainted(false);
+        validateSSLCheckBox.setOpaque(false);
         rememberMeCheckBox.setFocusPainted(false);
+        rememberMeCheckBox.setOpaque(false);
 
-        setContentPane(panel);
+        setContentPane(outer);
     }
 
     private JPanel buildOptionsRow() {
@@ -169,14 +209,16 @@ public class LoginWindow extends JDialog {
 
     private JPanel labeled(String label, JComponent comp) {
         JPanel p = new JPanel(new BorderLayout(0, 4));
+        p.setOpaque(false);
 
         JLabel l = new JLabel(label);
         boldFont(l);
+        l.setForeground(TEXT_DARK);
 
         if (comp instanceof JTextField tf) {
-            tf.setMargin(new Insets(6, 10, 6, 10));
-        } else if (comp instanceof JPasswordField pf) {
-            pf.setMargin(new Insets(6, 10, 6, 10));
+            tf.setBorder(BorderFactory.createCompoundBorder(
+                    BorderFactory.createLineBorder(CARD_BORDER),
+                    BorderFactory.createEmptyBorder(6, 10, 6, 10)));
         }
 
         p.add(l, BorderLayout.NORTH);
