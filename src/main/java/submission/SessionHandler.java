@@ -104,29 +104,10 @@ public class SessionHandler {
     }
 
     public void displayLoginThenSubmission(SubmitWindow submitWindowToShow) {
-        // Try to auto login asynchronously
-        new SwingWorker<Boolean, Void>() {
-            @Override
-            protected Boolean doInBackground() {
-                return autoReAuthenticate();
-            }
-
-            @Override
-            protected void done() {
-                try {
-                    boolean successful = get();
-                    if (!successful) {
-                        // Show login window (modal — blocks until user logs in or cancels)
-                        loginWindow.displayLoginWindow();
-                    }
-                    if (loggedIn) {
-                        submitWindowToShow.displaySubmitWindow();
-                    }
-                } catch (Exception e) {
-                    e.printStackTrace();
-                }
-            }
-        }.execute();
+        AFCTClient authenticated = requireAuthenticated();
+        if (authenticated != null && authenticated.isAuthenticated()) {
+            submitWindowToShow.displaySubmitWindow();
+        }
     }
 
     public void updateStartTime() {
@@ -147,15 +128,13 @@ public class SessionHandler {
         boolean needToReAuth = this.client == null || !this.client.isAuthenticated();
 
         if (needToReAuth) {
-            // Try to re-login automatically
-            boolean successful = autoReAuthenticate();
-
-            // If unsuccessful, display login window to user (modal)
-            if (!successful) {
-                loginWindow.displayLoginWindow();
-            }
+            // Remember Me now pre-fills the form only; user must explicitly log in.
+            loginWindow.displayLoginWindow();
         }
 
+        if (this.client == null || !this.client.isAuthenticated()) {
+            return null;
+        }
         return this.client;
     }
 
@@ -259,6 +238,15 @@ public class SessionHandler {
                 return null;
             }
         }.execute();
+
+        if (forceManualReLogin) {
+            Runnable showLogin = () -> loginWindow.displayLoginWindow();
+            if (SwingUtilities.isEventDispatchThread()) {
+                showLogin.run();
+            } else {
+                SwingUtilities.invokeLater(showLogin);
+            }
+        }
     }
 
     // ============================================================

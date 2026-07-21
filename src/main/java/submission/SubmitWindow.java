@@ -112,6 +112,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         addWindowListener(new WindowAdapter() {
             @Override
             public void windowClosed(WindowEvent e) {
+                closeSubmissionsDialog();
                 Universe.unregisterSubmitDialog(environment);
             }
         });
@@ -471,7 +472,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         infoBtn.addActionListener(e -> toggleSubmissionsDialog());
 
         logoutBtn.addActionListener(e -> {
-            Globals.sessionHandler.logout(false);
+            closeSubmissionsDialog();
+            Globals.sessionHandler.logout(true);
             dispose();
         });
 
@@ -1539,6 +1541,18 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     submissionsModel.addRow(new Object[]{ts.fileName, ts.problemName, ts.status, ts.elapsed()});
                 }
             }
+        }
+    }
+
+    private void closeSubmissionsDialog() {
+        if (submissionsTicker != null) {
+            submissionsTicker.stop();
+        }
+        if (submissionsDialog != null) {
+            submissionsDialog.setVisible(false);
+            submissionsDialog.dispose();
+            submissionsDialog = null;
+            submissionsModel = null;
         }
     }
 
