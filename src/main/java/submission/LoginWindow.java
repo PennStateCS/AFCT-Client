@@ -99,7 +99,7 @@ public class LoginWindow extends JDialog {
         // Login button
         c.gridy++;
         c.insets = new Insets(12, 0, 8, 0);
-        loginButton.setPreferredSize(new Dimension(320, 38));
+        loginButton.setPreferredSize(new Dimension(360, 38));
         loginButton.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
         panel.add(loginButton, c);
 
@@ -116,7 +116,7 @@ public class LoginWindow extends JDialog {
         resultPane.setBorder(BorderFactory.createEmptyBorder(6, 6, 6, 6));
 
         // Set preferred size for wrapping
-        resultScrollPane.setPreferredSize(new Dimension(320, 80));
+        resultScrollPane.setPreferredSize(new Dimension(360, 80));
         resultScrollPane.setBorder(BorderFactory.createCompoundBorder(
             BorderFactory.createLineBorder(new Color(200, 200, 200), 1),
             BorderFactory.createEmptyBorder(2, 2, 2, 2)

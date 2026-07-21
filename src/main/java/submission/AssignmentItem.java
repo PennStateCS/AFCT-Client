@@ -18,14 +18,16 @@ public final class AssignmentItem {
     public final boolean allowLateSubmissions;
     /** Raw UTC ISO-8601 late-submission cutoff, or null when there is no cutoff. */
     public final String lateCutoff;
+    /** Number of problems in this assignment (from the embedded problems list). */
+    public final int problemCount;
 
     public AssignmentItem(String id, String name, String description, String dueDate) {
-        this(id, name, description, dueDate, false, null, false, null);
+        this(id, name, description, dueDate, false, null, false, null, 0);
     }
 
     public AssignmentItem(String id, String name, String description, String dueDate,
                           boolean isGroup, String groupName, boolean allowLateSubmissions,
-                          String lateCutoff) {
+                          String lateCutoff, int problemCount) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -34,6 +36,7 @@ public final class AssignmentItem {
         this.groupName = groupName;
         this.allowLateSubmissions = allowLateSubmissions;
         this.lateCutoff = lateCutoff;
+        this.problemCount = problemCount;
     }
 
     /** Parses {@link #dueDate} as an Instant, or null if missing/unparseable. */

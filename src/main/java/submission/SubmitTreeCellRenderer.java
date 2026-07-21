@@ -39,6 +39,10 @@ public class SubmitTreeCellRenderer extends DefaultTreeCellRenderer {
                 setIcon(courseIcon);
             } else if (userObject instanceof AssignmentItem) {
                 setIcon(assignmentIcon);
+                // Flag an empty assignment right in the tree, so it is clear without expanding.
+                if (((AssignmentItem) userObject).problemCount == 0) {
+                    setText(getText() + "  (no problems)");
+                }
             } else if (userObject instanceof ProblemItem) {
                 ProblemItem problem = (ProblemItem) userObject;
                 setIcon(problem.solved ? problemSolvedIcon : problemIcon);

@@ -399,6 +399,31 @@ public class AFCTClient {
     }
 
     /**
+     * The caller's submission history for one problem, newest first. Each entry:
+     * { id, status, correct, submittedAt, fileName, feedback }. `feedback` (the
+     * evaluator witness) is null while the submission is still queued/processing.
+     */
+    @SuppressWarnings("unchecked")
+    public List<Map<String, Object>> getSubmissions(String assignmentId, String problemId) throws IOException {
+        ensureAuth();
+        String query = "?assignmentId=" + java.net.URLEncoder.encode(assignmentId, StandardCharsets.UTF_8)
+                + "&problemId=" + java.net.URLEncoder.encode(problemId, StandardCharsets.UTF_8);
+        URL url = new URL(baseUrl + API_PREFIX + "/submissions" + query);
+        HttpURLConnection conn = openGet(url);
+        int status = conn.getResponseCode();
+        String body = readBody(conn);
+        if (status == 401) {
+            throw handleUnauthorized("GET " + API_PREFIX + "/submissions");
+        }
+        if (status != 200) {
+            throw httpError("GET " + API_PREFIX + "/submissions", status, body);
+        }
+        Map<String, Object> wrapper = parseJson(body, Map.class);
+        List<Map<String, Object>> subs = (List<Map<String, Object>>) wrapper.get("submissions");
+        return subs != null ? subs : new java.util.ArrayList<>();
+    }
+
+    /**
      * Polls {@link #getSubmission} until the submission reaches COMPLETED or FAILED,
      * or the timeout elapses. Returns the last submission state seen.
      * Blocking — call from a background thread.
