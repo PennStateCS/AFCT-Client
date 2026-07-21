@@ -12,6 +12,7 @@ import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
+import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -30,7 +31,6 @@ import static submission.LoginResult.*;
 
 public class SessionHandler {
     public final Preferences preferences;
-    private final DateFormat dateFormat;
     public final CertificateHandler certificateHandler;
     private int expireAfterDays = 7;
 
@@ -52,7 +52,9 @@ public class SessionHandler {
 
     // Preferences
     public static final String PREF_HAS_USED_SAVED_CREDS = "has_used_saved_creds";
+    /** Legacy locale-formatted expiry key; retained only for migration. */
     public static final String PREF_SAVED_CREDS_EXPIRE_AFTER = "saved_creds_expire_after";
+    public static final String PREF_SAVED_CREDS_EXPIRE_AT_MS = "saved_creds_expire_at_ms";
     public static final String PREF_SERVER = "server";
     public static final String PREF_PORT = "port";
     public static final String PREF_EMAIL = "email";
@@ -74,17 +76,16 @@ public class SessionHandler {
     private static final int PASSWORD_IV_BYTES = 12;
     private static final int PASSWORD_PBKDF2_ITERATIONS = 120_000;
     private static final int PASSWORD_KEY_BITS = 256;
-    private static final String PASSWORD_ENC_VERSION = "v1";
+    private static final String PASSWORD_ENC_VERSION = "v2";
+    private static final String LEGACY_PASSWORD_ENC_VERSION = "v1";
 
     public SessionHandler() {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
-        this.dateFormat = DateFormat.getDateInstance(DateFormat.SHORT);
         this.certificateHandler = new CertificateHandler();
         this.submitWindows = new ArrayList<>();
 
-        // Load the user's last saved SSL-validation choice so autoReAuthenticate() (which
-        // runs before the login window is ever shown) honors it instead of silently
-        // falling back to the in-memory default.
+        // Load the user's last saved SSL-validation choice so the login checkbox starts
+        // in a consistent state across launches.
         this.insecureTls = this.preferences.getBoolean(PREF_INSECURE_TLS, true);
 
         // Login GUI elements
@@ -129,7 +130,7 @@ public class SessionHandler {
 
         if (needToReAuth) {
             // Remember Me now pre-fills the form only; user must explicitly log in.
-            loginWindow.displayLoginWindow();
+            showLoginWindowBlocking();
         }
 
         if (this.client == null || !this.client.isAuthenticated()) {
@@ -182,9 +183,9 @@ public class SessionHandler {
                 this.email = userEmail;
 
                 // Set creds to expire after 7 days
-                Calendar calendar = Calendar.getInstance();
-                calendar.add(Calendar.DAY_OF_MONTH, expireAfterDays);
-                preferences.put(PREF_SAVED_CREDS_EXPIRE_AFTER, dateFormat.format(calendar.getTime()));
+                long expiresAtMs = Instant.now().plus(Duration.ofDays(expireAfterDays)).toEpochMilli();
+                preferences.putLong(PREF_SAVED_CREDS_EXPIRE_AT_MS, expiresAtMs);
+                preferences.remove(PREF_SAVED_CREDS_EXPIRE_AFTER);
                 preferences.put(PREF_HAS_USED_SAVED_CREDS, "yes");
                 return getSuccessResult();
             } else {
@@ -241,11 +242,7 @@ public class SessionHandler {
 
         if (forceManualReLogin) {
             Runnable showLogin = () -> loginWindow.displayLoginWindow();
-            if (SwingUtilities.isEventDispatchThread()) {
-                showLogin.run();
-            } else {
-                SwingUtilities.invokeLater(showLogin);
-            }
+            SwingUtilities.invokeLater(showLogin);
         }
     }
 
@@ -267,6 +264,8 @@ public class SessionHandler {
     }
 
     public void clearSavedCredentials() {
+        preferences.remove(PREF_SAVED_CREDS_EXPIRE_AT_MS);
+        preferences.remove(PREF_SAVED_CREDS_EXPIRE_AFTER);
         preferences.remove(PREF_PASSWORD_ENCRYPTED);
         preferences.remove(PREF_PASSWORD_SALT);
         preferences.remove(PREF_PASSWORD);
@@ -293,7 +292,11 @@ public class SessionHandler {
         String encrypted = preferences.get(PREF_PASSWORD_ENCRYPTED, null);
         if (encrypted != null && !encrypted.isBlank()) {
             try {
-                return decryptPassword(encrypted);
+                String decrypted = decryptPassword(encrypted);
+                if (encrypted.startsWith(LEGACY_PASSWORD_ENC_VERSION + ":")) {
+                    storeRememberedPassword(decrypted);
+                }
+                return decrypted;
             } catch (GeneralSecurityException | IllegalArgumentException ex) {
                 System.err.println("[SessionHandler] Failed to decrypt saved password: " + ex.getMessage());
                 return defaultPassword;
@@ -334,29 +337,20 @@ public class SessionHandler {
             return false;
         }
 
-        String expireAfter = preferences.get(PREF_SAVED_CREDS_EXPIRE_AFTER, null);
-        if (expireAfter == null) {
+        long expiresAtMs = getSavedCredentialsExpiryMillis();
+        if (expiresAtMs <= 0 || Instant.now().toEpochMilli() >= expiresAtMs) {
             return false;
         }
 
-        String strCurrent = dateFormat.format(new Date());
-        try {
-            Date current = dateFormat.parse(strCurrent);
-            Date saved = dateFormat.parse(expireAfter);
-            if (current.before(saved)) {
-                String serverUrl = getSavedServer();
-                String portText = getSavedPort();
-                String userEmail = getSavedEmail();
-                String userPassword = getSavedPassword();
-                if (userPassword.isBlank()) {
-                    return false;
-                }
-                LoginResult loginResult = login(serverUrl, portText, userEmail, userPassword);
-                return loginResult.status == LoginResult.LoginStatus.SUCCESS;
-            }
-        } catch (ParseException ignored) { }
-
-        return false;
+        String serverUrl = getSavedServer();
+        String portText = getSavedPort();
+        String userEmail = getSavedEmail();
+        String userPassword = getSavedPassword();
+        if (userPassword.isBlank()) {
+            return false;
+        }
+        LoginResult loginResult = login(serverUrl, portText, userEmail, userPassword);
+        return loginResult.status == LoginResult.LoginStatus.SUCCESS;
     }
 
     private boolean storeRememberedPassword(String password) {
@@ -382,7 +376,7 @@ public class SessionHandler {
         new SecureRandom().nextBytes(iv);
 
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.ENCRYPT_MODE, getPasswordSecretKey(), new GCMParameterSpec(128, iv));
+        cipher.init(Cipher.ENCRYPT_MODE, getPasswordSecretKey(getPasswordKeyMaterial()), new GCMParameterSpec(128, iv));
         byte[] ciphertext = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
 
         return PASSWORD_ENC_VERSION + ":" +
@@ -392,9 +386,10 @@ public class SessionHandler {
 
     private String decryptPassword(String encoded) throws GeneralSecurityException {
         String[] parts = encoded.split(":", 3);
-        if (parts.length != 3 || !PASSWORD_ENC_VERSION.equals(parts[0])) {
+        if (parts.length != 3) {
             throw new GeneralSecurityException("Unsupported password encryption format.");
         }
+        String version = parts[0];
 
         byte[] iv = Base64.getDecoder().decode(parts[1]);
         byte[] ciphertext = Base64.getDecoder().decode(parts[2]);
@@ -402,14 +397,23 @@ public class SessionHandler {
             throw new GeneralSecurityException("Invalid password IV.");
         }
 
+        String keyMaterial;
+        if (PASSWORD_ENC_VERSION.equals(version)) {
+            keyMaterial = getPasswordKeyMaterial();
+        } else if (LEGACY_PASSWORD_ENC_VERSION.equals(version)) {
+            keyMaterial = getLegacyPasswordKeyMaterial();
+        } else {
+            throw new GeneralSecurityException("Unsupported password encryption format version.");
+        }
+
         Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
-        cipher.init(Cipher.DECRYPT_MODE, getPasswordSecretKey(), new GCMParameterSpec(128, iv));
+        cipher.init(Cipher.DECRYPT_MODE, getPasswordSecretKey(keyMaterial), new GCMParameterSpec(128, iv));
         byte[] plaintext = cipher.doFinal(ciphertext);
         return new String(plaintext, StandardCharsets.UTF_8);
     }
 
-    private SecretKey getPasswordSecretKey() throws GeneralSecurityException {
-        PBEKeySpec spec = new PBEKeySpec(getPasswordKeyMaterial().toCharArray(), getOrCreatePasswordSalt(),
+    private SecretKey getPasswordSecretKey(String keyMaterial) throws GeneralSecurityException {
+        PBEKeySpec spec = new PBEKeySpec(keyMaterial.toCharArray(), getOrCreatePasswordSalt(),
                 PASSWORD_PBKDF2_ITERATIONS, PASSWORD_KEY_BITS);
         SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
         byte[] keyBytes = factory.generateSecret(spec).getEncoded();
@@ -438,9 +442,57 @@ public class SessionHandler {
 
     private String getPasswordKeyMaterial() {
         return "afct-remember-me|" +
+                SessionHandler.class.getName() + "|" +
+                preferences.absolutePath() + "|" +
+                System.getProperty("user.name", "");
+    }
+
+    private String getLegacyPasswordKeyMaterial() {
+        return "afct-remember-me|" +
                 preferences.absolutePath() + "|" +
                 System.getProperty("user.name", "") + "|" +
                 System.getProperty("os.name", "") + "|" +
                 System.getProperty("os.arch", "");
+    }
+
+    private void showLoginWindowBlocking() {
+        Runnable showLogin = () -> loginWindow.displayLoginWindow();
+        if (SwingUtilities.isEventDispatchThread()) {
+            showLogin.run();
+            return;
+        }
+
+        try {
+            SwingUtilities.invokeAndWait(showLogin);
+        } catch (InterruptedException ex) {
+            Thread.currentThread().interrupt();
+        } catch (InvocationTargetException ex) {
+            throw new IllegalStateException("Unable to display login dialog.", ex.getCause());
+        }
+    }
+
+    private long getSavedCredentialsExpiryMillis() {
+        long expiresAt = preferences.getLong(PREF_SAVED_CREDS_EXPIRE_AT_MS, -1L);
+        if (expiresAt > 0) {
+            return expiresAt;
+        }
+
+        String legacyExpiry = preferences.get(PREF_SAVED_CREDS_EXPIRE_AFTER, null);
+        if (legacyExpiry == null || legacyExpiry.isBlank()) {
+            return -1L;
+        }
+
+        try {
+            Date parsed = DateFormat.getDateInstance(DateFormat.SHORT).parse(legacyExpiry);
+            if (parsed != null) {
+                long migrated = parsed.getTime();
+                preferences.putLong(PREF_SAVED_CREDS_EXPIRE_AT_MS, migrated);
+                preferences.remove(PREF_SAVED_CREDS_EXPIRE_AFTER);
+                return migrated;
+            }
+        } catch (ParseException ignored) {
+        }
+
+        return -1L;
     }
 }

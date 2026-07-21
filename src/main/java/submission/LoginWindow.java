@@ -15,6 +15,7 @@ public class LoginWindow extends JDialog {
     private final JTextField portTF = new JTextField("443");
     private final JTextField emailTF = new JTextField();
     private final JPasswordField passwordTF = new JPasswordField();
+    private final char defaultPasswordEchoChar = passwordTF.getEchoChar();
 
     private final JCheckBox validateSSLCheckBox =
             new JCheckBox("Validate SSL Certificate");
@@ -134,8 +135,7 @@ public class LoginWindow extends JDialog {
             if (showPasswordCheckBox.isSelected()) {
                 passwordTF.setEchoChar((char) 0);
             } else {
-                // restore default echo char (bullet)
-                passwordTF.setEchoChar('•');
+                passwordTF.setEchoChar(defaultPasswordEchoChar);
             }
         });
 

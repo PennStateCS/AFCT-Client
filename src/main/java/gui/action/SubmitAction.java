@@ -19,7 +19,7 @@ public class SubmitAction extends RestrictedAction {
     private final Environment environment;
 
     public SubmitAction(Serializable obj, Environment environment) {
-        super("Submit", null);
+        super("Submission Center", null);
         this.obj = obj;
         this.environment = environment;
     }
