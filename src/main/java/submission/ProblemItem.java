@@ -59,6 +59,7 @@ public final class ProblemItem {
 
     @Override
     public String toString() {
-        return solved ? name + " ✔" : name;
+        // Solved state is shown by the green check icon in the tree, not the text.
+        return name;
     }
 }
