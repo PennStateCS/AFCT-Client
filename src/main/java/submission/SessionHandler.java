@@ -5,13 +5,23 @@ import gui.environment.Environment;
 
 import javax.net.ssl.SSLHandshakeException;
 import javax.swing.*;
+import javax.crypto.Cipher;
+import javax.crypto.SecretKey;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.GCMParameterSpec;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
 import java.io.IOException;
+import java.nio.charset.StandardCharsets;
+import java.security.GeneralSecurityException;
+import java.security.SecureRandom;
 import java.text.DateFormat;
 import java.text.ParseException;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.*;
 import java.util.List;
+import java.util.Base64;
 import java.util.prefs.Preferences;
 
 import static submission.AFCTClient.fixUrl;
@@ -46,7 +56,10 @@ public class SessionHandler {
     public static final String PREF_SERVER = "server";
     public static final String PREF_PORT = "port";
     public static final String PREF_EMAIL = "email";
+    /** Legacy plaintext password key; retained only for migration. */
     public static final String PREF_PASSWORD = "password";
+    public static final String PREF_PASSWORD_ENCRYPTED = "password_encrypted";
+    public static final String PREF_PASSWORD_SALT = "password_salt";
     public static final String PREF_INSECURE_TLS = "insecure_tls";
     public static final String PREF_REMEMBER_ME = "remember_me";
     public static final String PREF_HOMEWORK = "homework";
@@ -57,6 +70,11 @@ public class SessionHandler {
     public static final String defaultPort = "3000";
     public static final String defaultEmail = "student@example.com";
     public static final String defaultPassword = "";
+    private static final int PASSWORD_SALT_BYTES = 16;
+    private static final int PASSWORD_IV_BYTES = 12;
+    private static final int PASSWORD_PBKDF2_ITERATIONS = 120_000;
+    private static final int PASSWORD_KEY_BITS = 256;
+    private static final String PASSWORD_ENC_VERSION = "v1";
 
     public SessionHandler() {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
@@ -252,12 +270,14 @@ public class SessionHandler {
         preferences.put(PREF_SERVER, withProtocol);
         preferences.put(PREF_PORT, port.trim());
         preferences.put(PREF_EMAIL, userEmail.trim());
-        preferences.put(PREF_PASSWORD, userPassword);
-        preferences.putBoolean(PREF_REMEMBER_ME, true);
+        boolean passwordSaved = storeRememberedPassword(userPassword);
+        preferences.putBoolean(PREF_REMEMBER_ME, passwordSaved);
         this.email = userEmail.trim();
     }
 
     public void clearSavedCredentials() {
+        preferences.remove(PREF_PASSWORD_ENCRYPTED);
+        preferences.remove(PREF_PASSWORD_SALT);
         preferences.remove(PREF_PASSWORD);
         preferences.putBoolean(PREF_REMEMBER_ME, false);
     }
@@ -279,7 +299,23 @@ public class SessionHandler {
     }
 
     public String getSavedPassword() {
-        return preferences.get(PREF_PASSWORD, defaultPassword);
+        String encrypted = preferences.get(PREF_PASSWORD_ENCRYPTED, null);
+        if (encrypted != null && !encrypted.isBlank()) {
+            try {
+                return decryptPassword(encrypted);
+            } catch (GeneralSecurityException | IllegalArgumentException ex) {
+                System.err.println("[SessionHandler] Failed to decrypt saved password: " + ex.getMessage());
+                return defaultPassword;
+            }
+        }
+
+        // Migrate any previously stored plaintext password into encrypted storage.
+        String legacyPlaintext = preferences.get(PREF_PASSWORD, defaultPassword);
+        if (!legacyPlaintext.isBlank()) {
+            storeRememberedPassword(legacyPlaintext);
+            preferences.remove(PREF_PASSWORD);
+        }
+        return legacyPlaintext;
     }
 
     public boolean isInsecureTls() {
@@ -290,7 +326,7 @@ public class SessionHandler {
         preferences.put(PREF_SERVER, fixUrl(serverUrl));
         preferences.put(PREF_PORT, portText.trim());
         preferences.put(PREF_EMAIL, userEmail.trim());
-        preferences.put(PREF_PASSWORD, userPassword);
+        storeRememberedPassword(userPassword);
         this.email = userEmail.trim();
     }
 
@@ -321,11 +357,99 @@ public class SessionHandler {
                 String portText = getSavedPort();
                 String userEmail = getSavedEmail();
                 String userPassword = getSavedPassword();
+                if (userPassword.isBlank()) {
+                    return false;
+                }
                 LoginResult loginResult = login(serverUrl, portText, userEmail, userPassword);
                 return loginResult.status == LoginResult.LoginStatus.SUCCESS;
             }
         } catch (ParseException ignored) { }
 
         return false;
+    }
+
+    private boolean storeRememberedPassword(String password) {
+        try {
+            if (password == null || password.isBlank()) {
+                preferences.remove(PREF_PASSWORD_ENCRYPTED);
+                preferences.remove(PREF_PASSWORD);
+                return false;
+            }
+            preferences.put(PREF_PASSWORD_ENCRYPTED, encryptPassword(password));
+            preferences.remove(PREF_PASSWORD);
+            return true;
+        } catch (GeneralSecurityException ex) {
+            preferences.remove(PREF_PASSWORD_ENCRYPTED);
+            preferences.remove(PREF_PASSWORD);
+            System.err.println("[SessionHandler] Failed to encrypt saved password: " + ex.getMessage());
+            return false;
+        }
+    }
+
+    private String encryptPassword(String plaintext) throws GeneralSecurityException {
+        byte[] iv = new byte[PASSWORD_IV_BYTES];
+        new SecureRandom().nextBytes(iv);
+
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.ENCRYPT_MODE, getPasswordSecretKey(), new GCMParameterSpec(128, iv));
+        byte[] ciphertext = cipher.doFinal(plaintext.getBytes(StandardCharsets.UTF_8));
+
+        return PASSWORD_ENC_VERSION + ":" +
+                Base64.getEncoder().encodeToString(iv) + ":" +
+                Base64.getEncoder().encodeToString(ciphertext);
+    }
+
+    private String decryptPassword(String encoded) throws GeneralSecurityException {
+        String[] parts = encoded.split(":", 3);
+        if (parts.length != 3 || !PASSWORD_ENC_VERSION.equals(parts[0])) {
+            throw new GeneralSecurityException("Unsupported password encryption format.");
+        }
+
+        byte[] iv = Base64.getDecoder().decode(parts[1]);
+        byte[] ciphertext = Base64.getDecoder().decode(parts[2]);
+        if (iv.length != PASSWORD_IV_BYTES) {
+            throw new GeneralSecurityException("Invalid password IV.");
+        }
+
+        Cipher cipher = Cipher.getInstance("AES/GCM/NoPadding");
+        cipher.init(Cipher.DECRYPT_MODE, getPasswordSecretKey(), new GCMParameterSpec(128, iv));
+        byte[] plaintext = cipher.doFinal(ciphertext);
+        return new String(plaintext, StandardCharsets.UTF_8);
+    }
+
+    private SecretKey getPasswordSecretKey() throws GeneralSecurityException {
+        PBEKeySpec spec = new PBEKeySpec(getPasswordKeyMaterial().toCharArray(), getOrCreatePasswordSalt(),
+                PASSWORD_PBKDF2_ITERATIONS, PASSWORD_KEY_BITS);
+        SecretKeyFactory factory = SecretKeyFactory.getInstance("PBKDF2WithHmacSHA256");
+        byte[] keyBytes = factory.generateSecret(spec).getEncoded();
+        spec.clearPassword();
+        return new SecretKeySpec(keyBytes, "AES");
+    }
+
+    private byte[] getOrCreatePasswordSalt() {
+        String encodedSalt = preferences.get(PREF_PASSWORD_SALT, null);
+        if (encodedSalt != null && !encodedSalt.isBlank()) {
+            try {
+                byte[] decoded = Base64.getDecoder().decode(encodedSalt);
+                if (decoded.length == PASSWORD_SALT_BYTES) {
+                    return decoded;
+                }
+            } catch (IllegalArgumentException ignored) {
+                // Invalid salt persisted previously; generate a new one below.
+            }
+        }
+
+        byte[] salt = new byte[PASSWORD_SALT_BYTES];
+        new SecureRandom().nextBytes(salt);
+        preferences.put(PREF_PASSWORD_SALT, Base64.getEncoder().encodeToString(salt));
+        return salt;
+    }
+
+    private String getPasswordKeyMaterial() {
+        return "afct-remember-me|" +
+                preferences.absolutePath() + "|" +
+                System.getProperty("user.name", "") + "|" +
+                System.getProperty("os.name", "") + "|" +
+                System.getProperty("os.arch", "");
     }
 }
