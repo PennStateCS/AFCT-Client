@@ -216,6 +216,9 @@ public class SessionHandler {
                 return getFailureResult();
             }
         } catch (SSLHandshakeException ex) {
+            this.loggedIn = false;
+            this.client = null;
+            preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
             this.certificateHandler.test();
             return getErrorResult(ex.getMessage());
         } catch (IOException ex) {
