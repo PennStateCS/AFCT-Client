@@ -164,7 +164,11 @@ public class AFCTClient {
             conn.setRequestMethod("POST");
             addAuthHeaders(conn);
             conn.getResponseCode(); // fire and forget
-        } catch (IOException ignored) {
+        } catch (IOException ex) {
+            String msg = ex.getMessage() == null || ex.getMessage().isBlank()
+                    ? ex.getClass().getSimpleName()
+                    : ex.getMessage();
+            System.err.println("[AFCTClient] Logout revoke request failed: " + msg);
         } finally {
             this.token = null;
         }
