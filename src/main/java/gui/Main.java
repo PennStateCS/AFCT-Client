@@ -147,9 +147,6 @@ public class Main {
         Universe.curProfile.loadPreferences();
 		updater.updatePopup.showOnLoad();
 
-        // TODO: remove after testing
-        new CertificatePopup(null);
-
 		if (args.length >= 2) {
 			print(Arrays.toString(args));
 			if(args[0].equals("update")){
