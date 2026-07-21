@@ -675,14 +675,29 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         + escapeHtml(formatDueDate(due)) + "</b></p>";
             }
 
+            // Individual vs group (with the student's group name), and whether late
+            // submissions are accepted.
+            String groupText = assignment.isGroup
+                    ? (assignment.groupName != null && !assignment.groupName.isBlank()
+                        ? "Group assignment (your group: " + escapeHtml(assignment.groupName) + ")"
+                        : "Group assignment")
+                    : "Individual assignment";
+            String lateText = assignment.allowLateSubmissions
+                    ? "Late submissions accepted"
+                    : "Late submissions not accepted";
+            String metaHtml =
+                "<p style='margin: 0 0 4px 0; color: #555555;'>" + groupText + "</p>" +
+                "<p style='margin: 0 0 8px 0; color: #555555;'>" + lateText + "</p>";
+
             // Format as HTML for better display
             String html = String.format(
                 "<html><body style='font-family: sans-serif; padding: 4px;'>" +
-                "<h3 style='margin: 0 0 8px 0; color: #000000;'>%s</h3>%s" +
+                "<h3 style='margin: 0 0 8px 0; color: #000000;'>%s</h3>%s%s" +
                 "<p style='margin: 0; color: #000000;'>%s</p>" +
                 "</body></html>",
                 escapeHtml(title),
                 dueHtml,
+                metaHtml,
                 escapeHtml(description)
             );
 
@@ -907,8 +922,16 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                                 continue;
                             }
 
+                            // Individual vs group, the caller's group name, and whether late
+                            // work is accepted, all straight from the assignments API.
+                            boolean isGroup = Boolean.TRUE.equals(a.get("isGroup"));
+                            Object groupNameObj = a.get("groupName");
+                            String groupName = groupNameObj != null ? String.valueOf(groupNameObj) : null;
+                            boolean allowLate = Boolean.TRUE.equals(a.get("allowLateSubmissions"));
+
                             displayedCount++;
-                            AssignmentItem assignment = new AssignmentItem(id, title, description, dueDateStr);
+                            AssignmentItem assignment = new AssignmentItem(
+                                    id, title, description, dueDateStr, isGroup, groupName, allowLate);
                             DefaultMutableTreeNode aNode = new DefaultMutableTreeNode(assignment);
 
                             // placeholder child to show expand handle
