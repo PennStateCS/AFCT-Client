@@ -16,13 +16,16 @@ public final class AssignmentItem {
     public final String groupName;
     /** Whether the assignment accepts late submissions (server field {@code allowLateSubmissions}). */
     public final boolean allowLateSubmissions;
+    /** Raw UTC ISO-8601 late-submission cutoff, or null when there is no cutoff. */
+    public final String lateCutoff;
 
     public AssignmentItem(String id, String name, String description, String dueDate) {
-        this(id, name, description, dueDate, false, null, false);
+        this(id, name, description, dueDate, false, null, false, null);
     }
 
     public AssignmentItem(String id, String name, String description, String dueDate,
-                          boolean isGroup, String groupName, boolean allowLateSubmissions) {
+                          boolean isGroup, String groupName, boolean allowLateSubmissions,
+                          String lateCutoff) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -30,13 +33,23 @@ public final class AssignmentItem {
         this.isGroup = isGroup;
         this.groupName = groupName;
         this.allowLateSubmissions = allowLateSubmissions;
+        this.lateCutoff = lateCutoff;
     }
 
     /** Parses {@link #dueDate} as an Instant, or null if missing/unparseable. */
     public java.time.Instant dueInstant() {
-        if (dueDate == null || dueDate.isBlank() || "null".equals(dueDate)) return null;
+        return parseInstant(dueDate);
+    }
+
+    /** Parses {@link #lateCutoff} as an Instant, or null if missing/unparseable. */
+    public java.time.Instant lateCutoffInstant() {
+        return parseInstant(lateCutoff);
+    }
+
+    private static java.time.Instant parseInstant(String iso) {
+        if (iso == null || iso.isBlank() || "null".equals(iso)) return null;
         try {
-            return java.time.Instant.parse(dueDate);
+            return java.time.Instant.parse(iso);
         } catch (Exception e) {
             return null;
         }

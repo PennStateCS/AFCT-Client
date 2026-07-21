@@ -682,9 +682,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         ? "Group assignment (your group: " + escapeHtml(assignment.groupName) + ")"
                         : "Group assignment")
                     : "Individual assignment";
-            String lateText = assignment.allowLateSubmissions
-                    ? "Late submissions accepted"
-                    : "Late submissions not accepted";
+            String lateText;
+            if (assignment.allowLateSubmissions) {
+                java.time.Instant cutoff = assignment.lateCutoffInstant();
+                lateText = cutoff != null
+                        ? "Late submissions accepted until " + escapeHtml(formatDueDate(cutoff))
+                        : "Late submissions accepted";
+            } else {
+                lateText = "Late submissions not accepted";
+            }
             String metaHtml =
                 "<p style='margin: 0 0 4px 0; color: #555555;'>" + groupText + "</p>" +
                 "<p style='margin: 0 0 8px 0; color: #555555;'>" + lateText + "</p>";
@@ -928,10 +934,12 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                             Object groupNameObj = a.get("groupName");
                             String groupName = groupNameObj != null ? String.valueOf(groupNameObj) : null;
                             boolean allowLate = Boolean.TRUE.equals(a.get("allowLateSubmissions"));
+                            String lateCutoffStr = a.get("lateCutoff") != null
+                                    ? String.valueOf(a.get("lateCutoff")) : null;
 
                             displayedCount++;
                             AssignmentItem assignment = new AssignmentItem(
-                                    id, title, description, dueDateStr, isGroup, groupName, allowLate);
+                                    id, title, description, dueDateStr, isGroup, groupName, allowLate, lateCutoffStr);
                             DefaultMutableTreeNode aNode = new DefaultMutableTreeNode(assignment);
 
                             // placeholder child to show expand handle
