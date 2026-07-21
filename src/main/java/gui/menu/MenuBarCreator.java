@@ -553,7 +553,7 @@ public class MenuBarCreator {
 	 */
 	private static JMenu getSubmitMenu(EnvironmentFrame frame) {
 		Environment environment = frame.getEnvironment();
-		JMenu menu = new JMenu("Submit");
+		JMenu menu = new JMenu("Assignments");
 		Serializable object = environment.getObject();
 
 		//addItem(menu, new SubmitAction(object, environment));
