@@ -47,7 +47,7 @@ public class CertificatePopup implements ExtensionPopup {
 
         // Create frame
         this.frame = new JFrame();
-        frame.setTitle("TEST"); // TODO: replace
+        frame.setTitle("Server Certificate Details");
 
         // Create contentPane
         this.contentPane = new JPanel(new GridBagLayout());
@@ -65,31 +65,42 @@ public class CertificatePopup implements ExtensionPopup {
         c.gridx = 0;
         c.gridy = y;
         this.contentPane.add(this.cards, c);
-
-
-
-        X509Certificate[] certChain = this.certificateHandler.getCertificateChain();
-        if (certChain == null) certChain = new X509Certificate[0];
-        for (X509Certificate cert : certChain) {
-            // Extract CN from the subject DN, fall back to full DN string
-            String dn = cert.getSubjectDN().getName();
-            String commonName = dn;
-            for (String part : dn.split(",")) {
-                if (part.trim().startsWith("CN=")) {
-                    commonName = part.trim().substring(3);
-                    break;
-                }
+        X509Certificate[] certChain = new X509Certificate[0];
+        if (this.certificateHandler != null) {
+            X509Certificate[] loaded = this.certificateHandler.getCertificateChain();
+            if (loaded != null) {
+                certChain = loaded;
             }
-            CertificateTab certificateTab = new CertificateTab(commonName, this, cards);
-            certificateTabPanel.add(certificateTab);
+        }
 
-            JPanel infoSection = setUpInfoSections(cert);
-            // TODO: handle possibility of multiple certs having the same common name
-            cards.add(commonName, infoSection);
+        if (certChain.length == 0) {
+            certificateTabPanel.add(new JLabel("No certificate data"));
+            cards.add("No certificate data", createUnavailablePanel(
+                    "Certificate details are unavailable for this session."
+            ));
+            ((CardLayout) cards.getLayout()).show(cards, "No certificate data");
+        } else {
+            for (X509Certificate cert : certChain) {
+                // Extract CN from the subject DN, fall back to full DN string
+                String dn = cert.getSubjectDN().getName();
+                String commonName = dn;
+                for (String part : dn.split(",")) {
+                    if (part.trim().startsWith("CN=")) {
+                        commonName = part.trim().substring(3);
+                        break;
+                    }
+                }
+                CertificateTab certificateTab = new CertificateTab(commonName, this, cards);
+                certificateTabPanel.add(certificateTab);
 
-            if (this.lastSelected == null) {
-                certificateTab.setAsSelectedTab(true);
-                this.lastSelected = certificateTab;
+                JPanel infoSection = setUpInfoSections(cert);
+                // TODO: handle possibility of multiple certs having the same common name
+                cards.add(commonName, infoSection);
+
+                if (this.lastSelected == null) {
+                    certificateTab.setAsSelectedTab(true);
+                    this.lastSelected = certificateTab;
+                }
             }
         }
 
@@ -99,6 +110,15 @@ public class CertificatePopup implements ExtensionPopup {
 
         // TODO: remove after testing
         showPopup();
+    }
+
+    private JPanel createUnavailablePanel(String message) {
+        JPanel panel = new JPanel(new BorderLayout());
+        panel.setBorder(new EmptyBorder(20, 20, 20, 20));
+        JLabel label = new JLabel(message, SwingConstants.CENTER);
+        label.setForeground(new Color(120, 120, 120));
+        panel.add(label, BorderLayout.CENTER);
+        return panel;
     }
 
     public CertificateTab getLastSelected() {
