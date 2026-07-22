@@ -435,11 +435,11 @@ public class REToFSAController {
 		}
 	}
 
+	/** The FSA being built. */
+	public FiniteStateAutomaton automaton;
+
 	/** The conversion pane. */
 	private ConvertToAutomatonPane convertPane;
-
-	/** The FSA being built. */
-	private FiniteStateAutomaton automaton;
 
 	/** The set of transitions that still require expansion. */
 	private Set<FSATransition> toDo = new HashSet<>();

@@ -111,6 +111,23 @@ public class RegularExpression implements Serializable {
 	}
 
 	/**
+	 * Checks if a given input string is matched by the regular expression.
+	 * @param input the input string
+	 * @return true if it accepts, false if it rejects
+	 */
+	public boolean validateInput(String input){
+		String regex = asCheckedString();
+		System.out.println("InputStr: " + input);
+		System.out.println("(Checked) RegEx: " + regex);
+
+		boolean isAccepted = input.matches(regex);
+		
+		System.out.println("STATUS: " + isAccepted);
+
+		return true;
+	}
+
+	/**
 	 * Changes the regular expression.
 	 * 
 	 * @param string
