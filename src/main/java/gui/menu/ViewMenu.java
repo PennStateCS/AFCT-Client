@@ -7,6 +7,7 @@ import gui.viewer.AutomatonDrawer;
 import gui.viewer.AutomatonPane;
 
 import javax.swing.*;
+import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
 import java.io.Serializable;
@@ -50,6 +51,13 @@ public class ViewMenu extends JMenu {
         stateLabelsCheckbox.addActionListener(new  ActionListener() {
             public void actionPerformed(ActionEvent e) {
                 drawer.shouldDrawStateLabels(stateLabelsCheckbox.isSelected());
+
+                // Important for layout recalculation in Swing
+                // Makes the canvas be redrawn so state labels instantly appear/disappear.
+                //  (instead of only appearing/disappearing after something else causes a canvas redraw.)
+                Component component = environment.getActive();
+                component.revalidate();
+                component.repaint();
             }
         });
 

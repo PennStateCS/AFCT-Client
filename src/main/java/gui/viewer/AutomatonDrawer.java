@@ -45,6 +45,7 @@ import automata.event.AutomataStateEvent;
 import automata.event.AutomataStateListener;
 import automata.event.AutomataTransitionEvent;
 import automata.event.AutomataTransitionListener;
+import equivalence.StatePair;
 import gui.menu.ContextActions;
 
 import java.util.HashSet;
@@ -60,6 +61,10 @@ import java.util.HashSet;
 
 public class AutomatonDrawer {
     public ContextActions contextActions;
+
+    public boolean showConnected = false;
+
+
 	/**
 	 * Instantiates an object to draw an automaton.
 	 * 
@@ -96,6 +101,15 @@ public class AutomatonDrawer {
     int specHash = Integer.MIN_VALUE;
     //
 
+	/**
+	 * Draws our automaton.
+	 *
+	 * @param g2
+	 *            the Graphics object to draw the automaton on
+	 */
+	public void drawAutomaton(Graphics g2) {
+		drawAutomaton(g2, false);
+	}
 
 	/**
 	 * Draws our automaton.
@@ -103,7 +117,7 @@ public class AutomatonDrawer {
 	 * @param g2
 	 *            the Graphics object to draw the automaton on
 	 */
-	public void drawAutomaton(Graphics g2) {
+	public void drawAutomaton(Graphics g2, boolean ignoreSelected) {
 		if (!valid)
 			refreshArrowMap();
 
@@ -112,9 +126,21 @@ public class AutomatonDrawer {
 				RenderingHints.VALUE_ANTIALIAS_ON);
 		g.setFont(g.getFont().deriveFont(12.0f));
 
+        boolean transitionFocusDraw = false;
+        if (this.showConnected) {
+			// no states selected and at least one transition selected
+			transitionFocusDraw = !automaton.anyStatesSelected() && automaton.anyTransitionsSelected();
+
+        }
+
 		// Draw transitions between states.
 		g.setColor(Color.black);
-		drawTransitions(g);
+        if (!transitionFocusDraw) {
+            drawTransitions(g);
+        } else {
+            drawTransitionsHighlightSelected(g);
+        }
+
 
 
 //        int sh = automaton.hashCode();
@@ -135,17 +161,24 @@ public class AutomatonDrawer {
 //                }
 //            }
 //        }
-        
+
 
 //        //reverse again, to get the correct ordering for non-overlapping things
 //        for (int i = hs.size() - 1; i >= 0; i--)
 //			drawState(g, hs.get(i));
-        
+
         State[] states = automaton.getStates();
-        for (int i = 0; i < states.length; i++){
-            drawState(g, states[i]);
+        if (!transitionFocusDraw) {
+            for (State state : states) {
+                drawState(g, state, ignoreSelected);
+            }
+        } else {
+            for (State state : states) {
+                statedrawer.drawConnectedViewTransitionFocus(g, getAutomaton(), state, drawLabels);
+            }
         }
-		
+
+
 		
 		this.drawSelectionBox(g);
 		this.drawObjectSnappingIndicators(g);
@@ -242,12 +275,27 @@ public class AutomatonDrawer {
 	 * @param state
 	 *            the state to draw
 	 */
+	protected void drawState(Graphics g, State state, boolean ignoreSelected) {
+        if (!this.showConnected) {
+            statedrawer.drawState(g, getAutomaton(), state, ignoreSelected);
+            if (drawLabels) {
+                statedrawer.drawStateLabel(g, state, state.getPoint(), StateDrawer.STATE_COLOR);
+            }
+        } else {
+            statedrawer.drawConnectedView(g, getAutomaton(), state, drawLabels);
+        }
+	}
+
+	/**
+	 * Draws a state on the automaton.
+	 *
+	 * @param g
+	 *            the graphics object to draw upon
+	 * @param state
+	 *            the state to draw
+	 */
 	protected void drawState(Graphics g, State state) {
-		statedrawer.drawState(g, getAutomaton(), state);
-		if (drawLabels) {
-			statedrawer.drawStateLabel(g, state, state.getPoint(),
-					StateDrawer.STATE_COLOR);
-		}
+		drawState(g, state, false);
 	}
 
 	/**
@@ -259,17 +307,47 @@ public class AutomatonDrawer {
 	protected void drawTransitions(Graphics g) {
 		Graphics2D g2 = (Graphics2D) g;
 		Set<CurvedArrow> arrows = arrowToTransitionMap.keySet();
-		Iterator<CurvedArrow> it = arrows.iterator();
-		while (it.hasNext()) {
-			CurvedArrow arrow = (CurvedArrow) it.next();
-            if (arrow.myTransition.isSelected){
-                arrow.drawHighlight(g2);
-                arrow.drawControlPoint(g2);
+        if (!this.showConnected) {
+            for (CurvedArrow arrow : arrows) {
+                if (arrow.myTransition.isSelected) {
+                    arrow.drawHighlight(g2);
+                    arrow.drawControlPoint(g2);
+                } else {
+                    arrow.draw(g2);
+                }
             }
-            else 
-                arrow.draw(g2);
-		}
+        } else {
+            for (CurvedArrow arrow : arrows) {
+                Transition transition = arrowToTransitionMap.get(arrow);
+                arrow.drawConnectedView(g2, transition);
+            }
+        }
 	}
+
+    protected void drawTransitionsHighlightSelected(Graphics g) {
+        Graphics2D g2 = (Graphics2D) g;
+        Set<CurvedArrow> arrows = arrowToTransitionMap.keySet();
+        if (!this.showConnected) {
+            drawTransitions(g);
+        } else {
+			// Get selected transition(s) and save endpoint states
+			HashSet<StatePair> statePairs = new HashSet<>();
+			Transition[] selectedTransitions = automaton.getSelectedTransitions();
+			for (Transition transition : selectedTransitions) {
+				statePairs.add(new StatePair(transition.getFromState(), transition.getToState()));
+			}
+
+			// Draw transitions
+			StatePair temp;
+			boolean forceDrawAsSelected;
+            for (CurvedArrow arrow : arrows) {
+                Transition transition = arrowToTransitionMap.get(arrow);
+				temp = new StatePair(transition.getFromState(), transition.getToState());
+				forceDrawAsSelected = statePairs.contains(temp);
+                arrow.drawConnectedViewHighlightSelected(g2, transition, forceDrawAsSelected);
+            }
+        }
+    }
 
 	
 
@@ -510,6 +588,8 @@ public class AutomatonDrawer {
 	public Transition transitionAtPoint(Point point) {
         int fudge = 2;
         fudge = 3; // TODO - change this based on zoom level so when zoomed out it is easier to click transitions
+        // Also maybe add a "cycle click" where if you click the same place multiple times, it will cycle through
+        //      overlapping transitions
 
 		if (!valid)
 			refreshArrowMap();

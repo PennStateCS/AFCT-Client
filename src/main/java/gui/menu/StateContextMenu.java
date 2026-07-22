@@ -24,7 +24,6 @@ import java.util.Set;
 public class StateContextMenu extends ContextMenu implements ActionListener {
     private State[] states;
     private State state;
-    private Point myPoint;
 
     protected final JCheckBoxMenuItem makeFinal, makeInitial;
 
@@ -52,11 +51,11 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
         makeInitial = new JCheckBoxMenuItem(makeInitial_DEFAULT);
         changeLabel = new JMenuItem(changeLabel_DEFAULT);
         deleteLabel = new JMenuItem(deleteLabel_DEFAULT);
-        deleteAllLabels = new JMenuItem("Clear All Labels");
+        deleteAllLabels = new JMenuItem(deleteAllLabels_DEFAULT);
         setName = new JMenuItem(setName_DEFAULT);
-        editBlock = new JMenuItem("Edit Block");
-        copyBlock = new JMenuItem("Duplicate Block");
-        replaceSymbol = new JMenuItem("Replace Symbol");
+        editBlock = new JMenuItem(editBlock_DEFAULT);
+        copyBlock = new JMenuItem(copyBlock_DEFAULT);
+        replaceSymbol = new JMenuItem(replaceSymbol_DEFAULT);
     }
 
     public void addMenuItems(MenuElement menu, boolean skipFinal, boolean isTurningBlock, boolean allowOnlyFinal) {
@@ -84,7 +83,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
     }
 
     public void selectAndEnableMenuItems(State[] states, Point p) {
-        myPoint = Objects.requireNonNullElseGet(p, () -> new Point(0, 0));
+        setMyPoint(p);
         this.states = states;
         int numSelectedStates = 0;
         int numSelectedFinalStates = 0;
@@ -129,8 +128,9 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
     @Override
     public void actionPerformed(ActionEvent e) {
         JMenuItem item = (JMenuItem) e.getSource();
+        EnvironmentFrame environmentFrame = drawer.getAutomaton().getEnvironmentFrame();
         if (drawer.getAutomaton().getEnvironmentFrame() != null) {
-            ((AutomatonEnvironment)drawer.getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
+            ((AutomatonEnvironment)environmentFrame.getEnvironment()).saveStatus();
         }
 
         switch (item.getText()) {
@@ -159,8 +159,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
             case changeLabel_MULTI:
                 String oldlabel = this.state.getLabel();
                 oldlabel = oldlabel == null ? "" : oldlabel;
-                // TODO make sure item.getParent() works for this
-                String label = (String) JOptionPane.showInputDialog(null,
+                String label = (String) JOptionPane.showInputDialog(environmentFrame,
                         "Input a new label, or \n"
                                 + "set blank to remove the label", "New Label",
                         JOptionPane.QUESTION_MESSAGE, null, null, oldlabel);
@@ -193,8 +192,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
             case setName_MULTI:
                 String oldName = state.getName();
                 oldName = oldName == null ? "" : oldName;
-                // TODO make sure item.getParent() works for this
-                String name = (String) JOptionPane.showInputDialog(item.getParent(),
+                String name = (String) JOptionPane.showInputDialog(environmentFrame,
                         "Input a new name, or \n"
                                 + "set blank to remove the name", "New Name",
                         JOptionPane.QUESTION_MESSAGE, null, null, oldName);
@@ -209,10 +207,19 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
                 }
                 break;
             case addNote_TEXT:
-                Note note = addNote(myPoint);
-                State clickedState = drawer.stateAtPoint(myPoint);
-                if (clickedState != null) {
-                    clickedState.setNote(note);
+                boolean anyNotesAdded = false;
+                for (State state : states) {
+                    if (state.isSelected()) {
+                        anyNotesAdded = true;
+                        Point point = state.getPoint();
+                        int x = point.x + drawer.getStateDrawer().getRadius();
+                        int y = point.y + (drawer.getStateDrawer().getRadius() / 3);
+                        state.setNote(addNote(new Point(x, y)));
+                    }
+                }
+
+                if (!anyNotesAdded) {
+                    addNote(myPoint);
                 }
                 break;
             case editBlock_DEFAULT:
@@ -233,7 +240,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
                     panel.add(new JLabel("Note: If you want to save this block as a seperate file, use 'Save As' while in the 'Edit Block' window"));
                     panel.add(new JLabel("Building Block Name" + " "));
                     panel.add(field);
-                    int result = JOptionPane.showOptionDialog((Component) e.getSource(), panel, "Give Building Block a Name",
+                    int result = JOptionPane.showOptionDialog(environmentFrame, panel, "Give Building Block a Name",
                             JOptionPane.OK_CANCEL_OPTION, JOptionPane.QUESTION_MESSAGE,
                             null, null, null);
                     if (result != JOptionPane.YES_OPTION && result != JOptionPane.OK_OPTION) {
@@ -245,7 +252,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
                         parent2 = ((TuringMachineBuildingBlocks)parent2.getAutomaton()).getParent();
                         if (parent2.myInternalName != null) {
                             if (parent2.myInternalName.equals(input + ".jff")) {
-                                JOptionPane.showMessageDialog((Component) e.getSource(), "Cannot use the same name as a parent block!",
+                                JOptionPane.showMessageDialog(environmentFrame, "Cannot use the same name as a parent block!",
                                         "A Parent Block Already Has This Name",JOptionPane.ERROR_MESSAGE);
                                 return;
                             }
@@ -256,7 +263,7 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
                         TMState stateTM = (TMState) regState;
                         if (stateTM.getInternalName().equals(input + ".jff")) {
                             Object[] options = { "CANCEL", "YES" };
-                            int selectedOption = JOptionPane.showOptionDialog((Component) e.getSource(), "We STRONGLY suggest to NOT "
+                            int selectedOption = JOptionPane.showOptionDialog(environmentFrame, "We STRONGLY suggest to NOT "
                                             + "use building blocks with the same name. Do you wish to continue anyways?", "Same Name as Another Building Block",
                                     JOptionPane.DEFAULT_OPTION, JOptionPane.WARNING_MESSAGE,
                                     null, options, options[0]);
@@ -297,12 +304,12 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
 
                 String replaceWith = null;
                 String toReplace = null;
-                String old = JOptionPane.showInputDialog(null, "Find");
+                String old = JOptionPane.showInputDialog(environmentFrame, "Find");
                 if (old == null)
                     return;
                 toReplace = old;
 
-                String newString = JOptionPane.showInputDialog(null, "Replace With");
+                String newString = JOptionPane.showInputDialog(environmentFrame, "Replace With");
                 if (newString == null)
                     return;
                 replaceWith = newString;

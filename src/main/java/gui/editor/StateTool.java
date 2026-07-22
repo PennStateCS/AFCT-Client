@@ -20,6 +20,8 @@
 
 package gui.editor;
 
+import automata.State;
+import automata.Transition;
 import gui.environment.AutomatonEnvironment;
 import gui.environment.EnvironmentFrame;
 import gui.viewer.AutomatonDrawer;
@@ -75,9 +77,17 @@ public class StateTool extends Tool {
 	 *            the mouse event
 	 */
 	public void mousePressed(MouseEvent event) {
+		getView().getDrawer().showConnected = false;
 		if (getDrawer().getAutomaton().getEnvironmentFrame() !=null)
     		((AutomatonEnvironment)getDrawer().getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
-        getAutomaton().deselectStatesAndTransitions();
+
+		// Right-clicking an existing state prompts the context-menu
+		if (event.isPopupTrigger() || event.getButton() == MouseEvent.BUTTON3) {
+			showPopup(event);
+			return;
+		}
+
+		getAutomaton().deselectStatesAndTransitions();
         getView().didBoundsSelection = false;
 		state = getAutomaton().createState(event.getPoint());
         state.setSelect(true);
@@ -114,6 +124,9 @@ public class StateTool extends Tool {
 	}
 
     public void mouseReleased(MouseEvent event) {
+		// Handle whether a popup should be shown
+		showPopup(event);
+
         ObjectSnappingHandler objectSnappingHandler = getObjectSnappingHandler();
         objectSnappingHandler.clearSnappingIndicators(getView());
         //state.setSelect(false);

@@ -32,7 +32,7 @@ import automata.State;
 	  * @param firstState  A state from the first automaton
 	  * @param secondState A state from the second automaton
 	  */
-	 StatePair(State firstState, State secondState) {
+	 public StatePair(State firstState, State secondState) {
 		 
 		 state1 = firstState;
 		 state2 = secondState;

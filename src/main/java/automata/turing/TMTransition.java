@@ -22,6 +22,10 @@ package automata.turing;
 
 import automata.Transition;
 import automata.State;
+import automata.pda.PDATransition;
+import gui.environment.Profile;
+import gui.environment.Universe;
+
 import java.util.*;
 
 /**
@@ -261,6 +265,43 @@ public class TMTransition extends Transition {
 			}
 		}
 		return sb.toString();
+	}
+
+	/**
+	 * {@inheritDoc}
+	 * {@link TMTransition} has the form: "read → write, move"
+	 * @see TMTransition#getRead(int)
+	 * @see TMTransition#getWrite(int)
+	 * @see TMTransition#getDirection(int)
+	 */
+	@Override
+	public String getDescriptionWithSpacesHandled() {
+		StringBuilder sb = new StringBuilder();
+		int t = this.tapes();
+		for (int i = 0; i < t; i++) {
+			if (i != 0) {
+				sb.append(" | ");
+			}
+			sb.append(TuringMachineGetEmptyOrReplaceSpaces(this.getRead(i)));
+			sb.append(" → ").append(TuringMachineGetEmptyOrReplaceSpaces(this.getWrite(i)));
+			sb.append(", ").append(TuringMachineGetEmptyOrReplaceSpaces(this.getDirection(i)));
+		}
+		return sb.toString();
+	}
+
+	/**
+	 * If <code>s</code> is empty, this method returns the Turing Machine empty string symbol {@link #BLANK}.
+	 * Otherwise, it returns <code>s</code> with any spaces replaced by {@link #SPACE_MARKER}.
+	 *
+	 * @param s the string to replace spaces in
+	 * @return <code>s</code> with any spaces replaced by {@link #SPACE_MARKER}
+	 */
+	public static String TuringMachineGetEmptyOrReplaceSpaces(String s) {
+		if (s.isEmpty()) {
+			return BLANK;
+		} else {
+			return s.replaceAll(" ", SPACE_MARKER);
+		}
 	}
 
 	/**

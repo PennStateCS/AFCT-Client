@@ -121,4 +121,14 @@ public class MooreTransition extends MealyTransition
         else
             return getLabel();
     }
+
+    /**
+     * {@inheritDoc}
+     * {@link MooreTransition} consists of the label. The output of the transition is shown in the state.
+     * @see MooreTransition#getLabel()
+     */
+    @Override
+    public String getDescriptionWithSpacesHandled() {
+        return getEmptyOrReplaceSpaces(getDescription());
+    }
 }

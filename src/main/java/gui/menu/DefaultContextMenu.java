@@ -18,7 +18,6 @@ import java.awt.event.ActionListener;
 import java.util.Objects;
 
 public class DefaultContextMenu extends ContextMenu implements ActionListener {
-    private Point myPoint;
     private Note curNote;
 
     private JCheckBoxMenuItem stateLabels;
@@ -52,9 +51,9 @@ public class DefaultContextMenu extends ContextMenu implements ActionListener {
     }
 
     public void selectAndEnableMenuItems(Point p) {
+        setMyPoint(p);
         stateLabels.setSelected(drawer.doesDrawStateLabels());
         adaptView.setSelected(view.getAdapt());
-        myPoint = Objects.requireNonNullElseGet(p, () -> new Point(0, 0));
     }
 
     @Override

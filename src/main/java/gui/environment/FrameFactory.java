@@ -46,7 +46,7 @@ public class FrameFactory {
 	 * @return the environment frame for this new item, or <CODE>null</CODE>
 	 *         if an error occurred
 	 */
-	public static EnvironmentFrame createFrame(Serializable object) {
+	public static EnvironmentFrame createFrame(Serializable object, boolean makeVisible) {
 		Environment environment = EnvironmentFactory.getEnvironment(object);
 		//System.out.println("ENVIRONMENT:" + environment);
 		if (environment == null)
@@ -80,9 +80,23 @@ public class FrameFactory {
 		height = Math.max(height, frame.getSize().height);
 		frame.setSize(new Dimension(width, height));
         // TODO: maybe make new windows open offset from source window so it is not covered up (except when opened from main menu
-		frame.setVisible(true);
+		if (makeVisible) {
+			frame.setVisible(true);
+		}
 
 		return frame;
+	}
+
+	/**
+	 * This creates an environment frame for a new item.
+	 *
+	 * @param object
+	 *            the object that we are to edit
+	 * @return the environment frame for this new item, or <CODE>null</CODE>
+	 *         if an error occurred
+	 */
+	public static EnvironmentFrame createFrame(Serializable object) {
+		return createFrame(object, true);
 	}
     
 	/**
@@ -129,7 +143,7 @@ public class FrameFactory {
 		return frame;
 	}
 	
-    public static EnvironmentFrame createFrame(Serializable object, boolean multiple) {
+    public static EnvironmentFrame createFrameMultiple(Serializable object, boolean multiple) {
         EnvironmentFrame frame = createFrame(object);
         
 

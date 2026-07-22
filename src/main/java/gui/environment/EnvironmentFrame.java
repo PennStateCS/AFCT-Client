@@ -29,6 +29,7 @@ import gui.editor.EditBlockPane;
 import gui.editor.EditorKeyBindings;
 import gui.editor.EditorPane;
 import gui.grammar.GrammarInputPane;
+import gui.popups.KeyboardShortcutsPopup;
 import submission.SubmissionGUI;
 
 import java.awt.BorderLayout;
@@ -71,6 +72,7 @@ public class EnvironmentFrame extends JFrame {
 		this.environment = environment;
         environment.setEnvironmentFrame(this);
         EditorKeyBindings.SetUpKeyBindings(this);
+        this.keyboardShortcutsPopup = new KeyboardShortcutsPopup();
 		environment.addFileChangeListener(new FileChangeListener() {
 			public void fileChanged(FileChangeEvent e) {
 				refreshTitle();
@@ -102,6 +104,7 @@ public class EnvironmentFrame extends JFrame {
 		this.environment = environment;
         environment.setEnvironmentFrame(this);
         EditorKeyBindings.SetUpKeyBindings(this);
+        this.keyboardShortcutsPopup = new KeyboardShortcutsPopup();
 		environment.addFileChangeListener(new FileChangeListener() {
 			public void fileChanged(FileChangeEvent e) {
 				refreshTitle();
@@ -167,6 +170,11 @@ public class EnvironmentFrame extends JFrame {
 	public Environment getEnvironment() {
 		return environment;
 	}
+
+    private KeyboardShortcutsPopup keyboardShortcutsPopup;
+    public void showKeyboardShortcutsPopup() {
+        this.keyboardShortcutsPopup.showPopup(this);
+    }
 
 	/**
 	 * Saves the environment's object to a file. This serializes the object

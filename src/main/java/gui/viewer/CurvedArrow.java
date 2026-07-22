@@ -25,6 +25,12 @@ import java.awt.geom.*;
 import java.awt.image.BufferedImage;
 
 import automata.Transition;
+import automata.pda.PDATransition;
+import automata.turing.TMTransition;
+import automata.turing.Tape;
+import gui.environment.Universe;
+
+import static gui.Globals.*;
 
 /**
  * This is a simple class for storing and drawing a curved line with possible
@@ -143,6 +149,32 @@ public class CurvedArrow {
 		needsRefresh = true;
 	}
 
+    public void drawAsColor(Graphics2D g, Color color) {
+        if (needsRefresh)
+            refreshCurve();
+        g.setColor(color);
+        g.draw(curve); // Draws the main part of the arrow.
+        drawArrow(g, end, control); // Draws the arrow head.
+        drawText(g, color);
+    }
+
+    public void drawAsGradient(Graphics2D g, Color startColor, Color endColor, CONNECTION_TYPE connectionType) {
+        if (needsRefresh)
+            refreshCurve();
+        LinearGradientPaint gradientPaint = new LinearGradientPaint(this.start, this.end, new float[]{0.0f, 1.0f}, new Color[]{startColor, endColor});
+        Graphics2D g2 = (Graphics2D) g.create();
+        g2.setPaint(gradientPaint);
+        g2.draw(curve); // Draws the main part of the arrow.
+        drawArrow(g2, end, control); // Draws the arrow head.
+        switch (connectionType) {
+            case FROM -> drawText(g, FROM_COLOR);
+            case TO -> drawText(g, TO_COLOR);
+            case BOTH -> drawText(g, BOTH_COLOR);
+            case NEITHER -> drawText(g, NEITHER_COLOR);
+        }
+        g2.dispose();
+    }
+
 	/**
 	 * Draws the arrow on the indicated graphics environment.
 	 * 
@@ -150,12 +182,7 @@ public class CurvedArrow {
 	 *            the graphics to draw this arrow upon
 	 */
 	public void draw(Graphics2D g) {
-		if (needsRefresh)
-			refreshCurve();
-		g.setColor(ARROW_COLOR);
-		g.draw(curve); // Draws the main part of the arrow.
-		drawArrow(g, end, control); // Draws the arrow head.
-		drawText(g);
+        drawAsColor(g, ARROW_COLOR);
 	}
 
     public void drawControlPoint(Graphics2D g){ //adjust later to center of circle = focus point
@@ -167,6 +194,7 @@ public class CurvedArrow {
         g2.fillOval((int)curve.getCtrlX() - 5, (int)curve.getCtrlY() - 5, controlPointDiameter, controlPointDiameter);
         g2.setColor(CONTROL_POINT_OUTER_COLOR);
         g2.drawOval((int)curve.getCtrlX() - 5, (int)curve.getCtrlY() - 5, controlPointDiameter, controlPointDiameter);
+        g2.dispose();
     }
 
     protected void drawGlowHighlight(Graphics2D g, boolean drawCurve) {
@@ -221,6 +249,41 @@ public class CurvedArrow {
         }
 	}
 
+    public enum CONNECTION_TYPE {
+        FROM,
+        TO,
+        BOTH,
+        NEITHER,
+    }
+
+    public void drawConnectedView(Graphics2D g, Transition transition) {
+		// TODO: ALSO change text color for invisible arrows that are connected to the selected transition
+		//  currently for transitions on multiple things, on the selected one will be highlighted if selecting a transition (states work fine)
+        if (transition.getFromState().isSelected() && transition.getToState().isSelected()) {
+            drawAsColor(g, BOTH_COLOR);
+        } else if (transition.getFromState().isSelected()) {
+            drawAsColor(g, FROM_COLOR);
+            //drawAsGradient(g, FROM_COLOR, TO_COLOR, CONNECTION_TYPE.FROM);
+        } else if (transition.getToState().isSelected()) {
+            drawAsColor(g, TO_COLOR);
+            //drawAsGradient(g, TO_COLOR, FROM_COLOR, CONNECTION_TYPE.TO);
+        } else {
+            drawAsColor(g, NEITHER_COLOR);
+        }
+    }
+
+    public void drawConnectedViewHighlightSelected(Graphics2D g, Transition transition, boolean forceDrawAsSelected) {
+        if (transition.isSelected || forceDrawAsSelected) {
+			if (transition.isSelfLoop()){
+				drawAsColor(g, BOTH_COLOR);
+			} else {
+				drawAsColor(g, FROM_COLOR);
+			}
+        } else {
+            drawAsColor(g, NEITHER_COLOR);
+        }
+    }
+
 	/**
 	 * Draws the text on the high point of the arc. The text drawn is none other
 	 * than the label for this object, as retrieved from <CODE>getLabel</CODE>.
@@ -228,7 +291,7 @@ public class CurvedArrow {
 	 * @param g
 	 *            the graphics object to draw the text upon
 	 */
-	public void drawText(Graphics2D g) {
+	public void drawText(Graphics2D g, Color color) {
 		// We don't want to corrupt the graphics environs with our
 		// affine transforms!
 		Graphics2D g2 = (Graphics2D) g.create();
@@ -236,9 +299,12 @@ public class CurvedArrow {
 				RenderingHints.VALUE_ANTIALIAS_ON);
 		g2.transform(affineToText);
 
+		// Handle spaces in transition
+		String tempLabel = myTransition.getDescriptionWithSpacesHandled();
+
 		// What about the text label?
 		FontMetrics metrics = g2.getFontMetrics();
-		bounds = metrics.getStringBounds(getLabel(), g2);
+		bounds = metrics.getStringBounds(tempLabel, g2);
 		// Will the label appear to be upside down?
 		boolean upsideDown = end.x < start.x;
 		float dx = (float) bounds.getWidth() / 2.0f;
@@ -246,10 +312,14 @@ public class CurvedArrow {
 				.getDescent();
 		bounds.setRect(bounds.getX() - dx, bounds.getY() + dy, bounds
 				.getWidth(), bounds.getHeight());
-		g2.setColor(new Color(0,0,0));
-		for (int i = 0; i < label.length(); i += CHARS_PER_STEP) {
-			String sublabel = label.substring(i, Math.min(i + CHARS_PER_STEP,
-					label.length()));
+		g2.setColor(color);
+
+		for (int i = 0; i < tempLabel.length(); i += CHARS_PER_STEP) {
+			String sublabel = tempLabel.substring(i, Math.min(i + CHARS_PER_STEP,
+					tempLabel.length()));
+//            if (sublabel.contains(" ")) {
+//                sublabel = sublabel.replaceAll(" ", "␣");
+//            }
 			g2.drawString(sublabel, -dx, dy);
 			dx -= (float) metrics.getStringBounds(sublabel, g2).getWidth();
 		}
@@ -260,6 +330,17 @@ public class CurvedArrow {
 		 * GRAPHICS.getFontMetrics(); }
 		 */
 	}
+
+    /**
+     * Draws the text on the high point of the arc. The text drawn is none other
+     * than the label for this object, as retrieved from <CODE>getLabel</CODE>.
+     *
+     * @param g
+     *            the graphics object to draw the text upon
+     */
+    public void drawText(Graphics2D g) {
+        drawText(g, Color.black);
+    }
 
 	/**
 	 * Sets the label that will be drawn on the high arc point.

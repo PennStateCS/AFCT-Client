@@ -147,7 +147,18 @@ public class MealyTransition extends Transition
             output = Universe.curProfile.getEmptyString();;
         return label + " ; " + output;
     }
-    
+
+    /**
+     * {@inheritDoc}
+     * {@link MealyTransition} has the form: "label ; output"
+     * @see MealyTransition#getLabel()
+     * @see MealyTransition#getOutput()
+     */
+    @Override
+    public String getDescriptionWithSpacesHandled() {
+        return getEmptyOrReplaceSpaces(getLabel()) + " ; " + getEmptyOrReplaceSpaces(getOutput());
+    }
+
     /**
      * Returns a string representation of this object. This is the same
      * as the string representation for a regular transition object with

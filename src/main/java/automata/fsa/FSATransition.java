@@ -20,6 +20,7 @@
 
 package automata.fsa;
 
+import automata.turing.TMTransition;
 import gui.environment.Universe;
 import automata.Transition;
 import automata.State;
@@ -100,6 +101,17 @@ public class FSATransition extends Transition {
 		if (desc.length() == 0)
 			return Universe.curProfile.getEmptyString(); // I am a badass.
 		return getLabel();
+	}
+
+
+	/**
+	 * {@inheritDoc}
+	 * {@link FSATransition} has the form: "label"
+	 * @see FSATransition#getLabel()
+	 */
+	@Override
+	public String getDescriptionWithSpacesHandled() {
+		return getEmptyOrReplaceSpaces(getDescription());
 	}
 
 	/**

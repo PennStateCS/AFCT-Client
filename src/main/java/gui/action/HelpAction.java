@@ -25,6 +25,8 @@ import javax.swing.KeyStroke;
 import java.awt.event.KeyEvent;
 import java.util.*;
 
+import static java.awt.event.InputEvent.SHIFT_DOWN_MASK;
+
 /**
  * The <CODE>HelpAction</CODE> is an abstract action that is meant to bring up
  * a help page appropriate to whatever context. It also serves as a general sort
@@ -50,7 +52,7 @@ public abstract class HelpAction extends RestrictedAction {
 	public HelpAction() {
 		super("Help...", null);
 		putValue(ACCELERATOR_KEY, KeyStroke.getKeyStroke(KeyEvent.VK_SLASH,
-				MAIN_MENU_MASK));
+				MAIN_MENU_MASK | SHIFT_DOWN_MASK));
 	}
 
 	/**
