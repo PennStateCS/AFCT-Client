@@ -41,9 +41,7 @@ class SessionHandlerTest {
         return new Harness(mock, new SessionHandler());
     }
 
-    /** Wipe the test-node preferences after each test so runs don't bleed into each other. */
-    @AfterEach
-    void cleanPrefs() throws BackingStoreException {
+    private void wipePrefs() throws BackingStoreException {
         Preferences prefs = Preferences.userNodeForPackage(SessionHandler.class);
         prefs.remove(SessionHandler.PREF_SERVER);
         prefs.remove(SessionHandler.PREF_PORT);
@@ -56,6 +54,17 @@ class SessionHandlerTest {
         prefs.remove(SessionHandler.PREF_SAVED_CREDS_EXPIRE_AT_MS);
         prefs.remove(SessionHandler.PREF_SAVED_CREDS_EXPIRE_AFTER);
         prefs.flush();
+    }
+
+    /** Wipe the test-node preferences before/after each test so runs don't bleed into each other. */
+    @BeforeEach
+    void cleanPrefsBefore() throws BackingStoreException {
+        wipePrefs();
+    }
+
+    @AfterEach
+    void cleanPrefsAfter() throws BackingStoreException {
+        wipePrefs();
     }
 
     // ── Initial state ────────────────────────────────────────────────────────
