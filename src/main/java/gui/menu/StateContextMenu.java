@@ -3,6 +3,7 @@ package gui.menu;
 import automata.Note;
 import automata.State;
 import automata.Transition;
+import automata.gnfa.GNFA;
 import automata.turing.TMState;
 import automata.turing.TMTransition;
 import automata.turing.TuringMachineBuildingBlocks;
@@ -18,6 +19,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.awt.event.ActionEvent;
 import java.awt.event.ActionListener;
+import java.util.HashSet;
 import java.util.Objects;
 import java.util.Set;
 
@@ -140,6 +142,11 @@ public class StateContextMenu extends ContextMenu implements ActionListener {
                 for (State state : states) {
                     if (state.isSelected()) {
                         if (item.isSelected()){
+                            // GNFAs can only have one final state; remove other final states before setting a new one
+                            if (drawer.getAutomaton() instanceof GNFA &&
+                                drawer.getAutomaton().getFinalStates().length == 1){
+                                drawer.getAutomaton().finalStates = new HashSet<State>();
+                            }
                             drawer.getAutomaton().addFinalState(state);
                         } else {
                             drawer.getAutomaton().removeFinalState(state);

@@ -199,24 +199,29 @@ public class NewAction extends RestrictedAction {
 				}
 			});
 			getContentPane().add(button);
-            
+
+			button = new JButton("Generalized Nondeterministic Finite Automata");
+			button.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e) {createWindow(new automata.gnfa.GNFA());}
+			});
+			getContentPane().add(button);
+
             button = new JButton("Mealy Machine");
-            button.addActionListener(new ActionListener()
-                {
-                    public void actionPerformed(ActionEvent e)
+            button.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e)
                     {
                         createWindow(new MealyMachine());
                     }
-                });
+			});
             getContentPane().add(button);
+
             button = new JButton("Moore Machine");
-            button.addActionListener(new ActionListener()
-                {
-                    public void actionPerformed(ActionEvent e)
+            button.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e)
                     {
                         createWindow(new MooreMachine());
                     }
-                });
+			});
             getContentPane().add(button);
 
 			button = new JButton("Pushdown Automaton");
@@ -298,23 +303,21 @@ public class NewAction extends RestrictedAction {
 			getContentPane().add(button);
             
             button = new JButton("Regular Pumping Lemma");
-            button.addActionListener(new ActionListener()
-                {
-                    public void actionPerformed(ActionEvent e)
+            button.addActionListener(new ActionListener() {
+				public void actionPerformed(ActionEvent e)
                     {
                         createWindow(new RegPumpingLemmaChooser());
                     }
-                });
+			});
             getContentPane().add(button);
             
             button = new JButton("Context-Free Pumping Lemma");
-            button.addActionListener(new ActionListener()
-                {
-                    public void actionPerformed(ActionEvent e)
+            button.addActionListener(new ActionListener() {
+			   public void actionPerformed(ActionEvent e)
                     {
                         createWindow(new CFPumpingLemmaChooser());
                     }
-                });
+			});
             getContentPane().add(button);
 		}
 	}

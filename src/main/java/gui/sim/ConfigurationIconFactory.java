@@ -22,6 +22,7 @@ package gui.sim;
 
 import automata.Configuration;
 import automata.fsa.FSAConfiguration;
+import automata.gnfa.GNFAConfiguration;
 import automata.pda.PDAConfiguration;
 import automata.turing.TMConfiguration;
 
@@ -47,6 +48,8 @@ public class ConfigurationIconFactory {
 			Configuration configuration) {
 		if (configuration instanceof FSAConfiguration)
 			return new FSAConfigurationIcon(configuration);
+		else if (configuration instanceof GNFAConfiguration)
+			return new GNFAConfigurationIcon(configuration);
 		else if (configuration instanceof PDAConfiguration)
 			return new PDAConfigurationIcon(configuration);
 		else if (configuration instanceof TMConfiguration)

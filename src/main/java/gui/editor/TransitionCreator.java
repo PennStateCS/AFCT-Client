@@ -91,6 +91,8 @@ public abstract class TransitionCreator {
 			AutomatonPane parent) {
 		if (automaton instanceof automata.fsa.FiniteStateAutomaton)
 			return new FSATransitionCreator(parent);
+		if (automaton instanceof automata.gnfa.GNFA)
+			return new GNFATransitionCreator(parent);
 		if (automaton instanceof automata.pda.PushdownAutomaton)
 			return new PDATransitionCreator(parent);
 		if (automaton instanceof automata.turing.TuringMachine)

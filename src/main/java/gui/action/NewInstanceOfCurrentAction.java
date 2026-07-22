@@ -1,6 +1,7 @@
 package gui.action;
 
 import automata.fsa.FiniteStateAutomaton;
+import automata.gnfa.GNFA;
 import automata.mealy.MealyMachine;
 import automata.mealy.MooreMachine;
 import automata.pda.PushdownAutomaton;
@@ -87,6 +88,7 @@ public class NewInstanceOfCurrentAction extends RestrictedAction {
         String base = "New ";
         return switch (obj) {
             case FiniteStateAutomaton fsa -> new NewInstanceOfCurrentAction(base + "Finite Automaton", frame);
+            case GNFA gnfa -> new NewInstanceOfCurrentAction(base + "Generalized Nondeterministic Finite Automaton", frame);
             case MooreMachine moore -> new NewInstanceOfCurrentAction(base + "Moore Machine", frame);
             case MealyMachine mealy -> new NewInstanceOfCurrentAction(base + "Mealy Machine", frame);
             case PushdownAutomaton pda -> new NewInstanceOfCurrentAction(base + (pda.singleInputPDA ? "Single" : "Multiple") + " Input Pushdown Automaton", frame);
