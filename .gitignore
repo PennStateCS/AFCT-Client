@@ -30,3 +30,13 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Java ###
+*.class
+*.jar
+
+### Logs ###
+*.log
+
+### Credentials / environment ###
+.env

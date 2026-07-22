@@ -1,0 +1,23 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="512" height="512">
+<defs>
+<linearGradient id="badge" x1="0" y1="0" x2="0.85" y2="1">
+<stop offset="0" stop-color="#3d4654"></stop><stop offset="0.45" stop-color="#2a3039"></stop><stop offset="1" stop-color="#161a20"></stop>
+</linearGradient>
+<linearGradient id="swoosh" gradientUnits="userSpaceOnUse" x1="118" y1="282" x2="372" y2="196">
+<stop offset="0" stop-color="#46c94a"></stop><stop offset="0.18" stop-color="#1cc2a8"></stop><stop offset="0.45" stop-color="#2bb8ef"></stop><stop offset="1" stop-color="#38dcef"></stop>
+</linearGradient>
+<radialGradient id="node" cx="0.35" cy="0.3" r="0.8">
+<stop offset="0" stop-color="#78e97a"></stop><stop offset="1" stop-color="#37bf3d"></stop>
+</radialGradient>
+</defs>
+<path d="M138,52 L374,52 L492,256 L374,460 L138,460 L20,256 Z" fill="url(#badge)" stroke="url(#badge)" stroke-width="34" stroke-linejoin="round"></path>
+<path d="M138,52 L374,52 L492,256 L374,460 L138,460 L20,256 Z" fill="none" stroke="#f2a94b" stroke-width="6" stroke-linejoin="round"></path>
+<g transform="translate(64, 6) scale(0.75)"><path d="M170,88 L229,88 L285,225 L352,383 L381,383 L381,424 L330,424 L242,229 L172,424 L129,424 L215,168 L203,129 L170,129 Z" fill="#ffffff"></path>
+<path d="M96,300 C158,390 318,344 374,232" fill="none" stroke="url(#swoosh)" stroke-width="30" stroke-linecap="round"></path>
+<path d="M393,190 L352,218 L401,239 Z" fill="url(#swoosh)" stroke="url(#swoosh)" stroke-width="10" stroke-linejoin="miter"></path>
+<path d="M242,229 L172,424 L129,424 L195,229 Z" fill="#ffffff"></path>
+<circle cx="94" cy="300" r="30" fill="url(#node)"></circle>
+<circle cx="85" cy="291" r="9" fill="rgba(255,255,255,0.55)"></circle></g>
+<text x="256" y="394" text-anchor="middle" font-family="Inter, &#39;Segoe UI&#39;, Arial, sans-serif" font-weight="900" font-size="80" letter-spacing="4" fill="#f2a94b">AFCT</text>
+<text x="256" y="435" text-anchor="middle" font-family="Inter, &#39;Segoe UI&#39;, Arial, sans-serif" font-weight="700" font-size="33" letter-spacing="2" fill="#38dcef">JFLAP Client</text>
+</svg>
