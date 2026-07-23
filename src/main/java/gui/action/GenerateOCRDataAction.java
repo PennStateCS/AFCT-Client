@@ -128,6 +128,13 @@ public class GenerateOCRDataAction extends RestrictedAction{
                 JOptionPane.showMessageDialog(null, errorMessage);
             }
 
+            try {
+                Thread.sleep(16);
+            } catch (InterruptedException e) {
+                // Restore interrupted status or handle the interruption
+                Thread.currentThread().interrupt();
+            }
+
             // screenshot the diagram and save it as a png
             // we will assume if we made it here the filepath is good
             saveAutomatonAsPNG(savedFilePath);
@@ -228,7 +235,7 @@ public class GenerateOCRDataAction extends RestrictedAction{
         Dimension psize = new Dimension(this.environment.getWidth()-assumedUsedWidth,
                 this.environment.getHeight()-assumedUsedHeight);
         Dimension vertexDimension = new Dimension(30,30);
-        int vertexBuffer = 120;
+        int vertexBuffer = 130;
         switch (algorithm) {
             case THE_RANDOM_ALGORITHM:
                 graph = LayoutAlgorithmFactory.getAutomatonGraph(LayoutAlgorithmFactory.RANDOM, this.automaton);
@@ -363,7 +370,11 @@ public class GenerateOCRDataAction extends RestrictedAction{
         for (State s : states) {
             Point point = s.getPoint();
             // these are just magic numbers that subjectively give good results
-            Point newPoint = new Point(point.x+200, point.y+20);
+            int randomShift = (int)(Math.random() * 30);
+            Point newPoint = new Point(point.x+190+randomShift, point.y+20);
+            if (newPoint.y < 50) {
+                newPoint.y = 50 + randomShift;
+            }
             s.setPoint(newPoint);
         }
     }

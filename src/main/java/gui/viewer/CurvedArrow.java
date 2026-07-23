@@ -324,7 +324,7 @@ public class CurvedArrow {
 		float dx = (float) bounds.getWidth() / 2.0f;
 		// add 4 to the descent so that the commas aren't touching the line
 		float dy = (curvy < 0.0f) ^ upsideDown ? (metrics.getAscent()) : -metrics
-				.getDescent() - 4;
+				.getDescent() - 6;
 
 		g2.setColor(color);
 

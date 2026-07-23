@@ -118,7 +118,7 @@ public class AutomatonDrawer {
 		Graphics2D g = (Graphics2D) g2.create();
 		g.setRenderingHint(RenderingHints.KEY_ANTIALIASING,
 				RenderingHints.VALUE_ANTIALIAS_ON);
-		g.setFont(g.getFont().deriveFont(12.0f));
+		g.setFont(g.getFont().deriveFont(15.0f));
 
         boolean transitionFocusDraw = false;
         if (this.showConnected) {
