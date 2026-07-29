@@ -1947,6 +1947,17 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // File selection
     // ============================================================
 
+    // TODO: currently it is impossible to submit without saving.
+    //  As well, the submission window does not display the current window as the selected file if it has not been saved
+    //  These are both major issues for the user experience, as trying to submit will just end with them seeing:
+    //  "No file open. Open a file in the editor first." which will make no sense as they clearly have a file open,
+    //  it just hasn't been saved yet. If we, for some reason, want to force users to save the file first, then trying
+    //  to submit an unsaved file should just open the file save dialog, then submit after it has been saved.
+    //  As well, being able to submit without saving at the very least needs to be an option that can be enabled
+    //  somewhere, as lacking this ability makes testing a major headache.
+
+
+
     private void browseForFile() {
         JFileChooser chooser = new JFileChooser();
         // Start in the directory of the currently selected file, or user home
