@@ -165,11 +165,11 @@ public class Globals {
         return KeyboardFocusManager.getCurrentKeyboardFocusManager().getActiveWindow();
     }
 
-    public static Dimension getSize(JFrame frame) {
+    public static Dimension getSize(Frame frame) {
         return getSize(frame, null);
     }
 
-    public static Dimension getSize(JFrame frame, Double scaleFactor) {
+    public static Dimension getSize(Frame frame, Double scaleFactor) {
         Rectangle frameBounds = frame.getBounds();
 
         // determine which screen the popup will appear on
@@ -230,15 +230,15 @@ public class Globals {
         toChange.setMinimumSize(size);
     }
 
-    public static void sizeAndCenterWindow(JFrame frame) {
+    public static void sizeAndCenterWindow(Frame frame) {
         sizeAndCenterWindow(frame, null, true);
     }
 
-    public static void sizeAndCenterWindow(JFrame frame, Double scaleFactor) {
+    public static void sizeAndCenterWindow(Frame frame, Double scaleFactor) {
         sizeAndCenterWindow(frame, scaleFactor, true);
     }
 
-    private static void sizeAndCenterWindow(JFrame frame, Double scaleFactor, boolean center) {
+    private static void sizeAndCenterWindow(Frame frame, Double scaleFactor, boolean center) {
         Window window = getActiveWindow();
         if (window == null) {
             return;
@@ -259,7 +259,7 @@ public class Globals {
         }
     }
 
-    public static void guaranteedPositionFrameOnWindow(JFrame frame, JFrame window, boolean selectScreenByArea) {
+    public static void guaranteedPositionFrameOnWindow(Frame frame, Frame window, boolean selectScreenByArea) {
         if (window.isShowing()) {
             frame.setLocationRelativeTo(window);
             return;
@@ -290,7 +290,7 @@ public class Globals {
         frame.setLocation(targetFit.x, targetFit.y);
     }
 
-    public static void guaranteedPositionFrameOnWindow(JFrame frame, JFrame window) {
+    public static void guaranteedPositionFrameOnWindow(Frame frame, Frame window) {
         guaranteedPositionFrameOnWindow(frame, window, true);
     }
 
@@ -451,7 +451,7 @@ public class Globals {
         return fitToScreen(windowFit.x, windowFit.y, frameBounds, screenBounds);
     }
 
-    private static WindowFit positionFrame(JFrame window, JFrame frame, Position targetPosition) {
+    private static WindowFit positionFrame(Frame window, Frame frame, Position targetPosition) {
         Rectangle windowBounds = window.getBounds();
         Rectangle frameBounds = frame.getBounds();
 
@@ -474,7 +474,7 @@ public class Globals {
         return new WindowFit(dx, dy);
     }
 
-    private static WindowFit tryFitPosition(JFrame frame, Position targetPosition, JFrame window, Rectangle screenBounds, boolean forceToTarget) {
+    private static WindowFit tryFitPosition(Frame frame, Position targetPosition, Frame window, Rectangle screenBounds, boolean forceToTarget) {
         Rectangle frameBounds = frame.getBounds();
 
         // Try to position frame at targetPosition
@@ -490,11 +490,11 @@ public class Globals {
         return dPoint;
     }
 
-    private static WindowFit tryFitPosition(JFrame frame, Position targetPosition, JFrame window, Rectangle screenBounds) {
+    private static WindowFit tryFitPosition(Frame frame, Position targetPosition, Frame window, Rectangle screenBounds) {
         return tryFitPosition(frame, targetPosition, window, screenBounds, false);
     }
 
-    private static Rectangle getScreenBounds(JFrame window) {
+    private static Rectangle getScreenBounds(Frame window) {
         // determine which screen the frame should appear on
         boolean validX = false;
         boolean validY = false;
@@ -531,7 +531,7 @@ public class Globals {
         return screenBounds;
     }
 
-    private static Rectangle getScreenBoundsForWindowByArea(JFrame window) {
+    private static Rectangle getScreenBoundsForWindowByArea(Frame window) {
         // determine which screen the frame should appear on
         Rectangle screenBounds;
         Rectangle windowBounds = window.getBounds();
@@ -615,7 +615,7 @@ public class Globals {
         return bestScreenBounds;
     }
 
-    public static void positionFrameNearWindow(JFrame frame, Position targetPosition, JFrame window, boolean forceToTarget) {
+    public static void positionFrameNearWindow(Frame frame, Position targetPosition, Frame window, boolean forceToTarget) {
         if (targetPosition == Position.CENTER) {
             frame.setLocationRelativeTo(window);
         }
@@ -651,7 +651,7 @@ public class Globals {
         frame.setLocation(bestFit.x, bestFit.y);
     }
 
-    public static void positionFrameNearWindow(JFrame frame, Position targetPosition, JFrame window) {
+    public static void positionFrameNearWindow(Frame frame, Position targetPosition, Frame window) {
         positionFrameNearWindow(frame, targetPosition, window, false);
     }
 

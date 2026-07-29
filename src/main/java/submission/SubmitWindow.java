@@ -28,8 +28,7 @@ import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
 
-import static gui.Globals.colorHTMLErrorMessage;
-import static gui.Globals.colorHTMLSuccessMessage;
+import static gui.Globals.*;
 
 public class SubmitWindow extends JFrame implements SubmissionGUI {
 
@@ -876,7 +875,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         logoutBtn.addActionListener(e -> {
             dispose();
-            Globals.sessionHandler.logout(true);
+            Globals.sessionHandler.logout(true, Universe.frameForEnvironment(environment));
         });
 
         submitBtn.addActionListener(e -> attemptSubmit());
@@ -925,11 +924,17 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     public void displaySubmitWindow() {
         applyDefaultSize();
+        positionFrameNearWindow(
+                this,
+                Globals.Position.RIGHT,
+                Universe.frameForEnvironment(environment)
+        );
         setVisible(true);
         toFront();
 
         // Ensure current file from environment is loaded
         updateCurrentFileDisplay();
+
     }
 
     /**
@@ -1230,7 +1235,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         new SwingWorker<List<Map<String, Object>>, Void>() {
             @Override
             protected List<Map<String, Object>> doInBackground() throws Exception {
-                AFCTClient client = Globals.sessionHandler.requireAuthenticated();
+                AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                 if (client == null) return null;
                 return client.getSubmissions(assignmentId, problemId);
             }
@@ -1522,7 +1527,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             @Override
             protected Map<String, Object> doInBackground() {
                 try {
-                    AFCTClient client = Globals.sessionHandler.requireAuthenticated();
+                    AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) {
                         err = "Login cancelled.";
                         return null;
@@ -1657,7 +1662,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             @Override
             protected List<Map<String, Object>> doInBackground() {
                 try {
-                    AFCTClient client = Globals.sessionHandler.requireAuthenticated();
+                    AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) {
                         err = "Login cancelled.";
                         return null;
@@ -1805,7 +1810,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             @Override
             protected List<Map<String, Object>> doInBackground() {
                 try {
-                    AFCTClient client = Globals.sessionHandler.requireAuthenticated();
+                    AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) {
                         err = "Login cancelled.";
                         return null;
@@ -2063,7 +2068,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             @Override
             protected Map<String, Object> doInBackground() {
                 try {
-                    AFCTClient client = Globals.sessionHandler.requireAuthenticated();
+                    AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) { err = "Login cancelled."; return null; }
 
                     // Upload (202 Accepted), then poll for the graded result

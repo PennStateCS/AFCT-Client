@@ -1,6 +1,7 @@
 package submission;
 
 import gui.Globals;
+import gui.environment.Universe;
 
 import javax.swing.*;
 import java.awt.*;
@@ -54,11 +55,12 @@ public class LoginWindow extends JDialog {
     // DISPLAY
     // ============================================================
 
-    public void displayLoginWindow() {
+    public void displayLoginWindow(JFrame frame) {
         resultPane.setText("");
         passwordTF.setText("");
         populateFromSessionState();
         toggleInputs(true);
+        setLocationRelativeTo(frame);
         setVisible(true); // modal => blocks until disposed/hidden
     }
 

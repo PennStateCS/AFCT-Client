@@ -87,7 +87,7 @@ class SessionHandlerTest {
     void requireAuthenticatedReturnsNullWhenNotLoggedIn() {
         try (var h = open()) {
             // No login attempted – must return null and not block.
-            assertNull(h.handler().requireAuthenticated());
+            assertNull(h.handler().requireAuthenticated(null));
         }
     }
 

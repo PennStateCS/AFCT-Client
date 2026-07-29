@@ -2,6 +2,7 @@ package submission;
 
 
 import gui.environment.Environment;
+import gui.environment.Universe;
 
 import javax.net.ssl.SSLHandshakeException;
 import javax.swing.*;
@@ -11,6 +12,7 @@ import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.GCMParameterSpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import java.awt.*;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
 import java.nio.charset.StandardCharsets;
@@ -104,8 +106,8 @@ public class SessionHandler {
         return submitWindow;
     }
 
-    public void displayLoginThenSubmission(SubmitWindow submitWindowToShow) {
-        AFCTClient authenticated = requireAuthenticated();
+    public void displayLoginThenSubmission(SubmitWindow submitWindowToShow, Environment environment) {
+        AFCTClient authenticated = requireAuthenticated(Universe.frameForEnvironment(environment));
         if (authenticated != null && authenticated.isAuthenticated()) {
             submitWindowToShow.displaySubmitWindow();
         }
@@ -125,12 +127,12 @@ public class SessionHandler {
      * The bearer token has a sliding 30-day expiry and every call renews it, so there
      * is no idle-timeout check here — if the server ever returns 401, log in again.
      */
-    public AFCTClient requireAuthenticated() {
+    public AFCTClient requireAuthenticated(JFrame frame) {
         boolean needToReAuth = this.client == null || !this.client.isAuthenticated();
 
         if (needToReAuth) {
             // Remember Me now pre-fills the form only; user must explicitly log in.
-            showLoginWindowBlocking();
+            showLoginWindowBlocking(frame);
         }
 
         if (this.client == null || !this.client.isAuthenticated()) {
@@ -210,10 +212,10 @@ public class SessionHandler {
     }
 
     public void logout() {
-        logout(false);
+        logout(false, null);
     }
 
-    public void logout(boolean forceManualReLogin) {
+    public void logout(boolean forceManualReLogin, JFrame frame) {
         preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
         this.loggedIn = false;
 
@@ -241,7 +243,7 @@ public class SessionHandler {
         }.execute();
 
         if (forceManualReLogin) {
-            Runnable showLogin = () -> loginWindow.displayLoginWindow();
+            Runnable showLogin = () -> loginWindow.displayLoginWindow(frame);
             SwingUtilities.invokeLater(showLogin);
         }
     }
@@ -455,8 +457,8 @@ public class SessionHandler {
                 System.getProperty("os.arch", "");
     }
 
-    private void showLoginWindowBlocking() {
-        Runnable showLogin = () -> loginWindow.displayLoginWindow();
+    private void showLoginWindowBlocking(JFrame frame) {
+        Runnable showLogin = () -> loginWindow.displayLoginWindow(frame);
         if (SwingUtilities.isEventDispatchThread()) {
             showLogin.run();
             return;

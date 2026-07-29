@@ -28,7 +28,7 @@ public class SubmitAction extends RestrictedAction {
     public void actionPerformed(ActionEvent e) {
 
         // 🔐 Authentication Gate
-        AFCTClient client = Globals.sessionHandler.requireAuthenticated();
+        AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
 
         if (client == null) {
             // Login cancelled or failed
