@@ -43,7 +43,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private static final Color CARD_BORDER = new Color(0xE2, 0xE5, 0xEA); // subtle card outline
     private static final Color ACCENT      = new Color(0x42, 0x63, 0xEB); // primary blue
     private static final Color TEXT_DARK   = new Color(0x1F, 0x29, 0x37);
-    private static final Color TEXT_MUTED  = new Color(0x6B, 0x72, 0x80);
+    public static final Color TEXT_MUTED  = new Color(0x6B, 0x72, 0x80);
     private static final Color SELECTION_BG = new Color(0xE7, 0xF0, 0xFE); // light-blue row highlight
 
     private final Environment environment;
@@ -321,7 +321,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         UIManager.put("Tree.selectionBorderColor", SELECTION_BG);
 
         // Custom renderer with icons
-        selectionTree.setCellRenderer(new SubmitTreeCellRenderer());
+        selectionTree.setCellRenderer(new ExtendedSubmitTreeCellRenderer());
 
         // Use +/- symbols for expand/collapse
         UIManager.put("Tree.expandedIcon", createPlusMinusIcon(true));
@@ -1270,6 +1270,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             autoSizeSubmissionHistoryColumns();
             return;
         }
+
+        if (selectedProblem != null) {
+            selectedProblem.updateStatus(subs.getFirst().get("status") != null ? String.valueOf(subs.getFirst().get("status")) : "");
+        }
+
         for (Map<String, Object> s : subs) {
             String when = "";
             Object submittedAt = s.get("submittedAt");

@@ -22,6 +22,10 @@ public final class ProblemItem {
     /** FA determinism requirement, or null when it does not apply. */
     public final Boolean isDeterministic;
 
+    /** Used to display the submission status for this problem. */
+    private final PillRenderer statusPill;
+    public String status = "";
+
     public ProblemItem(String id, String name, String description, boolean solved,
                        String type, int maxPoints, int maxSubmissions, int submissionCount, int grade,
                        Integer maxStates, Boolean isDeterministic) {
@@ -36,6 +40,8 @@ public final class ProblemItem {
         this.grade = grade;
         this.maxStates = maxStates;
         this.isDeterministic = isDeterministic;
+
+        this.statusPill = new PillRenderer();
     }
 
     /** The problem type's full display name, e.g. "Finite Automaton" for "FA". */
@@ -55,6 +61,12 @@ public final class ProblemItem {
     public int attemptsLeft() {
         if (maxSubmissions <= 0 || submissionCount < 0) return -1;
         return Math.max(0, maxSubmissions - submissionCount);
+    }
+
+    public void updateStatus(String status) {
+        this.status = status;
+        statusPill.setText(status);
+        statusPill.updateStatusPill(statusPill, status);
     }
 
     @Override
