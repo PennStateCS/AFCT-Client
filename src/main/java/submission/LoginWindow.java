@@ -55,13 +55,20 @@ public class LoginWindow extends JDialog {
     // DISPLAY
     // ============================================================
 
-    public void displayLoginWindow(JFrame frame) {
+    public void displayLoginWindow(JFrame frame, boolean shouldAutoLogin) {
         resultPane.setText("");
         passwordTF.setText("");
         populateFromSessionState();
         toggleInputs(true);
         setLocationRelativeTo(frame);
+        if (shouldAutoLogin) {
+            attemptLogin();
+        }
         setVisible(true); // modal => blocks until disposed/hidden
+    }
+
+    public void displayLoginWindow(JFrame frame) {
+        displayLoginWindow(frame, false);
     }
 
     // ============================================================

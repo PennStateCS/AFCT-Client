@@ -132,13 +132,26 @@ public class SessionHandler {
 
         if (needToReAuth) {
             // Remember Me now pre-fills the form only; user must explicitly log in.
-            showLoginWindowBlocking(frame);
+            showLoginWindowBlocking(frame, shouldAutoLogin());
         }
 
         if (this.client == null || !this.client.isAuthenticated()) {
             return null;
         }
         return this.client;
+    }
+
+
+    private boolean shouldAutoLogin() {
+        if (!hasRememberMe()) {
+            return false;
+        }
+
+        long expiresAtMs = getSavedCredentialsExpiryMillis();
+        if (expiresAtMs <= 0 || Instant.now().toEpochMilli() >= expiresAtMs) {
+            return false;
+        }
+        return true;
     }
 
     /**
@@ -457,8 +470,8 @@ public class SessionHandler {
                 System.getProperty("os.arch", "");
     }
 
-    private void showLoginWindowBlocking(JFrame frame) {
-        Runnable showLogin = () -> loginWindow.displayLoginWindow(frame);
+    private void showLoginWindowBlocking(JFrame frame, boolean shouldAutoLogin) {
+        Runnable showLogin = () -> loginWindow.displayLoginWindow(frame, shouldAutoLogin);
         if (SwingUtilities.isEventDispatchThread()) {
             showLogin.run();
             return;

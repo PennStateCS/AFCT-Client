@@ -1205,7 +1205,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             problemDetailsPane.setText(html);
             problemDetailsPane.setCaretPosition(0);
         }
-        sizeDetailScrollToContent(problemDetailsScroll, problemDetailsPane, 44, 220);
+        sizeDetailScrollToContent(problemDetailsScroll, problemDetailsPane, 44, 220, 1);
         // Refresh the submission history to match the selected problem (also runs after a
         // submit, since that path re-calls updateProblemDetails).
         updateSubmissionHistory(problem);
@@ -1419,7 +1419,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             assignmentDetailsPane.setText(html);
             assignmentDetailsPane.setCaretPosition(0);
         }
-        sizeDetailScrollToContent(assignmentDetailsScroll, assignmentDetailsPane, 44, 220);
+        sizeDetailScrollToContent(assignmentDetailsScroll, assignmentDetailsPane, 44, 220, 2);
     }
 
     /** Parses a UTC ISO-8601 string to an Instant, or null if missing/blank/unparseable. */
@@ -1444,16 +1444,25 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
      * [minH, maxH], so the Selected Assignment / Selected Problem boxes grow and shrink
      * to fit their text (with a floor) instead of holding a fixed slice of the window.
      */
-    private void sizeDetailScrollToContent(JScrollPane scroll, JTextPane pane, int minH, int maxH) {
+    private void sizeDetailScrollToContent(JScrollPane scroll, JTextPane pane, int minH, int maxH, double minHeightDivisor) {
         int w = scroll.getViewport().getExtentSize().width;
         if (w <= 0) w = scroll.getWidth();
         if (w <= 0) w = 280;
         // Constrain the width so the HTML view reports its wrapped (content) height.
         pane.setSize(new Dimension(w, Integer.MAX_VALUE));
         int contentH = pane.getPreferredSize().height + 6;
+        //System.out.printf("pane.getPreferredSize().height = %d, contentH = pane.getPreferredSize().height + 6 = %d\n", pane.getPreferredSize().height, contentH);
         int h = Math.max(minH, Math.min(contentH, maxH));
-        scroll.setPreferredSize(new Dimension(scroll.getPreferredSize().width, h));
+        int scrollPreferredWidth = scroll.getPreferredSize().width;
+        System.out.printf("scrollPreferredWidth = %d, h = %d\n", scrollPreferredWidth, h);
+        scroll.setPreferredSize(new Dimension(scrollPreferredWidth, h));
+
+        // Also set minium size to avoid the details section being compressed too far below its preferred size
+        scroll.setMinimumSize(new Dimension(0, (int) (h / minHeightDivisor)));
+//        scroll.setMinimumSize(new Dimension(0, h));
+
         scroll.revalidate();
+        System.out.printf("scroll.getWidth() = %d, scroll.getHeight() = %d\n", scroll.getWidth(), scroll.getHeight());
     }
 
     /** Formats a due-date Instant in the selected course's timezone (falling back to the local zone). */
