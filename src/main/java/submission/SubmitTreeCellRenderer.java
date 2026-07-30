@@ -46,6 +46,7 @@ public class SubmitTreeCellRenderer extends DefaultTreeCellRenderer {
             } else if (userObject instanceof ProblemItem) {
                 ProblemItem problem = (ProblemItem) userObject;
                 setIcon(problem.solved ? problemSolvedIcon : problemIcon);
+                System.out.printf("problem.solved = %b\n", problem.solved);
             } else {
                 // Placeholder / loading / "no items" nodes are informational text, not
                 // items. Show no icon rather than Swing's default document/folder icon,

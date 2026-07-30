@@ -23,6 +23,7 @@ import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.time.Duration;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -114,6 +115,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private CourseItem selectedCourse = null;
     private AssignmentItem selectedAssignment = null;
     private ProblemItem selectedProblem = null;
+    private DefaultMutableTreeNode selectedNode = null;
 
     // Selection to restore after a Refresh: captured before the reload, then re-applied
     // level by level as each lazily-loaded tree level (course, assignment, problem) arrives.
@@ -1088,6 +1090,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     private void updateSelectionStateFromNode(DefaultMutableTreeNode node) {
         clearSelectionState();
+        selectedNode = node;
 
         if (node == null) {
             updateAssignmentDetails(null);
@@ -1454,7 +1457,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         //System.out.printf("pane.getPreferredSize().height = %d, contentH = pane.getPreferredSize().height + 6 = %d\n", pane.getPreferredSize().height, contentH);
         int h = Math.max(minH, Math.min(contentH, maxH));
         int scrollPreferredWidth = scroll.getPreferredSize().width;
-        System.out.printf("scrollPreferredWidth = %d, h = %d\n", scrollPreferredWidth, h);
+        //System.out.printf("scrollPreferredWidth = %d, h = %d\n", scrollPreferredWidth, h);
         scroll.setPreferredSize(new Dimension(scrollPreferredWidth, h));
 
         // Also set minium size to avoid the details section being compressed too far below its preferred size
@@ -1462,7 +1465,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 //        scroll.setMinimumSize(new Dimension(0, h));
 
         scroll.revalidate();
-        System.out.printf("scroll.getWidth() = %d, scroll.getHeight() = %d\n", scroll.getWidth(), scroll.getHeight());
+        //System.out.printf("scroll.getWidth() = %d, scroll.getHeight() = %d\n", scroll.getWidth(), scroll.getHeight());
     }
 
     /** Formats a due-date Instant in the selected course's timezone (falling back to the local zone). */
@@ -2065,7 +2068,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         doSubmit(new QueuedSubmission(selectedCourse.id, selectedAssignment.id,
                 selectedProblem.id, selectedFile,
-                selectedCourse.name, selectedAssignment.name, selectedProblem.name));
+                selectedCourse.name, selectedAssignment.name, selectedProblem.name, selectedNode, selectedProblem));
     }
 
     /**
@@ -2088,7 +2091,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             @Override
             protected Map<String, Object> doInBackground() {
                 try {
-                    AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
+                    AFCTClient client = sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) { err = "Login cancelled."; return null; }
 
                     // Upload (202 Accepted), then poll for the graded result
@@ -2105,7 +2108,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     publish("\"" + qs.problemName + "\" submitted — grading in the background. "
                             + "Its result will appear in Submission History.");
 
-                    return client.waitForResult(submissionId, java.time.Duration.ofMinutes(2));
+                    return client.waitForResult(submissionId, Duration.ofMinutes(2));
                 } catch (Exception ex) {
                     err = ErrorMessages.userMessage(ex, "Unexpected submission error.");
                     return null;
@@ -2113,7 +2116,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             }
 
             @Override
-            protected void process(java.util.List<String> messages) {
+            protected void process(List<String> messages) {
                 // First publish means the upload was accepted: re-enable Submit
                 // and reflect the used attempt right away.
                 submitBtn.setEnabled(true);
@@ -2153,6 +2156,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         Object feedback = result.get("feedback");
                         if (correct) {
                             setStatus(true, "Correct! \"" + qs.problemName + "\" accepted (id: " + id + ")");
+                            qs.problemItem.solved = true;
+                            if (qs.problemNode != null) {
+                                DefaultTreeModel model = (DefaultTreeModel) selectionTree.getModel();
+                                model.nodeChanged(qs.problemNode);
+                            }
                         } else {
                             String fb = (feedback != null && !"null".equals(String.valueOf(feedback)))
                                     ? " Counterexample: " + feedback : "";
@@ -2262,9 +2270,12 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         final String courseId, assignmentId, problemId;
         final File file;
         final String courseName, assignmentName, problemName;
+        final DefaultMutableTreeNode problemNode;
+        final ProblemItem problemItem;
 
         QueuedSubmission(String courseId, String assignmentId, String problemId,
-                         File file, String courseName, String assignmentName, String problemName) {
+                         File file, String courseName, String assignmentName, String problemName,
+                         DefaultMutableTreeNode problemNode, ProblemItem problemItem) {
             this.courseId = courseId;
             this.assignmentId = assignmentId;
             this.problemId = problemId;
@@ -2272,6 +2283,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             this.courseName = courseName;
             this.assignmentName = assignmentName;
             this.problemName = problemName;
+            this.problemNode = problemNode;
+            this.problemItem = problemItem;
         }
     }
 

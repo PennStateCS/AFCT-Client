@@ -8,7 +8,7 @@ public final class ProblemItem {
     public final String id;
     public final String name;
     public final String description;
-    public final boolean solved; // For unsolved filter
+    public boolean solved; // For unsolved filter
 
     // Metadata from the client API (-1 / null when not provided)
     public final String type;          // e.g. "FA", "PDA", "TM"
