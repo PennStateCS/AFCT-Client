@@ -1154,9 +1154,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
             // Description paragraph — only when the server actually sent one
             String descriptionHtml = "";
-            if (problem.description != null && !problem.description.isBlank()) {
+            if (problem.description != null && !problem.description.isBlank() && !problem.description.equals("null")) {
                 descriptionHtml = "<p style='margin: 0 0 6px 0; color: #000000;'>"
                         + escapeHtml(problem.description) + "</p>";
+            } else {
+                descriptionHtml = "<p style='margin: 0 0 6px 0; color: #000000;'>No description available</p>";
             }
 
             // One compact metadata line: type, the intrinsic FA/PDA constraints when they
@@ -1196,13 +1198,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 meta.append("Submissions: ").append(problem.submissionCount).append(" (no limit)");
             }
             String metaHtml = meta.length() > 0
-                ? "<p style='margin: 0; color: #000000;'>" + meta + "</p>" : "";
+                ? "<p style='margin: 0; color: #555555;'>" + meta + "</p>" : "";
 
             String html = String.format(
                 "<html><body style='font-family: sans-serif; padding: 4px;'>" +
                 "<h3 style='margin: 0 0 4px 0; color: #000000;'>%s</h3>%s%s" +
                 "</body></html>",
-                escapeHtml(title), descriptionHtml, metaHtml
+                escapeHtml(title),
+                descriptionHtml,
+                metaHtml
             );
 
             problemDetailsPane.setText(html);
@@ -1375,7 +1379,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             );
         } else {
             String title = assignment.name != null ? assignment.name : "Untitled Assignment";
-            String description = assignment.description != null && !assignment.description.isBlank()
+            String description = assignment.description != null && !assignment.description.isBlank() && !assignment.description.equals("null")
                 ? assignment.description
                 : "No description available.";
 
