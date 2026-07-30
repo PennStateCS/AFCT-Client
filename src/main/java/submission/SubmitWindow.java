@@ -759,6 +759,16 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 if (table.getRowHeight(row) != desired) {
                     table.setRowHeight(row, desired);
                 }
+
+                if ("Result".equals(colName) && !text.isEmpty()) {
+                    boldFont(wrapArea);
+                    if (text.equals("Correct")) {
+                        wrapArea.setForeground(new Color(0x15, 0x80, 0x3D));
+                    } else if (text.equals("Incorrect")) {
+                        wrapArea.setForeground(new Color(0xB9, 0x1C, 0x1C));
+                    }
+                }
+
                 return wrapArea;
             }
 
