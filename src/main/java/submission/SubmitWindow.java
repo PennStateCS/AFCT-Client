@@ -1,7 +1,10 @@
 package submission;
 
+import file.EncodeException;
+import file.XMLCodec;
 import gui.Globals;
 import gui.environment.Environment;
+import gui.environment.EnvironmentFrame;
 import gui.environment.Universe;
 
 import javax.swing.*;
@@ -47,6 +50,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private static final Color SELECTION_BG = new Color(0xE7, 0xF0, 0xFE); // light-blue row highlight
 
     private final Environment environment;
+
+    private static final String baseTitle = "AFCT Submission Center";
 
     // ===============================
     // UI
@@ -140,7 +145,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private final Map<String, List<Map<String, Object>>> treeProblemsByAssignment = new java.util.HashMap<>();
 
     public SubmitWindow(Environment environment) {
-        super("AFCT Submission Center");
+        super(baseTitle);
         this.environment = environment;
 
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
@@ -1993,6 +1998,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             fileTF.setText(chosen.getName());
             fileTF.setForeground(new Color(60, 60, 60));
             fileTF.setToolTipText(chosen.getAbsolutePath());
+
+            // Update the window title to reflect the chosen file
+            this.setTitle(chosen.getName() + " - Submit");
+
             refreshFileButtons();
         }
     }
@@ -2003,12 +2012,16 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         updateCurrentFileDisplay();
     }
 
-    private void updateCurrentFileDisplay() {
+    public void updateCurrentFileDisplay() {
         // Respect a file the user browsed to; only refresh the button state for it.
         if (fileManuallyChosen) {
             refreshFileButtons();
             return;
         }
+
+        // Update the window title to reflect the chosen file
+        EnvironmentFrame frame = Universe.frameForEnvironment(this.environment);
+        this.setTitle(frame.getDescription() + " - Submit");
 
         File envFile = environment.getFile();
 
@@ -2031,9 +2044,13 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         // No file at all — show clickable prompt
         else {
             selectedFile = null;
-            fileTF.setText("Click Browse to choose a file…");
-            fileTF.setForeground(new Color(150, 150, 150));
-            fileTF.setToolTipText("The file that will be submitted. Click to browse for another.");
+            //fileTF.setText("Click Browse to choose a file…");
+            //fileTF.setForeground(new Color(150, 150, 150));
+            //fileTF.setToolTipText("The file that will be submitted. Click to browse for another.");
+
+            fileTF.setText(frame.getDescription());
+            fileTF.setForeground(new Color(60, 60, 60));
+            fileTF.setToolTipText("Unsaved document — save it in the editor before submitting.");
         }
 
         refreshFileButtons();
@@ -2080,8 +2097,30 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private void attemptSubmit() {
         if (!validateSelection()) return;
 
+        File fileToUse = selectedFile;
+
+        if (fileManuallyChosen) {
+            if (selectedFile == null || !selectedFile.exists()) {
+                setStatus(false, "Unable to find the manually chosen file, it may have been moved or deleted.");
+                return;
+            }
+        }
+        // File not yet named or saved
+        else if (selectedFile == null) {
+            fileToUse = createTempFile();
+        }
+        // File exists (but may or may not be saved)
+        else {
+            fileToUse = createTempFileWithName(selectedFile.getName());
+        }
+
+        if (fileToUse == null) {
+            // If fileToUse is null, temp file creation failed, and the status has already been set, so just return
+            return;
+        }
+
         doSubmit(new QueuedSubmission(selectedCourse.id, selectedAssignment.id,
-                selectedProblem.id, selectedFile,
+                selectedProblem.id, fileToUse,
                 selectedCourse.name, selectedAssignment.name, selectedProblem.name, selectedNode, selectedProblem));
     }
 
@@ -2216,7 +2255,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private boolean validateSelection() {
         if (selectedProblem == null) { setStatus(false, "Please select a problem in the tree."); return false; }
         if (selectedAssignment == null || selectedCourse == null) { setStatus(false, "Selection incomplete — re-select the problem."); return false; }
-        if (selectedFile == null || !selectedFile.exists()) { setStatus(false, "No file open. Open a file in the editor first."); return false; }
+        // Removed to allow submitting unsaved files - IMPORTANT
+        //if (selectedFile == null || !selectedFile.exists()) { setStatus(false, "No file open. Open a file in the editor first."); return false; }
         if (selectedProblem.attemptsLeft() == 0) {
             setStatus(false, "Submission limit reached (" + selectedProblem.submissionCount + "/"
                     + selectedProblem.maxSubmissions + ") for this problem.");
@@ -2231,6 +2271,46 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             if (choice != JOptionPane.YES_OPTION) return false;
         }
         return true;
+    }
+
+    private File createTempFile() {
+        // Try to create a temp file for the file that the user was working with
+        try{
+            // Create a temp file and encode the user's JFLAP program as the file
+            File f = File.createTempFile("afct", ".jff");
+            XMLCodec x = new XMLCodec();
+            x.encode(this.environment.getObject(), f, null);
+            return f;
+        } catch (IOException e) {
+            setStatus(false, "Error creating temp file: " + e.getMessage());
+        } catch (EncodeException e) {
+            setStatus(false, "Error saving temp file: " + e.getMessage());
+        }
+        return null;
+    }
+
+    private File createTempFileWithName(String fileName) {
+        // Try to create a temp file for the file that the user was working with
+        try{
+            // Create a temporary directory
+            Path tempDir = Files.createTempDirectory("afct");
+
+            // Resolve the target file name inside said temp directory
+            Path exactTempFile = tempDir.resolve(fileName);
+
+            // Create the file
+            Files.createFile(exactTempFile);
+            File f = exactTempFile.toFile();
+
+            XMLCodec x = new XMLCodec();
+            x.encode(this.environment.getObject(), f, null);
+            return f;
+        } catch (IOException e) {
+            setStatus(false, "Error creating temp file: " + e.getMessage());
+        } catch (EncodeException e) {
+            setStatus(false, "Error saving temp file: " + e.getMessage());
+        }
+        return null;
     }
 
     // ============================================================
