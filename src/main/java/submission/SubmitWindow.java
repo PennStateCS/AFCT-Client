@@ -2228,7 +2228,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     String comment = node.getNodeValue();
                     if (comment != null) {
                         String trimmed = comment.trim();
-                        if (trimmed.startsWith("one:") || trimmed.startsWith("two:")) {
+                        if (trimmed.startsWith("hashE:") || trimmed.startsWith("hashD:")) {
                             doc.removeChild(node);
                         }
                     }
@@ -2237,10 +2237,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
             java.util.List<Node> markers = new java.util.ArrayList<>();
             if (userEmail != null && !userEmail.isBlank()) {
-                markers.add(doc.createComment(" one: " + userEmail));
+                markers.add(doc.createComment(" hashE: " + userEmail));
             }
             if (submissionId != null && !submissionId.isBlank()) {
-                markers.add(doc.createComment(" two: " + submissionId));
+                markers.add(doc.createComment(" hashD: " + submissionId));
             }
             for (Node marker : markers) {
                 doc.appendChild(marker);
@@ -2256,9 +2256,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
             String xml = writer.toString();
             if (!markers.isEmpty()) {
-                xml = xml.replaceFirst("(?m)(</[^>]+>)(\\s*)(?=<!-- (?:one:|two:))", "$1\n\n");
-                if (xml.contains("<!-- one:") && xml.contains("<!-- two:")) {
-                    xml = xml.replaceFirst("(?s)(<!-- one:[^>]*-->)(\\s*)(<!-- two:[^>]*-->)", "$1\n$3");
+                xml = xml.replaceFirst("(?m)(</[^>]+>)(\\s*)(?=<!-- (?:hashE:|hashD:))", "$1\n\n");
+                if (xml.contains("<!-- hashE:") && xml.contains("<!-- hashD:")) {
+                    xml = xml.replaceFirst("(?s)(<!-- hashE:[^>]*-->)(\\s*)(<!-- hashD:[^>]*-->)", "$1\n$3");
                 }
             }
             Files.writeString(file.toPath(), xml, java.nio.charset.StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
