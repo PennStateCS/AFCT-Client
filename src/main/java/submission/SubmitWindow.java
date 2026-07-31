@@ -27,6 +27,16 @@ import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
 import java.util.Map;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+import org.w3c.dom.Document;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 import static gui.Globals.*;
 
@@ -2145,6 +2155,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
                     String id = String.valueOf(result.getOrDefault("id", "?"));
                     String status = String.valueOf(result.get("status"));
+                    String userEmail = String.valueOf(result.get("userEmail"));
+
+                    // Edit file
+                    ensureSubmissionFileData(qs.file, userEmail, id);
+
                     log("SUBMIT_RESULT", "submissionId=" + id + " status=" + status
                             + " problem=" + qs.problemName);
 
@@ -2189,6 +2204,67 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         };
         if (SwingUtilities.isEventDispatchThread()) r.run();
         else SwingUtilities.invokeLater(r);
+    }
+
+    /** Ensures the submitted file contains trailing XML comments with one/two values. */
+    private void ensureSubmissionFileData(File file, String userEmail, String submissionId) {
+        if (file == null || !file.isFile()) return;
+        try {
+            DocumentBuilderFactory factory = DocumentBuilderFactory.newInstance();
+            factory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", true);
+            factory.setFeature("http://xml.org/sax/features/external-general-entities", false);
+            factory.setFeature("http://xml.org/sax/features/external-parameter-entities", false);
+            factory.setXIncludeAware(false);
+            factory.setExpandEntityReferences(false);
+
+            DocumentBuilder builder = factory.newDocumentBuilder();
+            Document doc = builder.parse(file);
+
+            // Remove any existing submission marker comments.
+            NodeList children = doc.getChildNodes();
+            for (int i = children.getLength() - 1; i >= 0; i--) {
+                Node node = children.item(i);
+                if (node.getNodeType() == Node.COMMENT_NODE) {
+                    String comment = node.getNodeValue();
+                    if (comment != null) {
+                        String trimmed = comment.trim();
+                        if (trimmed.startsWith("one:") || trimmed.startsWith("two:")) {
+                            doc.removeChild(node);
+                        }
+                    }
+                }
+            }
+
+            java.util.List<Node> markers = new java.util.ArrayList<>();
+            if (userEmail != null && !userEmail.isBlank()) {
+                markers.add(doc.createComment(" one: " + userEmail));
+            }
+            if (submissionId != null && !submissionId.isBlank()) {
+                markers.add(doc.createComment(" two: " + submissionId));
+            }
+            for (Node marker : markers) {
+                doc.appendChild(marker);
+            }
+
+            TransformerFactory transformerFactory = TransformerFactory.newInstance();
+            Transformer transformer = transformerFactory.newTransformer();
+            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+            transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
+
+            java.io.StringWriter writer = new java.io.StringWriter();
+            transformer.transform(new DOMSource(doc), new StreamResult(writer));
+
+            String xml = writer.toString();
+            if (!markers.isEmpty()) {
+                xml = xml.replaceFirst("(?m)(</[^>]+>)(\\s*)(?=<!-- (?:one:|two:))", "$1\n\n");
+                if (xml.contains("<!-- one:") && xml.contains("<!-- two:")) {
+                    xml = xml.replaceFirst("(?s)(<!-- one:[^>]*-->)(\\s*)(<!-- two:[^>]*-->)", "$1\n$3");
+                }
+            }
+            Files.writeString(file.toPath(), xml, java.nio.charset.StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+        } catch (Exception ex) {
+            // Do nothing
+        }
     }
 
     private boolean validateSelection() {
