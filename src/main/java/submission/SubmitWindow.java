@@ -2215,9 +2215,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                                 model.nodeChanged(qs.problemNode);
                             }
                         } else {
-                            String fb = (feedback != null && !"null".equals(String.valueOf(feedback)))
-                                    ? " Counterexample: " + feedback : "";
-                            setStatus(false, "Incorrect: \"" + qs.problemName + "\"." + fb);
+//                            String fb = (feedback != null && !"null".equals(String.valueOf(feedback)))
+//                                    ? " Counterexample: " + feedback : "";
+//                            setStatus(false, "Incorrect: \"" + qs.problemName + "\"." + fb);
+                            String fb = (feedback != null && !"null".equals(String.valueOf(feedback))) ? feedback + "" : "";
+                            setStatus(false, "\"" + qs.problemName + "\": " + fb);
                         }
                     } else if ("FAILED".equals(status)) {
                         setStatus(false, "Grading failed for \"" + qs.problemName + "\" — please resubmit.");
