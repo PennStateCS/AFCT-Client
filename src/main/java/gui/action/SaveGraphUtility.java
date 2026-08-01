@@ -19,11 +19,14 @@
 
 package gui.action;
 
+import java.awt.Color;
 import java.awt.Component;
-import javax.swing.JComponent;
+import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
 import java.awt.Image;
+
+import javax.swing.JComponent;
 import java.awt.event.ActionEvent;
 import java.awt.image.BufferedImage;
 import java.awt.image.ImageObserver;
@@ -109,28 +112,80 @@ public class SaveGraphUtility{
         }
 
         public static void saveGraphUsingExistingFile(Component somePane, File file) {
-            if (somePane instanceof EditorPane){
-                somePane = ((EditorPane)somePane).getAutomatonPane();
+            Component target = somePane;
+            if (target instanceof EditorPane) {
+                target = ((EditorPane) target).getAutomatonPane();
             }
 
-            Image canvasimage = somePane.createImage(somePane.getWidth(), somePane.getHeight());
-            Graphics imgG = canvasimage.getGraphics();
-            somePane.paint(imgG);
-            BufferedImage bimg = new BufferedImage(canvasimage.getWidth(null), canvasimage.getHeight(null), BufferedImage.TYPE_INT_RGB);
-            Graphics2D g = bimg.createGraphics();
-            g.drawImage(canvasimage, null, null);
+            if (!(target instanceof JComponent)) {
+                return;
+            }
 
-            try
-            {
+            JComponent component = (JComponent) target;
+            component.setSize(component.getPreferredSize());
+            component.validate();
+            component.doLayout();
+            component.repaint();
+
+            if (component instanceof AutomatonPane) {
+                ((AutomatonPane) component).requestTransform();
+            }
+
+            Dimension size = component.getPreferredSize();
+            if (size.width <= 0 || size.height <= 0) {
+                size = component.getSize();
+            }
+            if (size.width <= 0 || size.height <= 0) {
+                size = new Dimension(900, 800);
+            }
+
+            BufferedImage tempImage = new BufferedImage(Math.max(1, size.width), Math.max(1, size.height), BufferedImage.TYPE_INT_RGB);
+            Graphics2D tempGraphics = tempImage.createGraphics();
+            try {
+                tempGraphics.setColor(Color.WHITE);
+                tempGraphics.fillRect(0, 0, size.width, size.height);
+                component.paint(tempGraphics);
+            } finally {
+                tempGraphics.dispose();
+            }
+
+            Dimension finalSize = component.getPreferredSize();
+            if (finalSize.width <= 0 || finalSize.height <= 0) {
+                finalSize = size;
+            }
+
+            // add some padding
+            finalSize.width += 150;
+            finalSize.height += 150;
+            component.setSize(finalSize);
+
+            Image canvasimage = component.createImage(finalSize.width, finalSize.height);
+            Graphics2D imgG = (Graphics2D) canvasimage.getGraphics();
+            try {
+                imgG.setColor(Color.WHITE);
+                imgG.fillRect(0, 0, finalSize.width, finalSize.height);
+                component.paint(imgG);
+            } finally {
+                imgG.dispose();
+            }
+
+            BufferedImage bimg = new BufferedImage(finalSize.width, finalSize.height, BufferedImage.TYPE_INT_RGB);
+            Graphics2D g = bimg.createGraphics();
+            try {
+                g.setColor(Color.WHITE);
+                g.fillRect(0, 0, finalSize.width, finalSize.height);
+                g.drawImage(canvasimage, 0, 0, null);
+            } finally {
+                g.dispose();
+            }
+
+            try {
                 file = new File(file.getPath() + ".png");
                 ImageIO.write(bimg, "png", file);
-            }
-            catch (IOException ioe)
-            {
+            } catch (IOException ioe) {
                 JOptionPane.showMessageDialog(null,
-                        "Save failed with error:\n"+ioe.getMessage(),
+                        "Save failed with error:\n" + ioe.getMessage(),
                         "Save failed", JOptionPane.ERROR_MESSAGE);
-
             }
         }
 

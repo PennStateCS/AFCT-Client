@@ -535,6 +535,11 @@ public class AutomatonDrawer {
 			}
 		}
 
+		// if this state is the start state we also want to avoid the start state arrow
+		if (a.getInitialState() == state) {
+			transitionPointsSet.add(pointOnState(state, -Math.PI));
+		}
+
 		ArrayList<Point> transitionPointsList = new ArrayList<>(transitionPointsSet);
 
 		// If there are no transitions then return the top

@@ -128,13 +128,6 @@ public class GenerateOCRDataAction extends RestrictedAction{
                 JOptionPane.showMessageDialog(null, errorMessage);
             }
 
-            try {
-                Thread.sleep(16);
-            } catch (InterruptedException e) {
-                // Restore interrupted status or handle the interruption
-                Thread.currentThread().interrupt();
-            }
-
             // screenshot the diagram and save it as a png
             // we will assume if we made it here the filepath is good
             saveAutomatonAsPNG(savedFilePath);
