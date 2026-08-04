@@ -19,10 +19,13 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.io.StringWriter;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.nio.file.StandardOpenOption;
+import java.security.MessageDigest;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.List;
@@ -35,6 +38,7 @@ import javax.xml.transform.TransformerFactory;
 import javax.xml.transform.dom.DOMSource;
 import javax.xml.transform.stream.StreamResult;
 import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 
@@ -2153,21 +2157,21 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         return;
                     }
 
-                    String id = String.valueOf(result.getOrDefault("id", "?"));
+                    String submissionId = String.valueOf(result.getOrDefault("id", "?"));
+                    String userEmail = Globals.sessionHandler.getUserEmail();
                     String status = String.valueOf(result.get("status"));
-                    String userEmail = String.valueOf(result.get("userEmail"));
 
                     // Edit file
-                    ensureSubmissionFileData(qs.file, userEmail, id);
+                    ensureSubmissionFileData(qs.file, userEmail, submissionId);
 
-                    log("SUBMIT_RESULT", "submissionId=" + id + " status=" + status
+                    log("SUBMIT_RESULT", "submissionId=" + submissionId + " status=" + status
                             + " problem=" + qs.problemName);
 
                     if ("COMPLETED".equals(status)) {
                         boolean correct = Boolean.TRUE.equals(result.get("correct"));
                         Object feedback = result.get("feedback");
                         if (correct) {
-                            setStatus(true, "Correct! \"" + qs.problemName + "\" accepted (id: " + id + ")");
+                            setStatus(true, "Correct! \"" + qs.problemName + "\" accepted (id: " + submissionId + ")");
                         } else {
                             String fb = (feedback != null && !"null".equals(String.valueOf(feedback)))
                                     ? " Counterexample: " + feedback : "";
@@ -2177,7 +2181,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         setStatus(false, "Grading failed for \"" + qs.problemName + "\" — please resubmit.");
                     } else {
                         // Still PENDING/PROCESSING after the polling window
-                        setStatus(true, "\"" + qs.problemName + "\" (id: " + id + ") is taking longer than usual — check Submission History later.");
+                        setStatus(true, "\"" + qs.problemName + "\" (id: " + submissionId + ") is taking longer than usual — check Submission History later.");
                     }
                 } catch (Exception ex) {
                     String friendly = ErrorMessages.userMessage(ex, "Unexpected submission error.");
@@ -2206,7 +2210,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         else SwingUtilities.invokeLater(r);
     }
 
-    /** Ensures the submitted file contains trailing XML comments with one/two values. */
+    /** Ensures the submitted file contains trailing XML comments with hashed user and structure markers. */
     private void ensureSubmissionFileData(File file, String userEmail, String submissionId) {
         if (file == null || !file.isFile()) return;
         try {
@@ -2228,19 +2232,25 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     String comment = node.getNodeValue();
                     if (comment != null) {
                         String trimmed = comment.trim();
-                        if (trimmed.startsWith("hashE:") || trimmed.startsWith("hashD:")) {
+                        if (trimmed.startsWith("hashE:") || trimmed.startsWith("hashD:")
+                                || trimmed.startsWith("one:") || trimmed.startsWith("two:")) {
                             doc.removeChild(node);
                         }
                     }
                 }
             }
 
+            String hashedUserEmail = userEmail != null && !userEmail.isBlank()
+                    ? sha256Hex(userEmail.trim())
+                    : null;
+            String structureHash = hashStructureElement(doc);
+
             java.util.List<Node> markers = new java.util.ArrayList<>();
-            if (userEmail != null && !userEmail.isBlank()) {
-                markers.add(doc.createComment(" hashE: " + userEmail));
+            if (hashedUserEmail != null && !hashedUserEmail.isBlank()) {
+                markers.add(doc.createComment(" hashE: " + hashedUserEmail));
             }
-            if (submissionId != null && !submissionId.isBlank()) {
-                markers.add(doc.createComment(" hashD: " + submissionId));
+            if (structureHash != null && !structureHash.isBlank()) {
+                markers.add(doc.createComment(" hashD: " + structureHash));
             }
             for (Node marker : markers) {
                 doc.appendChild(marker);
@@ -2251,7 +2261,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             transformer.setOutputProperty(OutputKeys.INDENT, "yes");
             transformer.setOutputProperty("{http://xml.apache.org/xslt}indent-amount", "2");
 
-            java.io.StringWriter writer = new java.io.StringWriter();
+            StringWriter writer = new StringWriter();
             transformer.transform(new DOMSource(doc), new StreamResult(writer));
 
             String xml = writer.toString();
@@ -2261,9 +2271,51 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     xml = xml.replaceFirst("(?s)(<!-- hashE:[^>]*-->)(\\s*)(<!-- hashD:[^>]*-->)", "$1\n$3");
                 }
             }
-            Files.writeString(file.toPath(), xml, java.nio.charset.StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
+            Files.writeString(file.toPath(), xml, StandardCharsets.UTF_8, StandardOpenOption.TRUNCATE_EXISTING);
         } catch (Exception ex) {
             // Do nothing
+        }
+    }
+
+    private static String hashStructureElement(Document doc) {
+        if (doc == null) return null;
+        NodeList structures = doc.getElementsByTagName("structure");
+        if (structures == null || structures.getLength() == 0) return null;
+        Node structure = structures.item(0);
+        try {
+            String xml = serializeNode(structure);
+            return xml == null ? null : sha256Hex(xml);
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private static String serializeNode(Node node) {
+        if (node == null) return null;
+        try {
+            Transformer transformer = TransformerFactory.newInstance().newTransformer();
+            transformer.setOutputProperty(OutputKeys.OMIT_XML_DECLARATION, "yes");
+            transformer.setOutputProperty(OutputKeys.INDENT, "no");
+            StringWriter writer = new StringWriter();
+            transformer.transform(new DOMSource(node), new StreamResult(writer));
+            return writer.toString().trim();
+        } catch (Exception ex) {
+            return null;
+        }
+    }
+
+    private static String sha256Hex(String input) {
+        if (input == null) return null;
+        try {
+            MessageDigest digest = MessageDigest.getInstance("SHA-256");
+            byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
+            StringBuilder hex = new StringBuilder(hash.length * 2);
+            for (byte b : hash) {
+                hex.append(String.format("%02x", b));
+            }
+            return hex.toString();
+        } catch (Exception ex) {
+            return null;
         }
     }
 
