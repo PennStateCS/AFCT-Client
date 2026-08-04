@@ -28,6 +28,9 @@ import java.awt.event.*;
 // import java.applet.Applet;
 // import java.applet.AudioClip;
 
+// TODO: The about box does not display correctly, and even if it did, the intended image is VERY outdated.
+// 		 This needs to be completely redone.
+
 /**
  * The <TT>AboutBox</TT> is the about box for JFLAP.
  * 
@@ -120,7 +123,7 @@ public class AboutBox extends JWindow {
 	private static Image IMAGE = null;
 
 	/** The version string. */
-	public static final String VERSION = "7.1";
+	public static final String VERSION = "1.6.8";
 
 	/**
 	 * Some simple test code for the about box.

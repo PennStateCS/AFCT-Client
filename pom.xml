@@ -12,6 +12,10 @@
         <maven.compiler.source>21</maven.compiler.source>
         <maven.compiler.target>21</maven.compiler.target>
         <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
+        <maven.build.timestamp.format>yyyyMMdd-HHmmss</maven.build.timestamp.format>
+        <!-- Keep this stable across releases so Windows can identify related products for upgrades. -->
+        <windows.upgrade.uuid>5a338032-2203-4f5d-95f2-56ea1d5b4f8b</windows.upgrade.uuid>
+        <windows.installer.output.dir>${project.build.directory}/jpackage/${project.version}-${maven.build.timestamp}</windows.installer.output.dir>
     </properties>
 
     <dependencies>
@@ -83,11 +87,39 @@
             <artifactId>jackson-databind</artifactId>
             <version>2.17.2</version>
         </dependency>
+
+        <dependency>
+            <groupId>org.junit.jupiter</groupId>
+            <artifactId>junit-jupiter</artifactId>
+            <version>5.10.2</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.mockito</groupId>
+            <artifactId>mockito-core</artifactId>
+            <version>5.14.2</version>
+            <scope>test</scope>
+        </dependency>
     </dependencies>
 
     <build>
         <finalName>${project.artifactId}</finalName>
         <plugins>
+            <!-- JAR plugin - creates basic JAR during compile -->
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-jar-plugin</artifactId>
+                <version>3.3.0</version>
+                <configuration>
+                    <archive>
+                        <manifest>
+                            <addClasspath>true</addClasspath>
+                            <classpathPrefix>lib/</classpathPrefix>
+                            <mainClass>gui.Main</mainClass>
+                        </manifest>
+                    </archive>
+                </configuration>
+            </plugin>
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-shade-plugin</artifactId>
@@ -154,12 +186,94 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
+                <version>3.15.0</version>
                 <configuration>
                     <source>21</source>
                     <target>21</target>
                 </configuration>
             </plugin>
+            <plugin>
+                <groupId>org.apache.maven.plugins</groupId>
+                <artifactId>maven-surefire-plugin</artifactId>
+                <version>3.2.5</version>
+                <configuration>
+                    <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+                </configuration>
+            </plugin>
         </plugins>
     </build>
+
+    <profiles>
+        <!-- Native installer profile - use: mvn package -Pjpackage -->
+        <!-- Requires WiX Toolset 3.x on PATH for exe/msi types -->
+        <profile>
+            <id>jpackage</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.panteleyev</groupId>
+                        <artifactId>jpackage-maven-plugin</artifactId>
+                        <version>1.6.5</version>
+                        <executions>
+                            <execution>
+                                <id>jpackage</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jpackage</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <name>AFCT Client</name>
+                            <appVersion>${project.version}</appVersion>
+                            <vendor>RIT CS</vendor>
+                            <copyright>RIT CS</copyright>
+                            <input>${project.build.directory}</input>
+                            <mainJar>afct-client.jar</mainJar>
+                            <mainClass>gui.Main</mainClass>
+                            <type>EXE</type>
+                            <!-- Use a unique destination per build to avoid AccessDenied collisions on a prior EXE in use. -->
+                            <destination>${windows.installer.output.dir}</destination>
+                            <javaOptions>
+                                <option>-Xmx512m</option>
+                            </javaOptions>
+                            <!-- Windows installer options -->
+                            <!-- appVersion must increase between releases for in-place upgrade behavior. -->
+                            <winDirChooser>true</winDirChooser>
+                            <winShortcut>true</winShortcut>
+                            <winMenu>true</winMenu>
+                            <winMenuGroup>AFCT</winMenuGroup>
+                            <winPerUserInstall>true</winPerUserInstall>
+                            <winUpgradeUuid>${windows.upgrade.uuid}</winUpgradeUuid>
+                            <icon>src/main/resources/afct.ico</icon>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <!-- Quick build profile - use: mvn compile -Pquick -->
+        <profile>
+            <id>quick</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-assembly-plugin</artifactId>
+                        <configuration>
+                            <skipAssembly>true</skipAssembly>
+                        </configuration>
+                    </plugin>
+                    <plugin>
+                        <groupId>org.apache.maven.plugins</groupId>
+                        <artifactId>maven-shade-plugin</artifactId>
+                        <configuration>
+                            <skip>true</skip>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+    </profiles>
 
 </project>

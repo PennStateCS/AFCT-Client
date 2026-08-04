@@ -1,6 +1,7 @@
 ### General ###
 target/
 dependency-reduced-pom.xml
+logs/
 
 ### IntelliJ IDEA ###
 .idea/
@@ -29,3 +30,13 @@ build/
 
 ### Mac OS ###
 .DS_Store
+
+### Java ###
+*.class
+*.jar
+
+### Logs ###
+*.log
+
+### Credentials / environment ###
+.env
