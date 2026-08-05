@@ -2171,7 +2171,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         boolean correct = Boolean.TRUE.equals(result.get("correct"));
                         Object feedback = result.get("feedback");
                         if (correct) {
-                            setStatus(true, "Correct! \"" + qs.problemName + "\" accepted (id: " + submissionId + ")");
+                            // setStatus(true, "Correct! \"" + qs.problemName + "\" accepted (id: " + submissionId + ")");
                         } else {
                             String fb = (feedback != null && !"null".equals(String.valueOf(feedback)))
                                     ? " Counterexample: " + feedback : "";
@@ -2243,7 +2243,14 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             String hashedUserEmail = userEmail != null && !userEmail.isBlank()
                     ? sha256Hex(userEmail.trim())
                     : null;
-            String structureHash = hashStructureElement(doc);
+            String structureXml = serializeStructureElement(doc);
+            String structureHash = structureXml == null ? null : sha256Hex(structureXml);
+            if (structureXml != null) {
+                log("XML_STRUCTURE", structureXml);
+                setStatus(true, "XML hash: " + structureHash + " (structure logged)");
+            } else {
+                setStatus(true, "XML hash: " + structureHash);
+            }
 
             java.util.List<Node> markers = new java.util.ArrayList<>();
             if (hashedUserEmail != null && !hashedUserEmail.isBlank()) {
@@ -2277,17 +2284,12 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         }
     }
 
-    private static String hashStructureElement(Document doc) {
+    private static String serializeStructureElement(Document doc) {
         if (doc == null) return null;
         NodeList structures = doc.getElementsByTagName("structure");
         if (structures == null || structures.getLength() == 0) return null;
         Node structure = structures.item(0);
-        try {
-            String xml = serializeNode(structure);
-            return xml == null ? null : sha256Hex(xml);
-        } catch (Exception ex) {
-            return null;
-        }
+        return serializeNode(structure);
     }
 
     private static String serializeNode(Node node) {
@@ -2311,7 +2313,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             byte[] hash = digest.digest(input.getBytes(StandardCharsets.UTF_8));
             StringBuilder hex = new StringBuilder(hash.length * 2);
             for (byte b : hash) {
-                hex.append(String.format("%02x", b));
+                hex.append(String.format("%02x", b & 0xFF));
             }
             return hex.toString();
         } catch (Exception ex) {
