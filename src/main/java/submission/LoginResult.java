@@ -27,4 +27,9 @@ public class LoginResult {
         String safe = ErrorMessages.userMessage(message, "An unexpected error occurred.");
         return new LoginResult(LoginStatus.ERROR, "Authentication Error: " + safe);
     }
+
+    public static LoginResult getErrorResultWithPrefix(String prefix, Throwable throwable) {
+        String safe = ErrorMessages.userMessageWithPrefix(prefix, throwable, "An unexpected error occurred.");
+        return new LoginResult(LoginStatus.ERROR, "Authentication Error: " + safe);
+    }
 }
