@@ -15,6 +15,7 @@ import javax.crypto.spec.SecretKeySpec;
 import java.awt.*;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.net.UnknownHostException;
 import java.nio.charset.StandardCharsets;
 import java.security.GeneralSecurityException;
 import java.security.SecureRandom;
@@ -80,6 +81,9 @@ public class SessionHandler {
     private static final int PASSWORD_KEY_BITS = 256;
     private static final String PASSWORD_ENC_VERSION = "v2";
     private static final String LEGACY_PASSWORD_ENC_VERSION = "v1";
+
+    // Message strings
+    public static final String CANT_CONNECT_TO_SERVER_MESSAGE = "We can't connect to the server at ";
 
     public SessionHandler() {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
@@ -216,6 +220,11 @@ public class SessionHandler {
             preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
             this.certificateHandler.test();
             return getErrorResult(ex.getMessage());
+        } catch (UnknownHostException ex) {
+            this.loggedIn = false;
+            this.client = null;
+            preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
+            return getErrorResultWithPrefix(CANT_CONNECT_TO_SERVER_MESSAGE, ex);
         } catch (IOException ex) {
             this.loggedIn = false;
             this.client = null;
