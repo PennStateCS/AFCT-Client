@@ -2171,7 +2171,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         boolean correct = Boolean.TRUE.equals(result.get("correct"));
                         Object feedback = result.get("feedback");
                         if (correct) {
-                            // setStatus(true, "Correct! \"" + qs.problemName + "\" accepted (id: " + submissionId + ")");
+                            setStatus(true, "Correct! \"" + qs.problemName + "\" accepted (id: " + submissionId + ")");
                         } else {
                             String fb = (feedback != null && !"null".equals(String.valueOf(feedback)))
                                     ? " Counterexample: " + feedback : "";
@@ -2245,12 +2245,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     : null;
             String structureXml = serializeStructureElement(doc);
             String structureHash = structureXml == null ? null : sha256Hex(structureXml);
-            if (structureXml != null) {
-                log("XML_STRUCTURE", structureXml);
-                setStatus(true, "XML hash: " + structureHash + " (structure logged)");
-            } else {
-                setStatus(true, "XML hash: " + structureHash);
-            }
 
             java.util.List<Node> markers = new java.util.ArrayList<>();
             if (hashedUserEmail != null && !hashedUserEmail.isBlank()) {
