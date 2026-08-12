@@ -1,12 +1,14 @@
 package submission;
 
 import gui.Globals;
+import gui.environment.Environment;
 import gui.environment.Universe;
 
 import javax.swing.*;
 import java.awt.*;
 
 import static gui.Globals.*;
+import static gui.action.SubmitAction.testAuthThenShowSubmitWindow;
 
 public class LoginWindow extends JDialog {
 
@@ -69,6 +71,17 @@ public class LoginWindow extends JDialog {
 
     public void displayLoginWindow(JFrame frame) {
         displayLoginWindow(frame, false);
+    }
+
+    public void displayLoginWindowThenSubmissionCenter(Environment environment) {
+        JFrame frame = null;
+        if (environment != null) {
+            frame = Universe.frameForEnvironment(environment);
+        }
+        displayLoginWindow(frame, false);
+        if (environment != null) {
+            testAuthThenShowSubmitWindow(environment);
+        }
     }
 
     // ============================================================
