@@ -26,7 +26,10 @@ public class SubmitAction extends RestrictedAction {
 
     @Override
     public void actionPerformed(ActionEvent e) {
+        testAuthThenShowSubmitWindow(environment);
+    }
 
+    public static void testAuthThenShowSubmitWindow(Environment environment) {
         // 🔐 Authentication Gate
         AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
 

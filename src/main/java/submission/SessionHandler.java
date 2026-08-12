@@ -237,7 +237,7 @@ public class SessionHandler {
         logout(false, null);
     }
 
-    public void logout(boolean forceManualReLogin, JFrame frame) {
+    public void logout(boolean forceManualReLogin, Environment environment) {
         preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
         this.loggedIn = false;
 
@@ -265,7 +265,7 @@ public class SessionHandler {
         }.execute();
 
         if (forceManualReLogin) {
-            Runnable showLogin = () -> loginWindow.displayLoginWindow(frame);
+            Runnable showLogin = () -> loginWindow.displayLoginWindowThenSubmissionCenter(environment);
             SwingUtilities.invokeLater(showLogin);
         }
     }
