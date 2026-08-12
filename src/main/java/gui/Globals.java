@@ -33,16 +33,16 @@ import static java.lang.Math.floor;
  */
 public class Globals {
     public static String testingPath = "src\\main\\resources";
-    public final static String currentVersion = "v" + Globals.class.getPackage().getImplementationVersion();
+    public final static String currentVersion = resolveCurrentVersion();
     public static final String JUST_NAME = "AFCT ";
-    public final static String APP_NAME = JUST_NAME + currentVersion;
+    public final static String APP_NAME = (JUST_NAME + currentVersion).trim();
     public static final String APP_URL = "https://www.cs.rit.edu/~afct";
     public static final String LATEST_RELEASE_PATH = "/client/";
     public static String JAR_PATH = "TODO";
     public static String JAR_NAME = "afct-client.jar";
     public static String AFCT_DATA_FOLDER_NAME = "AFCT-Data";
     public static String PREFERENCES_FILE_NAME = "AFCT-Preferences.xml";
-    public static String FILE_CREATED_WITH_STRING = "Created with AFCT " + currentVersion + " (based on JFLAP " + gui.AboutBox.VERSION + ")";
+    public static String FILE_CREATED_WITH_STRING = "Created with AFCT " + currentVersion + " (based on JFLAP " + gui.AboutBox.JFLAP_VERSION + ")";
 
     private static final String htmlProperty = "html.disable";
     public final static String UPDATE = "UPDATE";
@@ -76,6 +76,17 @@ public class Globals {
     public static Automaton lastCopiedAutomaton = null;
 
     public static SessionHandler sessionHandler = new SessionHandler();
+
+    private static String resolveCurrentVersion() {
+        String version = Globals.class.getPackage().getImplementationVersion();
+        if (version == null || version.isBlank()) {
+            version = AboutBox.AFCT_VERSION;
+        }
+        if (version == null || version.isBlank()) {
+            return "";
+        }
+        return version.startsWith("v") ? version : "v" + version;
+    }
 
     public enum Status {
         ERROR, WARNING, GOOD
