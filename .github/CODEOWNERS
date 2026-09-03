@@ -1,0 +1,11 @@
+# Who reviews changes here.
+#
+# Every pull request needs an approving review from this team, and only its members may push
+# to the default branch, so team membership is the single thing that decides who reviews and
+# who merges. Change the team, not this file.
+#
+# A team can only contain organization members, so someone joining is a two-step thing: they
+# accept the org invitation, then they are in. Anyone still showing as pending is not yet an
+# owner here.
+
+* @PennStateCS/afct-maintainers
