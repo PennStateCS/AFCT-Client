@@ -3,12 +3,15 @@ name: Release
 # Cut a release by pushing a version tag:
 #   git tag v1.6.8 && git push origin v1.6.8
 #
-# That builds the tagged commit and opens a GitHub Release with the jar attached, which is
-# the copy a person can download without a GitHub account. CI's artifact is not that: it
-# expires and it needs a login, so it is for handing a branch to a colleague.
+# That builds the tagged commit on three machines and opens a GitHub Release holding a
+# Windows installer, two macOS disk images (Apple Silicon and Intel), and the plain jar.
 #
 # Ordinary merges to main do NOT trigger this. CI keeps running on them; a release is a
 # separate, deliberate act, and the tag is what makes it.
+#
+# Nothing is signed yet, so Windows shows a SmartScreen warning and macOS refuses to open
+# the app until the user allows it under Privacy and Security. Signing is the next piece of
+# work: it becomes a step inside the `installers` job and changes nothing else here.
 on:
   push:
     tags:
@@ -25,16 +28,22 @@ concurrency:
   cancel-in-progress: false
 
 jobs:
-  # Nothing is published from a commit CI has not passed.
-  #
-  # A tag can point at any commit, including one CI's paths filter skipped and one CI never
-  # saw. Without this the first anybody knows is a published release built from untested
-  # code. Its own job, with no toolchain to set up, so the common failure is quick.
+  # Both refusals live here, before three machines spend ten minutes building something that
+  # was never going to be published. Neither check needs a JDK, so this job is quick.
   verify:
-    name: require a green CI run
+    name: check the tag
     runs-on: ubuntu-latest
     timeout-minutes: 5
+    outputs:
+      # The version the installers stamp into themselves. See the step that computes it.
+      app_version: ${{ steps.version.outputs.app_version }}
     steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      # A tag can point at any commit, including one CI's paths filter skipped and one CI
+      # never saw. Without this the first anybody knows is a published release built from
+      # untested code.
       - name: Require a successful CI run for this commit
         env:
           GH_TOKEN: ${{ github.token }}
@@ -51,9 +60,114 @@ jobs:
           fi
           echo "CI passed for ${SHA} (${count} successful run(s))."
 
-  release:
-    name: build and publish
+      # The tag names the release; the pom names what is inside it. The build bakes the pom
+      # version into the jar name, the jar manifest and the installers, so tagging v1.7.0
+      # against a pom that still says 1.6.8 publishes a release called one thing containing
+      # another. Nobody notices until a bug is reported against a version never built.
+      #
+      # Read with an XML parser rather than a grep, so it cannot pick up a dependency's
+      # <version> instead of the project's own.
+      - name: Tag must match the pom version
+        id: version
+        run: |
+          set -euo pipefail
+          # One line on purpose: an indented heredoc would hand Python indented source and
+          # fail before it read anything. The qualified tag name picks the project's own
+          # <version>, since find() matches direct children only.
+          pom=$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('pom.xml').getroot().find('{http://maven.apache.org/POM/4.0.0}version').text.strip())")
+          want="${GITHUB_REF_NAME#v}"
+          # Compare the numbers only, so a test release can be cut from the same code as the
+          # real one: pom 1.6.8 accepts both v1.6.8 and v1.6.8-rc1. Without this, rehearsing a
+          # release would mean bumping the pom to 1.6.8-rc1 and back again, which is exactly
+          # the sort of faff that stops people rehearsing at all.
+          if [ "${pom}" != "${want%%-*}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match the pom version ${pom}."
+            echo "Bump <version> in pom.xml to ${want%%-*} (or tag v${pom}), then re-tag."
+            exit 1
+          fi
+          # Installers cannot carry a suffix: macOS CFBundleVersion and the Windows MSI
+          # product version both want plain numbers, so v1.7.0-rc1 has to be built as 1.7.0.
+          # The release is still named with the full tag; only what is stamped inside the
+          # installer is trimmed.
+          echo "app_version=${want%%-*}" >> "$GITHUB_OUTPUT"
+          echo "Tag ${GITHUB_REF_NAME} matches the pom version ${pom}."
+
+  # One machine per platform, because jpackage can only build for the system it runs on.
+  # Each publishes its installer as an artifact rather than straight to the release, so a
+  # failure on one platform leaves no half-populated release behind: `publish` attaches
+  # everything at once or nothing at all.
+  installers:
+    name: installer (${{ matrix.label }})
     needs: verify
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 30
+    strategy:
+      # Carry on after one platform fails, so a run reports every platform's answer rather
+      # than only the first to break.
+      fail-fast: false
+      matrix:
+        include:
+          - os: windows-latest
+            profile: jpackage-windows
+            label: windows
+            ext: exe
+          - os: macos-latest
+            profile: jpackage-mac
+            label: macos-apple-silicon
+            ext: dmg
+          # Explicitly versioned: `macos-13` was retired, and the Intel image is no longer
+          # what `macos-latest` means.
+          - os: macos-15-intel
+            profile: jpackage-mac
+            label: macos-intel
+            ext: dmg
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      - name: Set up Java 21
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # -DskipTests because `verify` already required a green CI run on this exact commit,
+      # and the publish job runs them once more when it builds the jar.
+      - name: Build the installer
+        shell: bash
+        run: |
+          mvn -B package -P ${{ matrix.profile }} -DskipTests \
+            -Djpackage.app.version=${{ needs.verify.outputs.app_version }}
+
+      # jpackage names its output after the application and drops it in a timestamped
+      # directory, so the path is not known ahead of time and two disk images would arrive
+      # at the release with the same name. Rename to something a person can tell apart on a
+      # download page, and drop the space while we are here.
+      - name: Name it for the release page
+        shell: bash
+        run: |
+          set -euo pipefail
+          src=$(find target/jpackage -type f -name "*.${{ matrix.ext }}" | head -1)
+          if [ -z "$src" ]; then
+            echo "::error::jpackage produced no .${{ matrix.ext }} under target/jpackage."
+            find target/jpackage -type f | head -20
+            exit 1
+          fi
+          mkdir -p dist
+          cp "$src" "dist/AFCT-Client-${GITHUB_REF_NAME#v}-${{ matrix.label }}.${{ matrix.ext }}"
+          ls -lh dist/
+
+      - name: Keep it for the publish job
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: installer-${{ matrix.label }}
+          path: dist/*
+          if-no-files-found: error
+
+  publish:
+    name: publish the release
+    needs: [verify, installers]
     runs-on: ubuntu-latest
     timeout-minutes: 20
     steps:
@@ -67,30 +181,18 @@ jobs:
           java-version: '21'
           cache: maven
 
-      # The tag names the release; the pom names what is inside it. The assembly bakes the pom
-      # version into afct-client-v<version>.jar and into the manifest, so tagging v1.7.0 against
-      # a pom that still says 1.6.8 publishes a release called one thing containing another.
-      # Nobody notices until a bug is reported against a version that was never built.
-      #
-      # Here rather than in `verify` only because this job already has Maven; the check still
-      # runs before anything is built or published.
-      - name: Tag must match the pom version
-        run: |
-          set -euo pipefail
-          pom=$(mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout)
-          want="${GITHUB_REF_NAME#v}"
-          if [ "${pom}" != "${want}" ]; then
-            echo "::error::Tag ${GITHUB_REF_NAME} does not match the pom version ${pom}."
-            echo "Bump <version> in pom.xml to ${want} (or tag v${pom}), then re-tag."
-            exit 1
-          fi
-          echo "Tag ${GITHUB_REF_NAME} matches the pom version ${pom}."
-
-      # Built again rather than reusing CI's artifact: that artifact belongs to whatever commit
+      # Built here rather than reusing CI's artifact: that artifact belongs to whatever commit
       # produced it, and a minute of rebuilding is cheaper than reasoning about whether it is
-      # the same tree.
+      # the same tree. The jar is for anyone who would rather run it with their own Java.
       - name: Build and test
         run: mvn -B verify
+
+      - name: Collect the installers
+        uses: actions/download-artifact@3e5f45b2cfb9172054b4087a40e8e0b5a5461e7c # v8.0.1
+        with:
+          pattern: installer-*
+          merge-multiple: true
+          path: dist
 
       - name: Publish the release
         env:
@@ -98,6 +200,7 @@ jobs:
           TAG: ${{ github.ref_name }}
         run: |
           set -euo pipefail
+          ls -lh dist/
           # A hyphen means a pre-release tag (v1.7.0-rc1), which must not become the download
           # students land on.
           flags=(--title "$TAG" --generate-notes --verify-tag)
@@ -105,5 +208,5 @@ jobs:
             *-*) flags+=(--prerelease) ;;
           esac
           gh release create "$TAG" "${flags[@]}" \
-            target/afct-client-v*.jar \
-            target/afct-client.jar
+            dist/* \
+            target/afct-client-v*.jar

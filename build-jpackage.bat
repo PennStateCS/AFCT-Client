@@ -71,7 +71,7 @@ exit /b 1
 echo Using: %MVN_CMD%
 echo.
 cd /d "%PROJECT_DIR%"
-%MVN_CMD% -P jpackage package
+%MVN_CMD% -P jpackage-windows package
 if %ERRORLEVEL% EQU 0 (
     echo.
     echo ==========================================
