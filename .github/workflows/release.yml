@@ -1,0 +1,109 @@
+name: Release
+
+# Cut a release by pushing a version tag:
+#   git tag v1.6.8 && git push origin v1.6.8
+#
+# That builds the tagged commit and opens a GitHub Release with the jar attached, which is
+# the copy a person can download without a GitHub account. CI's artifact is not that: it
+# expires and it needs a login, so it is for handing a branch to a colleague.
+#
+# Ordinary merges to main do NOT trigger this. CI keeps running on them; a release is a
+# separate, deliberate act, and the tag is what makes it.
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  # Creating a release is the only privileged thing here. No packages, no security events:
+  # this repository publishes no images.
+  contents: write
+
+# Letting a second run cancel a half-finished publish would be worse than letting it finish.
+concurrency:
+  group: release-${{ github.ref_name }}
+  cancel-in-progress: false
+
+jobs:
+  # Nothing is published from a commit CI has not passed.
+  #
+  # A tag can point at any commit, including one CI's paths filter skipped and one CI never
+  # saw. Without this the first anybody knows is a published release built from untested
+  # code. Its own job, with no toolchain to set up, so the common failure is quick.
+  verify:
+    name: require a green CI run
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Require a successful CI run for this commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          count=$(gh api \
+            "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${SHA}&status=success" \
+            --jq '.total_count')
+          if [ "${count}" -lt 1 ]; then
+            echo "::error::No successful CI run for ${SHA}, so this tag is not releasable."
+            echo "Tag a commit CI has passed, or run CI on this ref (Actions > CI > Run workflow) and re-tag."
+            exit 1
+          fi
+          echo "CI passed for ${SHA} (${count} successful run(s))."
+
+  release:
+    name: build and publish
+    needs: verify
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out the tagged commit
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      - name: Set up Java 21
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # The tag names the release; the pom names what is inside it. The assembly bakes the pom
+      # version into afct-client-v<version>.jar and into the manifest, so tagging v1.7.0 against
+      # a pom that still says 1.6.8 publishes a release called one thing containing another.
+      # Nobody notices until a bug is reported against a version that was never built.
+      #
+      # Here rather than in `verify` only because this job already has Maven; the check still
+      # runs before anything is built or published.
+      - name: Tag must match the pom version
+        run: |
+          set -euo pipefail
+          pom=$(mvn -B -q help:evaluate -Dexpression=project.version -DforceStdout)
+          want="${GITHUB_REF_NAME#v}"
+          if [ "${pom}" != "${want}" ]; then
+            echo "::error::Tag ${GITHUB_REF_NAME} does not match the pom version ${pom}."
+            echo "Bump <version> in pom.xml to ${want} (or tag v${pom}), then re-tag."
+            exit 1
+          fi
+          echo "Tag ${GITHUB_REF_NAME} matches the pom version ${pom}."
+
+      # Built again rather than reusing CI's artifact: that artifact belongs to whatever commit
+      # produced it, and a minute of rebuilding is cheaper than reasoning about whether it is
+      # the same tree.
+      - name: Build and test
+        run: mvn -B verify
+
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+          TAG: ${{ github.ref_name }}
+        run: |
+          set -euo pipefail
+          # A hyphen means a pre-release tag (v1.7.0-rc1), which must not become the download
+          # students land on.
+          flags=(--title "$TAG" --generate-notes --verify-tag)
+          case "$TAG" in
+            *-*) flags+=(--prerelease) ;;
+          esac
+          gh release create "$TAG" "${flags[@]}" \
+            target/afct-client-v*.jar \
+            target/afct-client.jar
