@@ -15,7 +15,14 @@
         <maven.build.timestamp.format>yyyyMMdd-HHmmss</maven.build.timestamp.format>
         <!-- Keep this stable across releases so Windows can identify related products for upgrades. -->
         <windows.upgrade.uuid>5a338032-2203-4f5d-95f2-56ea1d5b4f8b</windows.upgrade.uuid>
-        <windows.installer.output.dir>${project.build.directory}/jpackage/${project.version}-${maven.build.timestamp}</windows.installer.output.dir>
+        <!--
+            The version stamped into the installers. jpackage requires plain numbers here:
+            macOS CFBundleVersion and the Windows MSI product version both refuse a suffix,
+            so a release candidate built as 1.7.0-rc1 would fail. The release workflow passes
+            the numeric part with -Djpackage.app.version; a local build just uses the pom.
+        -->
+        <jpackage.app.version>${project.version}</jpackage.app.version>
+        <jpackage.output.dir>${project.build.directory}/jpackage/${project.version}-${maven.build.timestamp}</jpackage.output.dir>
     </properties>
 
     <dependencies>
@@ -204,10 +211,20 @@
     </build>
 
     <profiles>
-        <!-- Native installer profile - use: mvn package -Pjpackage -->
-        <!-- Requires WiX Toolset 3.x on PATH for exe/msi types -->
+        <!--
+            Native installers. One profile per platform, because jpackage has to run on the
+            operating system it is building for and the options are not the same on each:
+
+              Windows:  mvn package -Pjpackage-windows   (needs WiX Toolset 3.x on PATH)
+              macOS:    mvn package -Pjpackage-mac
+
+            Neither is signed yet, so Windows shows a SmartScreen warning and macOS refuses
+            to open the app until the user allows it in Privacy and Security. Signing is the
+            next piece of work and slots in as extra options here plus a step in the release
+            workflow; nothing else about this has to change for it.
+        -->
         <profile>
-            <id>jpackage</id>
+            <id>jpackage-windows</id>
             <build>
                 <plugins>
                     <plugin>
@@ -225,7 +242,7 @@
                         </executions>
                         <configuration>
                             <name>AFCT Client</name>
-                            <appVersion>${project.version}</appVersion>
+                            <appVersion>${jpackage.app.version}</appVersion>
                             <vendor>RIT CS</vendor>
                             <copyright>RIT CS</copyright>
                             <input>${project.build.directory}</input>
@@ -233,7 +250,7 @@
                             <mainClass>gui.Main</mainClass>
                             <type>EXE</type>
                             <!-- Use a unique destination per build to avoid AccessDenied collisions on a prior EXE in use. -->
-                            <destination>${windows.installer.output.dir}</destination>
+                            <destination>${jpackage.output.dir}</destination>
                             <javaOptions>
                                 <option>-Xmx512m</option>
                             </javaOptions>
@@ -246,6 +263,56 @@
                             <winPerUserInstall>true</winPerUserInstall>
                             <winUpgradeUuid>${windows.upgrade.uuid}</winUpgradeUuid>
                             <icon>src/main/resources/afct.ico</icon>
+                        </configuration>
+                    </plugin>
+                </plugins>
+            </build>
+        </profile>
+
+        <profile>
+            <id>jpackage-mac</id>
+            <build>
+                <plugins>
+                    <plugin>
+                        <groupId>org.panteleyev</groupId>
+                        <artifactId>jpackage-maven-plugin</artifactId>
+                        <version>1.6.5</version>
+                        <executions>
+                            <execution>
+                                <id>jpackage</id>
+                                <phase>package</phase>
+                                <goals>
+                                    <goal>jpackage</goal>
+                                </goals>
+                            </execution>
+                        </executions>
+                        <configuration>
+                            <name>AFCT Client</name>
+                            <appVersion>${jpackage.app.version}</appVersion>
+                            <vendor>Penn State</vendor>
+                            <copyright>Penn State</copyright>
+                            <input>${project.build.directory}</input>
+                            <mainJar>afct-client.jar</mainJar>
+                            <mainClass>gui.Main</mainClass>
+                            <!--
+                                A disk image, which is what a Mac user expects to download:
+                                open it, drag the app across, done. A PKG installer would
+                                need its own signing identity to be worth anything.
+                            -->
+                            <type>DMG</type>
+                            <destination>${jpackage.output.dir}</destination>
+                            <javaOptions>
+                                <option>-Xmx512m</option>
+                            </javaOptions>
+                            <!--
+                                Reverse-DNS, and it must never change: macOS uses it to tell
+                                one application from another, so a new identifier reads as a
+                                different program and loses the user's settings for this one.
+                            -->
+                            <macPackageIdentifier>edu.psu.afct.client</macPackageIdentifier>
+                            <!-- Kept under 16 characters, which is the menu bar's limit. -->
+                            <macPackageName>AFCT Client</macPackageName>
+                            <icon>src/main/resources/afct.icns</icon>
                         </configuration>
                     </plugin>
                 </plugins>

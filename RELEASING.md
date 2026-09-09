@@ -59,11 +59,39 @@ That is the whole release. You do not need a pull request for a tag.
 ## Step 5: watch it build
 
 Open the [Actions tab](https://github.com/PennStateCS/AFCT-Client/actions). A run called
-**Release** starts within a few seconds and takes about a minute.
+**Release** starts within a few seconds. It takes roughly ten minutes, because the installers are
+built on three different machines.
+
+It builds on three machines at once, one for each thing people download:
+
+| File | For |
+| --- | --- |
+| `AFCT-Client-1.6.8-windows.exe` | Windows |
+| `AFCT-Client-1.6.8-macos-apple-silicon.dmg` | Macs made from late 2020 onwards |
+| `AFCT-Client-1.6.8-macos-intel.dmg` | Older Intel Macs |
+| `afct-client-v1.6.8.jar` | Anyone who would rather run it with their own Java |
 
 When it finishes, your new release is on the
-[Releases page](https://github.com/PennStateCS/AFCT-Client/releases) with the program attached and
-a list of what changed since last time.
+[Releases page](https://github.com/PennStateCS/AFCT-Client/releases) with all four attached and a
+list of what changed since last time.
+
+If one platform fails, nothing is published at all. That is on purpose: a release with the
+Windows installer missing is worse than no release, because people download the part that is
+there and assume it is everything.
+
+## A warning students will see
+
+The installers are not signed yet, so both systems will say they do not recognise the program:
+
+- **Windows** shows a blue "Windows protected your PC" box. The student clicks **More info**, then
+  **Run anyway**.
+- **macOS** refuses to open it. The student opens **System Settings**, goes to **Privacy and
+  Security**, scrolls down, and clicks **Open Anyway** next to the message about AFCT Client.
+
+This is worth fixing and is the next piece of work. It needs a code signing certificate for
+Windows and an Apple Developer account for macOS, so it is a purchasing question before it is a
+programming one. Until then, tell students to expect the warning, because a student who is not
+expecting it will reasonably assume the download is broken.
 
 ## If the release fails
 
