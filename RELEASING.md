@@ -137,13 +137,18 @@ one disappear.
 
 ## Test releases
 
-To share something for testing without it looking like the finished thing, put a dash and a label
-on the end of the version:
+To try a release without it looking like the finished thing, put a dash and a label on the end of
+the version. You do **not** need to change `pom.xml` for this: the check only compares the numbers,
+so a pom saying 1.6.8 accepts both `v1.6.8` and `v1.6.8-rc1`.
 
 ```bash
-git tag v1.7.0-rc1
-git push origin v1.7.0-rc1
+git tag v1.6.8-rc1
+git push origin v1.6.8-rc1
 ```
 
 Anything with a dash in it is published as a **pre-release**. It appears on the Releases page
 marked clearly, and it does not become the version people land on when they visit that page.
+
+This is the way to check that the installers actually build before you cut the real release, and
+it is worth doing the first time, or any time the build changes. Delete the test release and its
+tag afterwards.

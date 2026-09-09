@@ -76,9 +76,13 @@ jobs:
           # <version>, since find() matches direct children only.
           pom=$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('pom.xml').getroot().find('{http://maven.apache.org/POM/4.0.0}version').text.strip())")
           want="${GITHUB_REF_NAME#v}"
-          if [ "${pom}" != "${want}" ]; then
+          # Compare the numbers only, so a test release can be cut from the same code as the
+          # real one: pom 1.6.8 accepts both v1.6.8 and v1.6.8-rc1. Without this, rehearsing a
+          # release would mean bumping the pom to 1.6.8-rc1 and back again, which is exactly
+          # the sort of faff that stops people rehearsing at all.
+          if [ "${pom}" != "${want%%-*}" ]; then
             echo "::error::Tag ${GITHUB_REF_NAME} does not match the pom version ${pom}."
-            echo "Bump <version> in pom.xml to ${want} (or tag v${pom}), then re-tag."
+            echo "Bump <version> in pom.xml to ${want%%-*} (or tag v${pom}), then re-tag."
             exit 1
           fi
           # Installers cannot carry a suffix: macOS CFBundleVersion and the Windows MSI
