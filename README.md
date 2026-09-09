@@ -7,7 +7,7 @@ Related repositories:
 - [AFCT Dashboard](https://github.com/PennStateCS/AFCT)
 - [AFCT Evaluator](https://github.com/PennStateCS/AFCT-Evaluator)
 
-## Build and test it yourself
+## Build and test it
 
 You need Java 21 and Maven.
 
@@ -18,8 +18,7 @@ mvn verify
 That compiles the code, runs the tests, and puts the finished program in `target/`. The file you
 can run is `target/afct-client.jar`.
 
-The same command runs automatically on every pull request. If it fails on your machine, it will
-fail there too.
+The same command runs automatically on every pull request. 
 
 ## Making a release
 
@@ -27,8 +26,7 @@ A release is a version of the client that other people can download. It appears 
 [Releases page](https://github.com/PennStateCS/AFCT-Client/releases), and anyone can download it
 without a GitHub account.
 
-Releases do not happen on their own. Merging to `main` does not make one. You make a release by
-creating a **tag**, which is a label on one commit that says "this is version 1.6.8".
+You create a release by creating a **tag**, which is a label on one commit that says "this is version 1.6.8".
 
 ### Before you start
 
