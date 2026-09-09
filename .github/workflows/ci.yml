@@ -1,0 +1,67 @@
+name: CI
+
+# The client's only automated check. Nothing ran here before, so a pull request that
+# broke the build or the tests could be merged and nobody would know until somebody
+# tried to build it by hand.
+#
+# One job, because there is one thing to say: does it compile and do the tests pass.
+# `verify` rather than `test` so packaging is covered too; the shaded jar is what
+# people actually run, and a shade or assembly change that produces nothing would
+# otherwise pass a test-only build.
+#
+# The jar is kept from every run, pull requests included, so a change can be handed
+# to somebody to try without them building it themselves.
+#
+# Not here yet: the native installers. `mvn package -Pjpackage` is configured for
+# Windows only (type EXE, WiX, the win* options and an .ico), so it needs a
+# windows-latest runner, and macOS needs its own type and icon before a matrix is
+# worth writing. Adding that is the next step, not this one.
+on:
+  push:
+    branches: ['main']
+    paths-ignore:
+      - '**.md'
+  pull_request:
+  # So a commit that never had a run can get one without pushing an empty change.
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+# A second push to the same branch makes the first answer stale, so stop paying for it.
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: build and test
+    runs-on: ubuntu-latest
+    steps:
+      - name: Check out
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      # Pinned to the version the pom compiles against, rather than whatever the
+      # runner ships, so a runner image change cannot quietly move the target.
+      - name: Set up Java 21
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # -B for readable logs (no download progress spam). The Swing dialogs the tests
+      # touch are mocked out with Mockito, so no display is needed here.
+      - name: Build and test
+        run: mvn -B verify
+
+      - name: Keep the jar
+        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
+        with:
+          name: afct-client-jar
+          path: |
+            target/afct-client.jar
+            target/afct-client-v*.jar
+          # A packaging change that stops producing a jar should fail the run rather
+          # than upload an empty artifact nobody notices until they need it.
+          if-no-files-found: error
