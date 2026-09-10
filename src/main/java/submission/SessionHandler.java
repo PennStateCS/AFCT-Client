@@ -27,7 +27,6 @@ import java.util.List;
 import java.util.Base64;
 import java.util.prefs.Preferences;
 
-import static submission.AFCTClient.fixUrl;
 import static submission.LoginResult.*;
 
 
@@ -57,8 +56,8 @@ public class SessionHandler {
     /** Legacy locale-formatted expiry key; retained only for migration. */
     public static final String PREF_SAVED_CREDS_EXPIRE_AFTER = "saved_creds_expire_after";
     public static final String PREF_SAVED_CREDS_EXPIRE_AT_MS = "saved_creds_expire_at_ms";
+    /** The last successfully used server base URL; the login window prefills from it. */
     public static final String PREF_SERVER = "server";
-    public static final String PREF_PORT = "port";
     public static final String PREF_EMAIL = "email";
     /** Legacy plaintext password key; retained only for migration. */
     public static final String PREF_PASSWORD = "password";
@@ -76,9 +75,9 @@ public class SessionHandler {
     public static final String PREF_HOMEWORK = "homework";
     public static final String PREF_PROBLEM = "problem";
 
-    // Default values
-    public static final String defaultServer = "https://10.144.18.20";
-    public static final String defaultPort = "3000";
+    // Default values. The server default is deliberately empty: prefilling a
+    // development address taught people to trust whatever was in the box.
+    public static final String defaultServer = "";
     public static final String defaultEmail = "student@example.com";
     public static final String defaultPassword = "";
     private static final int PASSWORD_SALT_BYTES = 16;
@@ -175,37 +174,33 @@ public class SessionHandler {
     // Login / Logout
     // ============================================================
 
-    public LoginResult login(String serverUrl, String portText, String userEmail, String userPassword) {
-        return login(serverUrl, portText, userEmail, userPassword, this.insecureTls);
+    public LoginResult login(String serverAddress, String userEmail, String userPassword) {
+        return login(serverAddress, userEmail, userPassword, this.insecureTls);
     }
 
-    public LoginResult login(String serverUrl, String portText, String userEmail, String userPassword, boolean insecureTls) {
-        String originalServer = serverUrl == null ? "" : serverUrl.trim();
-        boolean hasHttpScheme = originalServer.regionMatches(true, 0, "http://", 0, "http://".length());
-        boolean useHttps = !hasHttpScheme; // default to HTTPS when scheme is omitted
-
-        serverUrl = fixUrl(originalServer);
-        portText = portText.trim();
+    public LoginResult login(String serverAddress, String userEmail, String userPassword, boolean insecureTls) {
         userEmail = userEmail.trim();
 
         this.insecureTls = insecureTls;
         preferences.putBoolean(PREF_INSECURE_TLS, insecureTls);
 
-        if (serverUrl.isBlank()) {
-            return getErrorResult("Server is required.");
+        ServerAddress address;
+        try {
+            address = ServerAddress.parse(serverAddress);
+        } catch (IllegalArgumentException ex) {
+            return getErrorResult(ex.getMessage());
         }
 
-        // Reconstruct the full URL with protocol so AFCTClient uses the user-selected
-        // scheme, defaulting to HTTPS when no scheme is provided.
-        String fullUrl = (useHttps ? "https://" : "http://") + serverUrl + ":" + portText;
-
         try {
-            client = new AFCTClient(fullUrl, insecureTls);
+            client = new AFCTClient(address.baseUrl(), insecureTls);
             token = client.login(userEmail, userPassword);
             if (token != null && !token.isBlank()) {
                 // Login succeeded
                 this.loggedIn = true;
                 this.email = userEmail;
+                // Remember the last server that actually worked, whatever sign-in
+                // mode was used; the login window prefills from it.
+                preferences.put(PREF_SERVER, address.baseUrl());
 
                 // Set creds to expire after 7 days
                 long expiresAtMs = Instant.now().plus(Duration.ofDays(expireAfterDays)).toEpochMilli();
@@ -240,35 +235,31 @@ public class SessionHandler {
      * an LMS iframe, so it is a first-class mode, not a fallback. Deliberately does
      * not touch the Remember Me machinery: no saved password, no expiry window.
      */
-    public LoginResult loginWithToken(String serverUrl, String portText, String tokenText, boolean insecureTls) {
-        String originalServer = serverUrl == null ? "" : serverUrl.trim();
-        boolean hasHttpScheme = originalServer.regionMatches(true, 0, "http://", 0, "http://".length());
-        boolean useHttps = !hasHttpScheme; // default to HTTPS when scheme is omitted
-
-        String host = fixUrl(originalServer);
-        portText = portText.trim();
+    public LoginResult loginWithToken(String serverAddress, String tokenText, boolean insecureTls) {
         String tokenValue = tokenText == null ? "" : tokenText.trim();
 
         this.insecureTls = insecureTls;
         preferences.putBoolean(PREF_INSECURE_TLS, insecureTls);
 
-        if (host.isBlank()) {
-            return getErrorResult("Server is required.");
+        ServerAddress address;
+        try {
+            address = ServerAddress.parse(serverAddress);
+        } catch (IllegalArgumentException ex) {
+            return getErrorResult(ex.getMessage());
         }
         if (tokenValue.isBlank()) {
             return getErrorResult("Sign-in token is required.");
         }
 
-        String fullUrl = (useHttps ? "https://" : "http://") + host + ":" + portText;
-
         try {
-            AFCTClient candidate = new AFCTClient(fullUrl, insecureTls);
+            AFCTClient candidate = new AFCTClient(address.baseUrl(), insecureTls);
             Map<String, Object> user = candidate.loginWithToken(tokenValue);
             if (user != null) {
                 this.client = candidate;
                 this.loggedIn = true;
                 Object userEmail = user.get("email");
                 this.email = userEmail != null ? String.valueOf(userEmail) : null;
+                preferences.put(PREF_SERVER, address.baseUrl());
                 return getSuccessResult();
             }
             this.loggedIn = false;
@@ -298,7 +289,7 @@ public class SessionHandler {
         if (!hasSavedSignInToken()) {
             return false;
         }
-        LoginResult result = loginWithToken(getSavedServer(), getSavedPort(),
+        LoginResult result = loginWithToken(getSavedServer(),
                 preferences.get(PREF_SIGNIN_TOKEN, ""), isInsecureTls());
         if (result.status == LoginResult.LoginStatus.SUCCESS) {
             return true;
@@ -311,14 +302,8 @@ public class SessionHandler {
         return false;
     }
 
-    public void saveSignInToken(String serverUrl, String port, String tokenValue) {
-        // Save the server with protocol, the same way saveCredentials does, so the
-        // silent sign-in reconstructs the URL the user actually typed.
-        String trimmed = serverUrl.trim();
-        String withProtocol = (trimmed.startsWith("http://") || trimmed.startsWith("https://"))
-                ? trimmed : "https://" + trimmed;
-        preferences.put(PREF_SERVER, withProtocol);
-        preferences.put(PREF_PORT, port.trim());
+    /** Called after a successful token sign-in; the server was already remembered there. */
+    public void saveSignInToken(String tokenValue) {
         preferences.put(PREF_SIGNIN_TOKEN, tokenValue);
         preferences.putBoolean(PREF_STAY_SIGNED_IN, true);
     }
@@ -382,13 +367,8 @@ public class SessionHandler {
     // Credentials / Remember Me
     // ============================================================
 
-    public void saveCredentials(String serverUrl, String port, String userEmail, String userPassword) {
-        // Save with protocol so auto-reauth can reconstruct the correct URL
-        String trimmed = serverUrl.trim();
-        String withProtocol = (trimmed.startsWith("http://") || trimmed.startsWith("https://"))
-                ? trimmed : "https://" + trimmed;
-        preferences.put(PREF_SERVER, withProtocol);
-        preferences.put(PREF_PORT, port.trim());
+    /** Called after a successful password sign-in; the server was already remembered there. */
+    public void saveCredentials(String userEmail, String userPassword) {
         preferences.put(PREF_EMAIL, userEmail.trim());
         boolean passwordSaved = storeRememberedPassword(userPassword);
         preferences.putBoolean(PREF_REMEMBER_ME, passwordSaved);
@@ -410,10 +390,6 @@ public class SessionHandler {
 
     public String getSavedServer() {
         return preferences.get(PREF_SERVER, defaultServer);
-    }
-
-    public String getSavedPort() {
-        return preferences.get(PREF_PORT, defaultPort);
     }
 
     public String getSavedEmail() {
@@ -448,14 +424,6 @@ public class SessionHandler {
         return preferences.getBoolean(PREF_INSECURE_TLS, true);
     }
 
-    public void saveLoginInfo(String serverUrl, String portText, String userEmail, String userPassword) {
-        preferences.put(PREF_SERVER, fixUrl(serverUrl));
-        preferences.put(PREF_PORT, portText.trim());
-        preferences.put(PREF_EMAIL, userEmail.trim());
-        storeRememberedPassword(userPassword);
-        this.email = userEmail.trim();
-    }
-
     // ============================================================
     // Auto re-authenticate
     // ============================================================
@@ -475,13 +443,12 @@ public class SessionHandler {
         }
 
         String serverUrl = getSavedServer();
-        String portText = getSavedPort();
         String userEmail = getSavedEmail();
         String userPassword = getSavedPassword();
         if (userPassword.isBlank()) {
             return false;
         }
-        LoginResult loginResult = login(serverUrl, portText, userEmail, userPassword);
+        LoginResult loginResult = login(serverUrl, userEmail, userPassword);
         return loginResult.status == LoginResult.LoginStatus.SUCCESS;
     }
 

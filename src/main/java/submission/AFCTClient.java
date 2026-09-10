@@ -26,7 +26,6 @@ public class AFCTClient {
     private String token;           // bearer token from POST /auth/login
     private int connectTimeoutMs = 15000;
     private int readTimeoutMs = 30000;
-    private boolean useHTTPS = false;
     /**
      * When true, HTTPS connections skip certificate/hostname validation (self-signed
      * servers). When false, connections use the JVM's normal trust store and will
@@ -52,19 +51,10 @@ public class AFCTClient {
         this(baseUrl, true);
     }
 
+    /** @throws IllegalArgumentException when the address cannot be parsed. */
     public AFCTClient(String baseUrl, boolean insecureTls) {
-        String url = fixUrl(baseUrl);
+        this.baseUrl = ServerAddress.parse(baseUrl).baseUrl();
         this.insecureTls = insecureTls;
-
-        if (baseUrl.trim().startsWith("https://") || url.endsWith("443")) {
-            this.useHTTPS = true;
-        }
-
-        if (useHTTPS) {
-            this.baseUrl = "https://" + url;
-        } else {
-            this.baseUrl = "http://" + url;
-        }
     }
 
     /**
@@ -76,27 +66,6 @@ public class AFCTClient {
         this.connectTimeoutMs = (int) connectTimeout.toMillis();
         this.readTimeoutMs = (int) readTimeout.toMillis();
         // maxRetries, baseBackoffMs stored for future use
-    }
-
-    public static String fixUrl(String baseUrl) {
-        String fixedUrl = baseUrl.trim();
-        // Strip ending "/" if present
-        if (baseUrl.endsWith("/")) {
-            fixedUrl = baseUrl.substring(0, baseUrl.length() - 1).trim();
-        }
-
-        // TODO: test *https* on AFCT server
-        // Add "http://" to the beginning if it is missing
-//        if (!fixedUrl.startsWith("http://") && !fixedUrl.startsWith("https://")) {
-//            fixedUrl = "http://" + fixedUrl;
-//        }
-
-        if (fixedUrl.startsWith("http://")) {
-            fixedUrl = fixedUrl.substring("http://".length());
-        } else if (fixedUrl.startsWith("https://")) {
-            fixedUrl = fixedUrl.substring("https://".length());
-        }
-        return fixedUrl;
     }
 
     public AFCTClient timeouts(int connectMs, int readMs) {

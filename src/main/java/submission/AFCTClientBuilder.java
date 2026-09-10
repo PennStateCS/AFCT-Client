@@ -15,8 +15,9 @@ public final class AFCTClientBuilder {
     private int maxRetries = 3;
     private long baseBackoffMs = 300;
 
+    /** @throws IllegalArgumentException when the address cannot be parsed. */
     public AFCTClientBuilder(String baseUrl) {
-        this.baseUrl = AFCTClient.fixUrl(baseUrl);
+        this.baseUrl = ServerAddress.parse(baseUrl).baseUrl();
     }
 
     public AFCTClientBuilder insecureTls(boolean insecureTls) {

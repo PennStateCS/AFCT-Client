@@ -44,7 +44,6 @@ class SessionHandlerTest {
     private void wipePrefs() throws BackingStoreException {
         Preferences prefs = Preferences.userNodeForPackage(SessionHandler.class);
         prefs.remove(SessionHandler.PREF_SERVER);
-        prefs.remove(SessionHandler.PREF_PORT);
         prefs.remove(SessionHandler.PREF_EMAIL);
         prefs.remove(SessionHandler.PREF_PASSWORD);
         prefs.remove(SessionHandler.PREF_PASSWORD_ENCRYPTED);
@@ -96,16 +95,10 @@ class SessionHandlerTest {
     // ── Default preferences ──────────────────────────────────────────────────
 
     @Test
-    void savedServerDefaultsToConstant() {
+    void savedServerDefaultsToEmpty() {
+        // No dev-address prefill: an empty box is the correct starting state.
         try (var h = open()) {
-            assertEquals(SessionHandler.defaultServer, h.handler().getSavedServer());
-        }
-    }
-
-    @Test
-    void savedPortDefaultsToConstant() {
-        try (var h = open()) {
-            assertEquals(SessionHandler.defaultPort, h.handler().getSavedPort());
+            assertEquals("", h.handler().getSavedServer());
         }
     }
 
@@ -133,18 +126,9 @@ class SessionHandlerTest {
     // ── saveCredentials / clearSavedCredentials ──────────────────────────────
 
     @Test
-    void saveCredentialsPersistsServerAndPort() {
-        try (var h = open()) {
-            h.handler().saveCredentials("https://10.0.0.1", "3000", "a@b.com", "secret");
-            assertEquals("https://10.0.0.1", h.handler().getSavedServer());
-            assertEquals("3000", h.handler().getSavedPort());
-        }
-    }
-
-    @Test
     void saveCredentialsPersistsEmail() {
         try (var h = open()) {
-            h.handler().saveCredentials("https://10.0.0.1", "3000", "student@rit.edu", "pw");
+            h.handler().saveCredentials("student@rit.edu", "pw");
             assertEquals("student@rit.edu", h.handler().getSavedEmail());
         }
     }
@@ -152,7 +136,7 @@ class SessionHandlerTest {
     @Test
     void saveCredentialsPersistsPasswordRoundTrip() {
         try (var h = open()) {
-            h.handler().saveCredentials("https://10.0.0.1", "3000", "a@b.com", "mypassword");
+            h.handler().saveCredentials("a@b.com", "mypassword");
             assertEquals("mypassword", h.handler().getSavedPassword());
         }
     }
@@ -160,7 +144,7 @@ class SessionHandlerTest {
     @Test
     void saveCredentialsSetsRememberMe() {
         try (var h = open()) {
-            h.handler().saveCredentials("https://10.0.0.1", "3000", "a@b.com", "pw");
+            h.handler().saveCredentials("a@b.com", "pw");
             assertTrue(h.handler().hasRememberMe());
         }
     }
@@ -168,7 +152,7 @@ class SessionHandlerTest {
     @Test
     void clearSavedCredentialsClearsRememberMe() {
         try (var h = open()) {
-            h.handler().saveCredentials("https://10.0.0.1", "3000", "a@b.com", "pw");
+            h.handler().saveCredentials("a@b.com", "pw");
             h.handler().clearSavedCredentials();
             assertFalse(h.handler().hasRememberMe());
         }
@@ -177,7 +161,7 @@ class SessionHandlerTest {
     @Test
     void clearSavedCredentialsClearsPassword() {
         try (var h = open()) {
-            h.handler().saveCredentials("https://10.0.0.1", "3000", "a@b.com", "pw");
+            h.handler().saveCredentials("a@b.com", "pw");
             h.handler().clearSavedCredentials();
             assertEquals(SessionHandler.defaultPassword, h.handler().getSavedPassword());
         }
@@ -190,7 +174,7 @@ class SessionHandlerTest {
         // Save → getSavedPassword decrypts; if values match, AES-GCM round-trip works.
         try (var h = open()) {
             String plain = "SuperSecret123!";
-            h.handler().saveCredentials("https://localhost", "443", "x@y.com", plain);
+            h.handler().saveCredentials("x@y.com", plain);
             assertEquals(plain, h.handler().getSavedPassword());
         }
     }
@@ -198,7 +182,7 @@ class SessionHandlerTest {
     @Test
     void passwordEncryptedKeyIsPresentAfterSave() {
         try (var h = open()) {
-            h.handler().saveCredentials("https://localhost", "443", "x@y.com", "pw");
+            h.handler().saveCredentials("x@y.com", "pw");
             Preferences prefs = h.handler().preferences;
             String enc = prefs.get(SessionHandler.PREF_PASSWORD_ENCRYPTED, null);
             assertNotNull(enc, "Encrypted key must be present after saveCredentials");
@@ -209,7 +193,7 @@ class SessionHandlerTest {
     @Test
     void plaintextPasswordKeyIsAbsentAfterSave() {
         try (var h = open()) {
-            h.handler().saveCredentials("https://localhost", "443", "x@y.com", "pw");
+            h.handler().saveCredentials("x@y.com", "pw");
             Preferences prefs = h.handler().preferences;
             // Legacy plaintext key must NOT be written.
             assertNull(prefs.get(SessionHandler.PREF_PASSWORD, null));
@@ -233,7 +217,7 @@ class SessionHandlerTest {
     @Test
     void loginWithEmptyServerReturnsError() {
         try (var h = open()) {
-            LoginResult r = h.handler().login("", "3000", "a@b.com", "pw");
+            LoginResult r = h.handler().login("", "a@b.com", "pw");
             assertEquals(LoginResult.LoginStatus.ERROR, r.status);
             assertNotNull(r.message);
         }
@@ -242,7 +226,15 @@ class SessionHandlerTest {
     @Test
     void loginWithBlankServerReturnsError() {
         try (var h = open()) {
-            LoginResult r = h.handler().login("   ", "3000", "a@b.com", "pw");
+            LoginResult r = h.handler().login("   ", "a@b.com", "pw");
+            assertEquals(LoginResult.LoginStatus.ERROR, r.status);
+        }
+    }
+
+    @Test
+    void loginWithUnparseableServerReturnsError() {
+        try (var h = open()) {
+            LoginResult r = h.handler().login("https://", "a@b.com", "pw");
             assertEquals(LoginResult.LoginStatus.ERROR, r.status);
         }
     }
@@ -251,7 +243,7 @@ class SessionHandlerTest {
     void loginWithUnreachableHostReturnsErrorNotException() {
         // An unreachable host should produce an ERROR result, not a thrown exception.
         try (var h = open()) {
-            LoginResult r = h.handler().login("http://192.0.2.1", "9999", "a@b.com", "pw");
+            LoginResult r = h.handler().login("http://192.0.2.1:9999", "a@b.com", "pw");
             assertEquals(LoginResult.LoginStatus.ERROR, r.status,
                     "Connection failure to unreachable host must map to ERROR, got: " + r.message);
         }
@@ -262,7 +254,7 @@ class SessionHandlerTest {
     @Test
     void tokenLoginWithEmptyServerReturnsError() {
         try (var h = open()) {
-            LoginResult r = h.handler().loginWithToken("", "3000", "some-token", true);
+            LoginResult r = h.handler().loginWithToken("", "some-token", true);
             assertEquals(LoginResult.LoginStatus.ERROR, r.status);
             assertNotNull(r.message);
         }
@@ -271,7 +263,7 @@ class SessionHandlerTest {
     @Test
     void tokenLoginWithBlankTokenReturnsError() {
         try (var h = open()) {
-            LoginResult r = h.handler().loginWithToken("https://10.0.0.1", "3000", "   ", true);
+            LoginResult r = h.handler().loginWithToken("https://10.0.0.1", "   ", true);
             assertEquals(LoginResult.LoginStatus.ERROR, r.status);
         }
     }
@@ -279,7 +271,7 @@ class SessionHandlerTest {
     @Test
     void tokenLoginWithNullTokenReturnsError() {
         try (var h = open()) {
-            LoginResult r = h.handler().loginWithToken("https://10.0.0.1", "3000", null, true);
+            LoginResult r = h.handler().loginWithToken("https://10.0.0.1", null, true);
             assertEquals(LoginResult.LoginStatus.ERROR, r.status);
         }
     }
@@ -287,7 +279,7 @@ class SessionHandlerTest {
     @Test
     void tokenLoginWithUnreachableHostReturnsErrorNotException() {
         try (var h = open()) {
-            LoginResult r = h.handler().loginWithToken("http://192.0.2.1", "9999", "some-token", true);
+            LoginResult r = h.handler().loginWithToken("http://192.0.2.1:9999", "some-token", true);
             assertEquals(LoginResult.LoginStatus.ERROR, r.status,
                     "Connection failure to unreachable host must map to ERROR, got: " + r.message);
         }
@@ -298,18 +290,16 @@ class SessionHandlerTest {
     @Test
     void saveSignInTokenRoundTrip() {
         try (var h = open()) {
-            h.handler().saveSignInToken("https://10.0.0.1", "3000", "tok-123");
+            h.handler().saveSignInToken("tok-123");
             assertTrue(h.handler().hasSavedSignInToken());
             assertTrue(h.handler().staySignedInPreferred());
-            assertEquals("https://10.0.0.1", h.handler().getSavedServer());
-            assertEquals("3000", h.handler().getSavedPort());
         }
     }
 
     @Test
     void clearSavedSignInTokenClearsTokenAndPreference() {
         try (var h = open()) {
-            h.handler().saveSignInToken("https://10.0.0.1", "3000", "tok-123");
+            h.handler().saveSignInToken("tok-123");
             h.handler().clearSavedSignInToken();
             assertFalse(h.handler().hasSavedSignInToken());
             assertFalse(h.handler().staySignedInPreferred());
@@ -319,7 +309,7 @@ class SessionHandlerTest {
     @Test
     void logoutClearsSavedSignInToken() {
         try (var h = open()) {
-            h.handler().saveSignInToken("https://10.0.0.1", "3000", "tok-123");
+            h.handler().saveSignInToken("tok-123");
             h.handler().logout();
             assertFalse(h.handler().hasSavedSignInToken());
         }
@@ -330,7 +320,8 @@ class SessionHandlerTest {
         // A silent sign-in that fails because the server is unreachable must keep the
         // stored token: it may be fine, and only a server rejection means it is dead.
         try (var h = open()) {
-            h.handler().saveSignInToken("http://192.0.2.1", "9999", "tok-123");
+            h.handler().preferences.put(SessionHandler.PREF_SERVER, "http://192.0.2.1:9999");
+            h.handler().saveSignInToken("tok-123");
             assertNull(h.handler().requireAuthenticated(null));
             assertTrue(h.handler().hasSavedSignInToken(),
                     "Unreachable server must not clear the stored token");
@@ -341,8 +332,8 @@ class SessionHandlerTest {
     void tokenLoginFailureLeavesSavedCredentialsAlone() {
         // A token sign-in must never disturb the password form's Remember Me state.
         try (var h = open()) {
-            h.handler().saveCredentials("https://10.0.0.1", "3000", "a@b.com", "pw");
-            h.handler().loginWithToken("", "3000", "some-token", true);
+            h.handler().saveCredentials("a@b.com", "pw");
+            h.handler().loginWithToken("", "some-token", true);
             assertTrue(h.handler().hasRememberMe());
             assertEquals("pw", h.handler().getSavedPassword());
         }

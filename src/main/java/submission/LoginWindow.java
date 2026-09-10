@@ -21,8 +21,9 @@ public class LoginWindow extends JDialog {
 
     private final SessionHandler sessionHandler;
 
-    private final JTextField serverTF = new JTextField("https://10.144.18.20");
-    private final JTextField portTF = new JTextField("443");
+    // One address field; ServerAddress.parse handles scheme and port. Starts empty
+    // on purpose: prefilling a development address taught people to trust the box.
+    private final JTextField serverTF = new JTextField();
     private final JTextField emailTF = new JTextField();
     private final JPasswordField passwordTF = new JPasswordField();
     private final char defaultPasswordEchoChar = passwordTF.getEchoChar();
@@ -133,10 +134,7 @@ public class LoginWindow extends JDialog {
 
         c.gridy++;
         c.insets = new Insets(6, 0, 6, 0);
-        panel.add(labeled("Server", serverTF), c);
-
-        c.gridy++;
-        panel.add(labeled("Port", portTF), c);
+        panel.add(labeled("Server address", serverTF), c);
 
         c.gridy++;
         panel.add(buildModeRow(), c);
@@ -224,7 +222,6 @@ public class LoginWindow extends JDialog {
             public void changedUpdate(DocumentEvent e) { refreshAccountLink(); }
         };
         serverTF.getDocument().addDocumentListener(relink);
-        portTF.getDocument().addDocumentListener(relink);
         refreshAccountLink();
 
         setContentPane(outer);
@@ -333,11 +330,13 @@ public class LoginWindow extends JDialog {
     }
 
     private void refreshAccountLink() {
-        String server = serverTF.getText().trim();
-        boolean hasHttpScheme = server.regionMatches(true, 0, "http://", 0, "http://".length());
-        String host = AFCTClient.fixUrl(server);
-        String port = portTF.getText().trim();
-        String base = (hasHttpScheme ? "http://" : "https://") + host + (port.isEmpty() ? "" : ":" + port);
+        String base;
+        try {
+            base = ServerAddress.parse(serverTF.getText()).baseUrl();
+        } catch (IllegalArgumentException ex) {
+            // Half-typed address: point at what is there, better than a dead link.
+            base = "https://" + serverTF.getText().trim();
+        }
         // ?tab=tokens lands directly on the App tokens tab of the account page.
         accountLink.update("your AFCT account page", base + "/dashboard/account?tab=tokens");
     }
@@ -386,7 +385,6 @@ public class LoginWindow extends JDialog {
     private void toggleInputs(boolean enabled) {
         boolean tokenMode = tokenModeRadio.isSelected();
         serverTF.setEnabled(enabled);
-        portTF.setEnabled(enabled);
         emailTF.setEnabled(enabled);
         passwordTF.setEnabled(enabled);
         tokenTF.setEnabled(enabled);
@@ -405,7 +403,6 @@ public class LoginWindow extends JDialog {
 
     private void attemptLogin() {
         final String server = serverTF.getText().trim();
-        final String port = portTF.getText().trim();
         final String email = emailTF.getText().trim();
         final String password = new String(passwordTF.getPassword());
         final String signInToken = tokenTF.getText().trim();
@@ -426,15 +423,15 @@ public class LoginWindow extends JDialog {
                     publish("Configuring TLS settings...");
                     Thread.sleep(100); // Brief pause so user sees status
 
-                    publish("Connecting to " + server + ":" + port + "...");
+                    publish("Connecting to " + server + "...");
                     Thread.sleep(100);
 
                     if (tokenMode) {
                         publish("Checking sign-in token...");
-                        return sessionHandler.loginWithToken(server, port, signInToken, insecureTls);
+                        return sessionHandler.loginWithToken(server, signInToken, insecureTls);
                     }
                     publish("Authenticating user...");
-                    return sessionHandler.login(server, port, email, password, insecureTls);
+                    return sessionHandler.login(server, email, password, insecureTls);
                 } catch (Exception ex) {
                     return LoginResult.getErrorResult(
                             ErrorMessages.userMessage(ex, "Unable to reach the server. Please try again.")
@@ -466,13 +463,13 @@ public class LoginWindow extends JDialog {
 
                         // Handle Remember Me
                         if (!tokenMode && rememberMeCheckBox.isSelected()) {
-                            sessionHandler.saveCredentials(server, port, email, password);
+                            sessionHandler.saveCredentials(email, password);
                         }
                         // Store the token only on a successful sign-in with the box
                         // ticked; unticked means it lives in memory for this run only.
                         if (tokenMode) {
                             if (staySignedInCheckBox.isSelected()) {
-                                sessionHandler.saveSignInToken(server, port, signInToken);
+                                sessionHandler.saveSignInToken(signInToken);
                             } else {
                                 sessionHandler.clearSavedSignInToken();
                             }
@@ -524,11 +521,12 @@ public class LoginWindow extends JDialog {
         // Load SSL validation preference
         validateSSLCheckBox.setSelected(!sessionHandler.isInsecureTls());
 
+        // The last server that actually worked, whatever sign-in mode was used.
+        serverTF.setText(sessionHandler.getSavedServer());
+
         // Load Remember Me credentials if enabled
         if (sessionHandler.hasRememberMe()) {
             rememberMeCheckBox.setSelected(true);
-            serverTF.setText(sessionHandler.getSavedServer());
-            portTF.setText(sessionHandler.getSavedPort());
             emailTF.setText(sessionHandler.getSavedEmail());
             passwordTF.setText(sessionHandler.getSavedPassword());
         }
@@ -539,8 +537,6 @@ public class LoginWindow extends JDialog {
         if (sessionHandler.staySignedInPreferred()) {
             tokenModeRadio.setSelected(true);
             staySignedInCheckBox.setSelected(true);
-            serverTF.setText(sessionHandler.getSavedServer());
-            portTF.setText(sessionHandler.getSavedPort());
         }
         applyMode();
     }
