@@ -122,20 +122,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private ProblemItem selectedProblem = null;
     private DefaultMutableTreeNode selectedNode = null;
 
-    // Selection to restore after a Refresh: captured before the reload, then re-applied
-    // level by level as each lazily-loaded tree level (course, assignment, problem) arrives.
-    private String restoreCourseId;
-    private String restoreAssignmentId;
-    private String restoreProblemId;
-
-    // Every expanded branch to restore after a Refresh (not just the selected path), so
-    // the whole tree comes back the way the user left it. Because the tree loads lazily
-    // and only one load runs at a time (the `loading` flag), the branches are re-expanded
-    // one at a time: pumpRestore expands the next branch that still needs loading, and the
-    // load's done() pumps again, until nothing is left and the selection is re-applied.
-    private final java.util.Set<String> restoreExpandedCourseIds = new java.util.HashSet<>();
-    private final java.util.Set<String> restoreExpandedAssignmentIds = new java.util.HashSet<>();
-    private boolean restoreInProgress = false;
+    // Puts expansion + selection back after a Refresh or filter change rebuilds
+    // the tree; see TreeStateRestorer. Created lazily because it needs the tree.
+    private TreeStateRestorer restorer;
 
     // The whole course tree, fetched once (GET /api/client/v1/tree) and cached so the tree
     // builds and re-filters locally without more network calls. The lazy expanders read
@@ -881,11 +870,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             lastRefreshMs = now;
             // Remember what is selected, and every expanded branch, so the reload can
             // return the tree to exactly the state the user left it in.
-            restoreCourseId = selectedCourse != null ? selectedCourse.id : null;
-            restoreAssignmentId = selectedAssignment != null ? selectedAssignment.id : null;
-            restoreProblemId = selectedProblem != null ? selectedProblem.id : null;
-            captureExpansionState();
-            restoreInProgress = !restoreExpandedCourseIds.isEmpty() || restoreCourseId != null;
+            restorer().capture(rootNode, selectedCourse, selectedAssignment, selectedProblem);
             refreshDialog();
             startRefreshCooldown();
         });
@@ -996,111 +981,23 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // Restore selection after a Refresh
     // ============================================================
 
+    private TreeStateRestorer restorer() {
+        if (restorer == null) {
+            restorer = new TreeStateRestorer(selectionTree, this::hasRealChildren);
+        }
+        return restorer;
+    }
+
     private void clearRestore() {
-        restoreCourseId = null;
-        restoreAssignmentId = null;
-        restoreProblemId = null;
-        restoreExpandedCourseIds.clear();
-        restoreExpandedAssignmentIds.clear();
-        restoreInProgress = false;
+        restorer().clear();
     }
 
-    /** Records the ids of every currently expanded course and assignment, for a Refresh. */
-    private void captureExpansionState() {
-        restoreExpandedCourseIds.clear();
-        restoreExpandedAssignmentIds.clear();
-        for (int i = 0; i < rootNode.getChildCount(); i++) {
-            DefaultMutableTreeNode courseNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
-            if (!(courseNode.getUserObject() instanceof CourseItem course)) continue;
-            if (!selectionTree.isExpanded(new javax.swing.tree.TreePath(courseNode.getPath()))) continue;
-            restoreExpandedCourseIds.add(course.id);
-            for (int j = 0; j < courseNode.getChildCount(); j++) {
-                DefaultMutableTreeNode aNode = (DefaultMutableTreeNode) courseNode.getChildAt(j);
-                if (!(aNode.getUserObject() instanceof AssignmentItem a)) continue;
-                if (selectionTree.isExpanded(new javax.swing.tree.TreePath(aNode.getPath()))) {
-                    restoreExpandedAssignmentIds.add(a.id);
-                }
-            }
-        }
-    }
-
-    /**
-     * Re-expands the next remembered branch that still needs its children loaded, then
-     * returns. The triggered load's done() calls this again, so branches are restored one
-     * at a time (only one lazy load may run at once). When nothing is left to expand, the
-     * remembered selection is re-applied and the restore ends.
-     */
     private void pumpRestore() {
-        if (!restoreInProgress || loading) return;
-
-        for (int i = 0; i < rootNode.getChildCount(); i++) {
-            DefaultMutableTreeNode courseNode = (DefaultMutableTreeNode) rootNode.getChildAt(i);
-            if (!(courseNode.getUserObject() instanceof CourseItem course)) continue;
-            if (!restoreExpandedCourseIds.contains(course.id)) continue;
-
-            if (!hasRealChildren(courseNode, AssignmentItem.class)) {
-                // Its assignments are not loaded yet; expanding kicks off that load.
-                selectionTree.expandPath(new javax.swing.tree.TreePath(courseNode.getPath()));
-                return;
-            }
-            // Assignments are present; make sure the course shows as expanded, then look
-            // for a remembered assignment under it that still needs its problems.
-            selectionTree.expandPath(new javax.swing.tree.TreePath(courseNode.getPath()));
-            for (int j = 0; j < courseNode.getChildCount(); j++) {
-                DefaultMutableTreeNode aNode = (DefaultMutableTreeNode) courseNode.getChildAt(j);
-                if (!(aNode.getUserObject() instanceof AssignmentItem a)) continue;
-                if (!restoreExpandedAssignmentIds.contains(a.id)) continue;
-                if (!hasRealChildren(aNode, ProblemItem.class)) {
-                    selectionTree.expandPath(new javax.swing.tree.TreePath(aNode.getPath()));
-                    return;
-                }
-                selectionTree.expandPath(new javax.swing.tree.TreePath(aNode.getPath()));
-            }
-        }
-
-        // Everything the user had expanded is back; restore the selection and finish.
-        finalizeRestore();
+        if (!loading) restorer().pump(rootNode);
     }
 
-    /** Re-selects the remembered course/assignment/problem (their ancestors are now loaded). */
-    private void finalizeRestore() {
-        DefaultMutableTreeNode courseNode = findChildById(rootNode, CourseItem.class, restoreCourseId);
-        if (courseNode != null) {
-            DefaultMutableTreeNode target = courseNode;
-            if (restoreAssignmentId != null) {
-                DefaultMutableTreeNode aNode = findChildById(courseNode, AssignmentItem.class, restoreAssignmentId);
-                if (aNode != null) {
-                    target = aNode;
-                    if (restoreProblemId != null) {
-                        DefaultMutableTreeNode pNode = findChildById(aNode, ProblemItem.class, restoreProblemId);
-                        if (pNode != null) target = pNode;
-                    }
-                }
-            }
-            selectAndReveal(new javax.swing.tree.TreePath(target.getPath()));
-        }
-        clearRestore();
-    }
-
-    private void selectAndReveal(javax.swing.tree.TreePath path) {
-        selectionTree.setSelectionPath(path);
-        selectionTree.scrollPathToVisible(path);
-    }
-
-    /** A direct child of {@code parent} whose user object is a {@code type} with the given id. */
-    private DefaultMutableTreeNode findChildById(DefaultMutableTreeNode parent, Class<?> type, String id) {
-        if (id == null) return null;
-        for (int i = 0; i < parent.getChildCount(); i++) {
-            DefaultMutableTreeNode child = (DefaultMutableTreeNode) parent.getChildAt(i);
-            Object uo = child.getUserObject();
-            if (!type.isInstance(uo)) continue;
-            String childId = uo instanceof CourseItem ? ((CourseItem) uo).id
-                    : uo instanceof AssignmentItem ? ((AssignmentItem) uo).id
-                    : uo instanceof ProblemItem ? ((ProblemItem) uo).id
-                    : null;
-            if (id.equals(childId)) return child;
-        }
-        return null;
+    private boolean restoreInProgress() {
+        return restorer().inProgress();
     }
 
     private void updateSelectionStateFromNode(DefaultMutableTreeNode node) {
@@ -1159,72 +1056,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     private void updateProblemDetails(ProblemItem problem) {
         if (problem == null) {
-            // Show placeholder text when no problem is selected
-            problemDetailsPane.setText(
-                "<html><body style='font-family: sans-serif; padding: 4px; color: #888;'>" +
-                "<i>Select a problem to view details</i></body></html>"
-            );
+            problemDetailsPane.setText(DetailsHtml.problemPlaceholder());
         } else {
-            String title = problem.name != null ? problem.name : "Untitled Problem";
-
-            // Description paragraph — only when the server actually sent one
-            String descriptionHtml = "";
-            if (problem.description != null && !problem.description.isBlank() && !problem.description.equals("null")) {
-                descriptionHtml = "<p style='margin: 0 0 6px 0; color: #000000;'>"
-                        + escapeHtml(problem.description) + "</p>";
-            } else {
-                descriptionHtml = "<p style='margin: 0 0 6px 0; color: #000000;'>No description available</p>";
-            }
-
-            // One compact metadata line: type, the intrinsic FA/PDA constraints when they
-            // apply, points, grade, and the (colored) submissions-used count.
-            StringBuilder meta = new StringBuilder();
-            String typeName = problem.typeFullName();
-            if (typeName != null) meta.append("Type: ").append(escapeHtml(typeName));
-            // A non-positive cap (e.g. -1) means "no limit", so only show a real cap.
-            if (problem.maxStates != null && problem.maxStates > 0) {
-                if (meta.length() > 0) meta.append(" &nbsp;·&nbsp; ");
-                meta.append("Max states: ").append(problem.maxStates);
-            }
-            if (problem.isDeterministic != null) {
-                if (meta.length() > 0) meta.append(" &nbsp;·&nbsp; ");
-                meta.append("Deterministic: ").append(problem.isDeterministic ? "Yes" : "No");
-            }
-            if (problem.maxPoints >= 0) {
-                if (meta.length() > 0) meta.append(" &nbsp;·&nbsp; ");
-                meta.append("Points: ").append(problem.maxPoints);
-            }
-            if (problem.grade >= 0) {
-                if (meta.length() > 0) meta.append(" &nbsp;·&nbsp; ");
-                meta.append("Grade: ").append(problem.grade)
-                    .append(problem.maxPoints >= 0 ? " / " + problem.maxPoints : "");
-            }
-            // Submissions used, colored by how many attempts remain, on the same line.
-            if (problem.submissionCount >= 0 && problem.maxSubmissions > 0) {
-                int left = problem.attemptsLeft();
-                String color = left == 0 ? "#c0392b" : (left == 1 ? "#e67e22" : "#27ae60");
-                String warn = left == 0 ? " (limit reached)" : (left == 1 ? " (last attempt)" : "");
-                if (meta.length() > 0) meta.append(" &nbsp;·&nbsp; ");
-                meta.append("<span style='color:").append(color).append(";'><b>Submissions: ")
-                    .append(problem.submissionCount).append(" / ").append(problem.maxSubmissions)
-                    .append(warn).append("</b></span>");
-            } else if (problem.submissionCount >= 0) {
-                if (meta.length() > 0) meta.append(" &nbsp;·&nbsp; ");
-                meta.append("Submissions: ").append(problem.submissionCount).append(" (no limit)");
-            }
-            String metaHtml = meta.length() > 0
-                ? "<p style='margin: 0; color: #555555;'>" + meta + "</p>" : "";
-
-            String html = String.format(
-                "<html><body style='font-family: sans-serif; padding: 4px;'>" +
-                "<h3 style='margin: 0 0 4px 0; color: #000000;'>%s</h3>%s%s" +
-                "</body></html>",
-                escapeHtml(title),
-                descriptionHtml,
-                metaHtml
-            );
-
-            problemDetailsPane.setText(html);
+            problemDetailsPane.setText(DetailsHtml.problemDetails(problem));
             problemDetailsPane.setCaretPosition(0);
         }
         sizeDetailScrollToContent(problemDetailsScroll, problemDetailsPane, 44, 220, 1);
@@ -1361,58 +1195,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     private void updateAssignmentDetails(AssignmentItem assignment) {
         if (assignment == null) {
-            // Show placeholder text when no assignment is selected
-            assignmentDetailsPane.setText(
-                "<html><body style='font-family: sans-serif; padding: 4px; color: #888;'>" +
-                "<i>Select an assignment to view details</i></body></html>"
-            );
+            assignmentDetailsPane.setText(DetailsHtml.assignmentPlaceholder());
         } else {
-            String title = assignment.name != null ? assignment.name : "Untitled Assignment";
-            String description = assignment.description != null && !assignment.description.isBlank() && !assignment.description.equals("null")
-                ? assignment.description
-                : "No description available.";
-
-            // One compact metadata line to save vertical space: due, then individual vs
-            // group (with the student's group name), then the late-submission policy,
-            // separated by middots.
-            StringBuilder meta = new StringBuilder();
-            java.time.Instant due = assignment.dueInstant();
-            if (due != null) {
-                meta.append("<b>Due:</b> ").append(escapeHtml(formatDueDate(due)));
-            }
-
-            String typeText = assignment.isGroup
-                    ? (assignment.groupName != null && !assignment.groupName.isBlank()
-                        ? "Group (your group: " + escapeHtml(assignment.groupName) + ")"
-                        : "Group")
-                    : "Individual";
-            if (meta.length() > 0) meta.append(" &nbsp;&middot;&nbsp; ");
-            meta.append(typeText);
-
-            String lateText;
-            if (assignment.allowLateSubmissions) {
-                java.time.Instant cutoff = assignment.lateCutoffInstant();
-                lateText = cutoff != null
-                        ? "Late until " + escapeHtml(formatDueDate(cutoff))
-                        : "Late accepted";
-            } else {
-                lateText = "No late submissions";
-            }
-            meta.append(" &nbsp;&middot;&nbsp; ").append(lateText);
-
-            // Three compact rows: title, the metadata line, and the description.
-            String html = String.format(
-                "<html><body style='font-family: sans-serif; padding: 4px;'>" +
-                "<h3 style='margin: 0 0 4px 0; color: #000000;'>%s</h3>" +
-                "<p style='margin: 0 0 6px 0; color: #555555;'>%s</p>" +
-                "<p style='margin: 0; color: #000000;'>%s</p>" +
-                "</body></html>",
-                escapeHtml(title),
-                meta.toString(),
-                escapeHtml(description)
-            );
-
-            assignmentDetailsPane.setText(html);
+            assignmentDetailsPane.setText(DetailsHtml.assignmentDetails(assignment, this::formatDueDate));
             assignmentDetailsPane.setCaretPosition(0);
         }
         sizeDetailScrollToContent(assignmentDetailsScroll, assignmentDetailsPane, 44, 220, 2);
@@ -1456,14 +1241,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         return ApiTree.formatDueDate(due, selectedCourse != null ? selectedCourse.timezone : null);
     }
 
-    private String escapeHtml(String text) {
-        if (text == null) return "";
-        return text.replace("&", "&amp;")
-                   .replace("<", "&lt;")
-                   .replace(">", "&gt;")
-                   .replace("\"", "&quot;")
-                   .replace("\n", "<br>");
-    }
 
     private DefaultMutableTreeNode nodeFromPath(TreePath path) {
         if (path == null) return null;
@@ -1594,7 +1371,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             clearRestore();
         } else {
             setStatus(true, "Courses loaded. Expand a course to view assignments.");
-            if (restoreInProgress) {
+            if (restoreInProgress()) {
                 SwingUtilities.invokeLater(this::pumpRestore);
             }
         }
@@ -1604,11 +1381,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
      *  preserving the expanded branches and selection. */
     private void reapplyFiltersFromCache() {
         if (loading || treeCourseList.isEmpty()) return;
-        restoreCourseId = selectedCourse != null ? selectedCourse.id : null;
-        restoreAssignmentId = selectedAssignment != null ? selectedAssignment.id : null;
-        restoreProblemId = selectedProblem != null ? selectedProblem.id : null;
-        captureExpansionState();
-        restoreInProgress = !restoreExpandedCourseIds.isEmpty() || restoreCourseId != null;
+        restorer().capture(rootNode, selectedCourse, selectedAssignment, selectedProblem);
         buildTreeFromCache();
     }
 
@@ -1709,7 +1482,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
                     // Continue restoring the pre-Refresh tree state. Deferred so `loading`
                     // is cleared before the next branch is expanded.
-                    if (restoreInProgress) {
+                    if (restoreInProgress()) {
                         SwingUtilities.invokeLater(SubmitWindow.this::pumpRestore);
                     }
 
@@ -1802,7 +1575,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     setStatus(true, "Ready. Select a problem and submit.");
 
                     // Continue restoring the pre-Refresh tree state (problems just arrived).
-                    if (restoreInProgress) {
+                    if (restoreInProgress()) {
                         SwingUtilities.invokeLater(SubmitWindow.this::pumpRestore);
                     }
 
