@@ -1298,33 +1298,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             return;
         }
         for (Map<String, Object> s : subs) {
-            String when = "";
-            Object submittedAt = s.get("submittedAt");
-            if (submittedAt != null) {
-                try {
-                    when = formatDueDate(java.time.Instant.parse(String.valueOf(submittedAt)));
-                } catch (Exception e) {
-                    when = String.valueOf(submittedAt);
-                }
-            }
-            String file = s.get("fileName") != null ? String.valueOf(s.get("fileName")) : "";
-            String status = s.get("status") != null ? String.valueOf(s.get("status")) : "";
-            // Result: the evaluator verdict, blank while still queued/processing.
-            String result;
-            Object correct = s.get("correct");
-            if (correct instanceof Boolean) {
-                result = ((Boolean) correct) ? "Correct" : "Incorrect";
-            } else {
-                result = "PENDING".equals(status) || "PROCESSING".equals(status) ? "Not evaluated yet" : "";
-            }
-            String feedback = s.get("feedback") != null ? String.valueOf(s.get("feedback")) : "";
-
-            if (group) {
-                String member = s.get("submittedBy") != null ? String.valueOf(s.get("submittedBy")) : "";
-                submissionHistoryModel.addRow(new Object[]{when, member, file, status, result, feedback});
-            } else {
-                submissionHistoryModel.addRow(new Object[]{when, file, status, result, feedback});
-            }
+            submissionHistoryModel.addRow(ApiTree.historyRow(s, group, this::formatDueDate));
         }
         int n = subs.size();
         setHistoryStatus(n + (n == 1 ? " submission" : " submissions"), true);
@@ -1445,16 +1419,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     }
 
     /** Parses a UTC ISO-8601 string to an Instant, or null if missing/blank/unparseable. */
-    private static java.time.Instant parseIsoOrNull(Object value) {
-        if (value == null) return null;
-        String s = String.valueOf(value);
-        if (s.isBlank() || "null".equals(s)) return null;
-        try {
-            return java.time.Instant.parse(s);
-        } catch (Exception e) {
-            return null;
-        }
-    }
 
     /** Clamps {@code v} into the inclusive range [min, max]. */
     private static int clamp(int v, int min, int max) {
@@ -1489,17 +1453,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     /** Formats a due-date Instant in the selected course's timezone (falling back to the local zone). */
     private String formatDueDate(java.time.Instant due) {
-        java.time.ZoneId zone;
-        try {
-            zone = (selectedCourse != null && selectedCourse.timezone != null)
-                    ? java.time.ZoneId.of(selectedCourse.timezone)
-                    : java.time.ZoneId.systemDefault();
-        } catch (Exception e) {
-            zone = java.time.ZoneId.systemDefault();
-        }
-        java.time.format.DateTimeFormatter fmt = java.time.format.DateTimeFormatter
-                .ofPattern("MMM d, yyyy 'at' h:mm a z");
-        return due.atZone(zone).format(fmt);
+        return ApiTree.formatDueDate(due, selectedCourse != null ? selectedCourse.timezone : null);
     }
 
     private String escapeHtml(String text) {
@@ -1634,12 +1588,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         clearSelectionState();
 
         for (Map<String, Object> c : treeCourseList) {
-            String id = String.valueOf(c.get("id"));
-            String title = String.valueOf(c.getOrDefault("name", "Untitled Course"));
-            Object tz = c.get("timezone");
-            String timezone = (tz != null && !"null".equals(String.valueOf(tz))) ? String.valueOf(tz) : null;
-
-            CourseItem course = new CourseItem(id, title, timezone);
+            CourseItem course = ApiTree.course(c);
             DefaultMutableTreeNode courseNode = new DefaultMutableTreeNode(course);
             // Placeholder so the node shows an expand handle; children build from cache on expand.
             courseNode.add(new DefaultMutableTreeNode(new Placeholder("Expand to load assignments…")));
@@ -1732,61 +1681,20 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         int displayedCount = 0;
 
                         // Show assignments earliest-due first; missing/unparseable dates sort last.
-                        raw.sort((x, y) -> {
-                            java.time.Instant dx = parseIsoOrNull(x.get("dueDate"));
-                            java.time.Instant dy = parseIsoOrNull(y.get("dueDate"));
-                            if (dx == null && dy == null) return 0;
-                            if (dx == null) return 1;
-                            if (dy == null) return -1;
-                            return dx.compareTo(dy);
-                        });
+                        raw.sort(ApiTree.byDueDateNullsLast());
 
                         for (Map<String, Object> a : raw) {
-                            String id = String.valueOf(a.get("id"));
-                            String title = String.valueOf(a.getOrDefault("title", "Untitled Assignment"));
-                            String description = String.valueOf(a.getOrDefault("description", ""));
-                            String dueDateStr = a.get("dueDate") != null ? String.valueOf(a.get("dueDate")) : null;
-
-                            // Apply upcoming filter — dueDate is UTC ISO-8601, so parse as an
-                            // Instant and compare against the server's clock (not the local
-                            // machine's, and not a naive/timezone-less parse).
-                            boolean isUpcoming = false;
-                            if (dueDateStr != null && !dueDateStr.equals("null")) {
-                                try {
-                                    java.time.Instant dueInstant = java.time.Instant.parse(dueDateStr);
-                                    isUpcoming = dueInstant.isAfter(now);
-                                } catch (Exception e) {
-                                    // If date parsing fails, treat as not upcoming
-                                    isUpcoming = false;
-                                }
-                            }
-
-                            // Skip if filtering for upcoming and this isn't upcoming
-                            if (upcomingOnly && !isUpcoming) {
+                            // The upcoming filter compares against the server's clock, not
+                            // the local machine's.
+                            if (upcomingOnly && !ApiTree.isUpcoming(a, now)) {
                                 continue;
                             }
 
-                            // Individual vs group, the caller's group name, and whether late
-                            // work is accepted, all straight from the assignments API.
-                            boolean isGroup = Boolean.TRUE.equals(a.get("isGroup"));
-                            Object groupNameObj = a.get("groupName");
-                            String groupName = groupNameObj != null ? String.valueOf(groupNameObj) : null;
-                            boolean allowLate = Boolean.TRUE.equals(a.get("allowLateSubmissions"));
-                            String lateCutoffStr = a.get("lateCutoff") != null
-                                    ? String.valueOf(a.get("lateCutoff")) : null;
-
-                            // Problems come embedded in the assignments response, so we know
-                            // the count now (before expanding).
-                            Object problemsObj = a.get("problems");
-                            int problemCount = (problemsObj instanceof List) ? ((List<?>) problemsObj).size() : 0;
-
                             displayedCount++;
-                            AssignmentItem assignment = new AssignmentItem(
-                                    id, title, description, dueDateStr, isGroup, groupName, allowLate,
-                                    lateCutoffStr, problemCount);
+                            AssignmentItem assignment = ApiTree.assignment(a);
                             DefaultMutableTreeNode aNode = new DefaultMutableTreeNode(assignment);
 
-                            if (problemCount > 0) {
+                            if (assignment.problemCount > 0) {
                                 // Placeholder child so the node shows an expand handle; the real
                                 // problems load lazily when expanded.
                                 aNode.add(new DefaultMutableTreeNode(new Placeholder("Expand to load problems…")));
@@ -1878,46 +1786,17 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         int displayedCount = 0;
 
                         // Show problems in alphabetical order by title (case-insensitive).
-                        raw.sort((x, y) -> {
-                            String tx = String.valueOf(x.getOrDefault("title", ""));
-                            String ty = String.valueOf(y.getOrDefault("title", ""));
-                            return tx.compareToIgnoreCase(ty);
-                        });
+                        raw.sort(ApiTree.byTitle());
 
                         for (Map<String, Object> p : raw) {
-                            String id = String.valueOf(p.get("id"));
-                            String title = String.valueOf(p.getOrDefault("title", "Untitled Problem"));
-
-                            // Get description, handling null properly (the client API may omit it)
-                            Object descObj = p.get("description");
-                            String description = (descObj != null && !String.valueOf(descObj).equals("null"))
-                                ? String.valueOf(descObj)
-                                : "";
-
-                            boolean solved = p.get("solved") != null && (Boolean) p.get("solved");
+                            ProblemItem problem = ApiTree.problem(p);
 
                             // Skip if filtering for unsolved and this is solved
-                            if (unsolvedOnly && solved) {
+                            if (unsolvedOnly && problem.solved) {
                                 continue;
                             }
 
                             displayedCount++;
-
-                            Object typeObj = p.get("type");
-                            String type = (typeObj != null && !"null".equals(String.valueOf(typeObj)))
-                                ? String.valueOf(typeObj) : null;
-
-                            // Intrinsic FA/PDA constraints, null when not set for this problem.
-                            Object msObj = p.get("maxStates");
-                            Integer maxStates = (msObj instanceof Number) ? ((Number) msObj).intValue() : null;
-                            Object detObj = p.get("isDeterministic");
-                            Boolean isDeterministic = (detObj instanceof Boolean) ? (Boolean) detObj : null;
-
-                            // Create problem item with original title (checkmark added in toString)
-                            ProblemItem problem = new ProblemItem(id, title, description, solved,
-                                    type, asInt(p.get("maxPoints")), asInt(p.get("maxSubmissions")),
-                                    asInt(p.get("submissionCount")), asInt(p.get("grade")),
-                                    maxStates, isDeterministic);
                             assignmentNode.add(new DefaultMutableTreeNode(problem));
                         }
 
@@ -1946,14 +1825,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     }
 
     /** Parses a JSON number field, returning -1 when missing or non-numeric. */
-    private static int asInt(Object value) {
-        if (value instanceof Number) return ((Number) value).intValue();
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (Exception e) {
-            return -1;
-        }
-    }
 
     private boolean hasRealChildren(DefaultMutableTreeNode node, Class<?> clazz) {
         if (node == null || node.getChildCount() == 0) return false;
