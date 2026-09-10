@@ -155,11 +155,6 @@ public class LoginWindow extends JDialog {
         c.gridy++;
         panel.add(modeCards, c);
 
-        // small options row (show password + SSL validation)
-        c.gridy++;
-        c.insets = new Insets(10, 0, 4, 0);
-        panel.add(buildOptionsRow(), c);
-
         // Login button — solid blue primary, like the Submit button
         c.gridy++;
         c.insets = new Insets(12, 0, 8, 0);
@@ -364,6 +359,12 @@ public class LoginWindow extends JDialog {
         c.gridy++;
         card.add(labeled("Password", passwordTF), c);
 
+        // These belong to the password form alone, so they live inside its card
+        // rather than being disabled from outside it.
+        c.gridy++;
+        c.insets = new Insets(8, 0, 2, 0);
+        card.add(buildOptionsRow(), c);
+
         return card;
     }
 
@@ -420,10 +421,6 @@ public class LoginWindow extends JDialog {
         // A shown URL belongs to a finished or cancelled flow; its state and PKCE
         // pair are dead, so it must not be copied later.
         clearBrowserUrl();
-        // Show password and Remember Me only make sense for the password form.
-        boolean passwordMode = passwordModeRadio.isSelected();
-        showPasswordCheckBox.setEnabled(passwordMode);
-        rememberMeCheckBox.setEnabled(passwordMode);
         pack();
     }
 
@@ -488,7 +485,6 @@ public class LoginWindow extends JDialog {
     }
 
     private void toggleInputs(boolean enabled) {
-        boolean passwordMode = passwordModeRadio.isSelected();
         serverTF.setEnabled(enabled);
         emailTF.setEnabled(enabled);
         passwordTF.setEnabled(enabled);
@@ -498,8 +494,8 @@ public class LoginWindow extends JDialog {
         passwordModeRadio.setEnabled(enabled);
         tokenModeRadio.setEnabled(enabled);
         browserModeRadio.setEnabled(enabled);
-        showPasswordCheckBox.setEnabled(enabled && passwordMode);
-        rememberMeCheckBox.setEnabled(enabled && passwordMode);
+        showPasswordCheckBox.setEnabled(enabled);
+        rememberMeCheckBox.setEnabled(enabled);
         loginButton.setEnabled(enabled);
         // Cancel is the one control that must work exactly while everything else
         // is disabled: it aborts the in-flight browser wait.
