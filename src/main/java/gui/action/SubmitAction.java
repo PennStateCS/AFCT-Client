@@ -41,7 +41,7 @@ public class SubmitAction extends RestrictedAction {
 
         if (submitWindow == null) {
 
-            submitWindow = new SubmitWindow(environment);
+            submitWindow = new SubmitWindow(environment, Globals.sessionHandler);
 
             Universe.registerSubmitDialog(environment, submitWindow);
 

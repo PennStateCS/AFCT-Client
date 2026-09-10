@@ -36,8 +36,10 @@ import static gui.Globals.*;
 
 public class SubmitWindow extends JFrame implements SubmissionGUI {
 
-
     private final Environment environment;
+    // Injected rather than reached for via Globals, so window logic is testable
+    // against a mock session.
+    private final SessionHandler sessionHandler;
 
     private static final String baseTitle = "AFCT Submission Center";
 
@@ -124,9 +126,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private final Map<String, List<ApiModels.Assignment>> treeAssignmentsByCourse = new java.util.HashMap<>();
     private final Map<String, List<ApiModels.Problem>> treeProblemsByAssignment = new java.util.HashMap<>();
 
-    public SubmitWindow(Environment environment) {
+    public SubmitWindow(Environment environment, SessionHandler sessionHandler) {
         super(baseTitle);
         this.environment = environment;
+        this.sessionHandler = sessionHandler;
 
         setDefaultCloseOperation(DISPOSE_ON_CLOSE);
         setMinimumSize(new Dimension(860, 560));
@@ -844,7 +847,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         logoutBtn.addActionListener(e -> {
             dispose();
-            Globals.sessionHandler.logout(true, Universe.frameForEnvironment(environment));
+            sessionHandler.logout(true, Universe.frameForEnvironment(environment));
         });
 
         submitBtn.addActionListener(e -> attemptSubmit());
@@ -1057,7 +1060,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         new SwingWorker<List<ApiModels.Submission>, Void>() {
             @Override
             protected List<ApiModels.Submission> doInBackground() throws Exception {
-                AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
+                AFCTClient client = sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                 if (client == null) return null;
                 return client.getSubmissions(assignmentId, problemId);
             }
@@ -1255,7 +1258,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             @Override
             protected ApiModels.Tree doInBackground() {
                 try {
-                    AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
+                    AFCTClient client = sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) {
                         err = "Login cancelled.";
                         return null;
@@ -1373,7 +1376,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             @Override
             protected List<ApiModels.Assignment> doInBackground() {
                 try {
-                    AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
+                    AFCTClient client = sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) {
                         err = "Login cancelled.";
                         return null;
@@ -1480,7 +1483,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             @Override
             protected List<ApiModels.Problem> doInBackground() {
                 try {
-                    AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
+                    AFCTClient client = sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) {
                         err = "Login cancelled.";
                         return null;

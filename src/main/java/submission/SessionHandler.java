@@ -48,8 +48,6 @@ public class SessionHandler {
     // lab machine with a shared login is one node for every student who sits down.
     public static final String PREF_STAY_SIGNED_IN = "stay_signed_in";
     public static final String PREF_SIGNIN_TOKEN = "signin_token";
-    public static final String PREF_HOMEWORK = "homework";
-    public static final String PREF_PROBLEM = "problem";
 
     // Deliberately empty before first use: prefilling a development address
     // taught people to trust whatever was in the box.
@@ -72,7 +70,7 @@ public class SessionHandler {
     }
 
     public SubmitWindow createNewSubmitWindow(Environment environment) {
-        SubmitWindow submitWindow = new SubmitWindow(environment);
+        SubmitWindow submitWindow = new SubmitWindow(environment, this);
         submitWindows.add(submitWindow);
         return submitWindow;
     }
