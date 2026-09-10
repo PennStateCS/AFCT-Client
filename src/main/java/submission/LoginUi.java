@@ -11,10 +11,12 @@ import static gui.Globals.boldFont;
  */
 final class LoginUi {
 
-    static final Color CARD_BG     = Color.WHITE;
-    static final Color CARD_BORDER = new Color(0xE2, 0xE5, 0xEA);
-    static final Color ACCENT      = new Color(0x42, 0x63, 0xEB);
-    static final Color TEXT_DARK   = new Color(0x1F, 0x29, 0x37);
+    // The palette lives in Theme, shared with the Submission Center; these are
+    // kept as aliases so the login classes read naturally.
+    static final Color CARD_BG     = Theme.CARD_BG;
+    static final Color CARD_BORDER = Theme.CARD_BORDER;
+    static final Color ACCENT      = Theme.ACCENT;
+    static final Color TEXT_DARK   = Theme.TEXT_DARK;
 
     private LoginUi() {}
 
