@@ -109,22 +109,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // The history table's current column set (group problems add Group Member).
     private java.util.List<HistoryColumn> currentHistoryColumns = HistoryColumn.forGroup(false);
 
-    // Selected items derived from tree selection
-    private CourseItem selectedCourse = null;
-    private AssignmentItem selectedAssignment = null;
-    private ProblemItem selectedProblem = null;
-    private DefaultMutableTreeNode selectedNode = null;
+    // What is selected in the tree, derived in one place; see Selection.
+    private Selection selection = Selection.empty();
 
     // Puts expansion + selection back after a Refresh or filter change rebuilds
     // the tree; see TreeStateRestorer. Created lazily because it needs the tree.
     private TreeStateRestorer restorer;
 
-    // The whole course tree, fetched once (GET /api/client/v1/tree) and cached so the tree
-    // builds and re-filters locally without more network calls. The lazy expanders read
-    // their children from these maps; a filter toggle rebuilds the tree from them instantly.
-    private java.util.List<ApiModels.Course> treeCourseList = new java.util.ArrayList<>();
-    private final Map<String, List<ApiModels.Assignment>> treeAssignmentsByCourse = new java.util.HashMap<>();
-    private final Map<String, List<ApiModels.Problem>> treeProblemsByAssignment = new java.util.HashMap<>();
+    // The fetched course tree plus the filter/ordering rules; see CourseTreeCache.
+    private final CourseTreeCache treeCache = new CourseTreeCache();
 
     public SubmitWindow(Environment environment, SessionHandler sessionHandler) {
         super(baseTitle);
@@ -840,7 +833,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             lastRefreshMs = now;
             // Remember what is selected, and every expanded branch, so the reload can
             // return the tree to exactly the state the user left it in.
-            restorer().capture(rootNode, selectedCourse, selectedAssignment, selectedProblem);
+            restorer().capture(rootNode, selection.course(), selection.assignment(), selection.problem());
             refreshDialog();
             startRefreshCooldown();
         });
@@ -940,9 +933,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // ============================================================
 
     private void clearSelectionState() {
-        selectedCourse = null;
-        selectedAssignment = null;
-        selectedProblem = null;
+        selection = Selection.empty();
         updateAssignmentDetails(null);
         updateProblemDetails(null);
     }
@@ -971,57 +962,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     }
 
     private void updateSelectionStateFromNode(DefaultMutableTreeNode node) {
-        clearSelectionState();
-        selectedNode = node;
-
-        if (node == null) {
-            updateAssignmentDetails(null);
-            updateProblemDetails(null);
-            return;
-        }
-
-        Object uo = node.getUserObject();
-
-        if (uo instanceof ProblemItem) {
-            selectedProblem = (ProblemItem) uo;
-
-            DefaultMutableTreeNode parent = (DefaultMutableTreeNode) node.getParent();
-            if (parent != null && parent.getUserObject() instanceof AssignmentItem) {
-                selectedAssignment = (AssignmentItem) parent.getUserObject();
-
-                DefaultMutableTreeNode grand = (DefaultMutableTreeNode) parent.getParent();
-                if (grand != null && grand.getUserObject() instanceof CourseItem) {
-                    selectedCourse = (CourseItem) grand.getUserObject();
-                }
-            }
-
-            // Update both assignment and problem details
-            updateAssignmentDetails(selectedAssignment);
-            updateProblemDetails(selectedProblem);
-
-        } else if (uo instanceof AssignmentItem) {
-            selectedAssignment = (AssignmentItem) uo;
-
-            DefaultMutableTreeNode parent = (DefaultMutableTreeNode) node.getParent();
-            if (parent != null && parent.getUserObject() instanceof CourseItem) {
-                selectedCourse = (CourseItem) parent.getUserObject();
-            }
-
-            // Show assignment details, clear problem details
-            updateAssignmentDetails(selectedAssignment);
-            updateProblemDetails(null);
-
-        } else if (uo instanceof CourseItem) {
-            selectedCourse = (CourseItem) uo;
-
-            // Clear both assignment and problem details when course is selected
-            updateAssignmentDetails(null);
-            updateProblemDetails(null);
-        } else {
-            // Clear both details for other selections
-            updateAssignmentDetails(null);
-            updateProblemDetails(null);
-        }
+        selection = Selection.fromNode(node);
+        updateAssignmentDetails(selection.assignment());
+        updateProblemDetails(selection.problem());
     }
 
     private void updateProblemDetails(ProblemItem problem) {
@@ -1048,13 +991,13 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         submissionHistoryTable.setRowHeight(28); // reset per-row heights from wrapped text
         setHistoryTableVisible(false);
 
-        if (problem == null || selectedAssignment == null) {
+        if (problem == null || selection.assignment() == null) {
             setHistoryStatus("Select a problem to view its submission history.", false);
             return;
         }
 
         setHistoryStatus("Loading submission history…", false);
-        final String assignmentId = selectedAssignment.id;
+        final String assignmentId = selection.assignment().id;
         final String problemId = problem.id;
 
         new SwingWorker<List<ApiModels.Submission>, Void>() {
@@ -1085,7 +1028,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     /** Fills the history table from the API rows (newest first) and updates the status line. */
     private void populateSubmissionHistory(List<ApiModels.Submission> subs) {
         // A group problem gains a "Group Member" column showing who submitted.
-        boolean group = selectedAssignment != null && selectedAssignment.isGroup;
+        boolean group = selection.assignment() != null && selection.assignment().isGroup;
         submissionHistoryModel.setRowCount(0);
         submissionHistoryTable.setRowHeight(28); // reset per-row heights from wrapped text
         currentHistoryColumns = HistoryColumn.forGroup(group);
@@ -1207,7 +1150,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     /** Formats a due-date Instant in the selected course's timezone (falling back to the local zone). */
     private String formatDueDate(java.time.Instant due) {
-        return ApiTree.formatDueDate(due, selectedCourse != null ? selectedCourse.timezone : null);
+        return ApiTree.formatDueDate(due, selection.course() != null ? selection.course().timezone : null);
     }
 
 
@@ -1287,7 +1230,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         return;
                     }
 
-                    cacheTree(wrapper);
+                    treeCache.replaceWith(wrapper);
                     buildTreeFromCache();
                 } catch (Exception ex) {
                     setStatus(false, ErrorMessages.userMessage(ex, "Unable to load courses."));
@@ -1299,25 +1242,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         }.execute();
     }
 
-    /** Indexes the fetched tree into the per-course / per-assignment caches the lazy
-     *  expanders and filters read from. */
-    private void cacheTree(ApiModels.Tree tree) {
-        treeCourseList = new java.util.ArrayList<>();
-        treeAssignmentsByCourse.clear();
-        treeProblemsByAssignment.clear();
-
-        if (tree.courses() == null) return;
-        for (ApiModels.Course c : tree.courses()) {
-            treeCourseList.add(c);
-            List<ApiModels.Assignment> assignments =
-                    c.assignments() != null ? c.assignments() : java.util.List.of();
-            treeAssignmentsByCourse.put(c.id(), assignments);
-            for (ApiModels.Assignment a : assignments) {
-                treeProblemsByAssignment.put(a.id(),
-                        a.problems() != null ? a.problems() : java.util.List.of());
-            }
-        }
-    }
 
     /** Rebuilds the course nodes from the cached tree (collapsed, with lazy expand handles),
      *  then restores the pre-existing expanded/selected state. No network. */
@@ -1325,7 +1249,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         clearTree();
         clearSelectionState();
 
-        for (ApiModels.Course c : treeCourseList) {
+        for (ApiModels.Course c : treeCache.courses()) {
             CourseItem course = ApiTree.course(c);
             DefaultMutableTreeNode courseNode = new DefaultMutableTreeNode(course);
             // Placeholder so the node shows an expand handle; children build from cache on expand.
@@ -1349,8 +1273,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     /** Re-applies the current filters by rebuilding the tree from the cache (no re-fetch),
      *  preserving the expanded branches and selection. */
     private void reapplyFiltersFromCache() {
-        if (loading || treeCourseList.isEmpty()) return;
-        restorer().capture(rootNode, selectedCourse, selectedAssignment, selectedProblem);
+        if (loading || treeCache.isEmpty()) return;
+        restorer().capture(rootNode, selection.course(), selection.assignment(), selection.problem());
         buildTreeFromCache();
     }
 
@@ -1366,12 +1290,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         setBusy(true, "Loading assignments…");
 
+        // Read on the EDT before the worker starts.
+        final boolean upcomingOnly = upcomingAssignmentsRadio.isSelected();
+
         new SwingWorker<List<ApiModels.Assignment>, Void>() {
             private String err;
-            // The server's clock as of the tree fetch, used instead of the local
-            // machine's clock so "upcoming" isn't thrown off by clock skew or
-            // timezone differences. Falls back to Instant.now() if unset.
-            private java.time.Instant serverNow;
 
             @Override
             protected List<ApiModels.Assignment> doInBackground() {
@@ -1381,10 +1304,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         err = "Login cancelled.";
                         return null;
                     }
-                    // Served from the cached tree (fetched once); the server clock came with it.
-                    serverNow = client.getLastServerTime();
-                    return new java.util.ArrayList<>(
-                            treeAssignmentsByCourse.getOrDefault(course.id, java.util.Collections.emptyList()));
+                    // Served from the cached tree (fetched once). "Upcoming" is judged
+                    // against the server's clock from that fetch, not this machine's.
+                    java.time.Instant serverNow = client.getLastServerTime();
+                    return treeCache.visibleAssignments(course.id, upcomingOnly,
+                            serverNow != null ? serverNow : java.time.Instant.now());
                 } catch (Exception ex) {
                     err = ErrorMessages.userMessage(ex, "Unable to load assignments.");
                     return null;
@@ -1408,23 +1332,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     courseNode.removeAllChildren();
 
                     if (raw.isEmpty()) {
-                        courseNode.add(new DefaultMutableTreeNode(new Placeholder("No assignments.")));
+                        String msg = upcomingOnly ? "No upcoming assignments." : "No assignments.";
+                        courseNode.add(new DefaultMutableTreeNode(new Placeholder(msg)));
                     } else {
-                        java.time.Instant now = serverNow != null ? serverNow : java.time.Instant.now();
-                        boolean upcomingOnly = upcomingAssignmentsRadio.isSelected();
-                        int displayedCount = 0;
-
-                        // Show assignments earliest-due first; missing/unparseable dates sort last.
-                        raw.sort(ApiTree.byDueDateNullsLast());
-
                         for (ApiModels.Assignment a : raw) {
-                            // The upcoming filter compares against the server's clock, not
-                            // the local machine's.
-                            if (upcomingOnly && !ApiTree.isUpcoming(a, now)) {
-                                continue;
-                            }
-
-                            displayedCount++;
                             AssignmentItem assignment = ApiTree.assignment(a);
                             DefaultMutableTreeNode aNode = new DefaultMutableTreeNode(assignment);
 
@@ -1438,11 +1349,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                                 aNode.add(new DefaultMutableTreeNode(new Placeholder("No problems in this assignment.")));
                             }
                             courseNode.add(aNode);
-                        }
-
-                        if (displayedCount == 0) {
-                            String msg = upcomingOnly ? "No upcoming assignments." : "No assignments.";
-                            courseNode.add(new DefaultMutableTreeNode(new Placeholder(msg)));
                         }
                     }
 
@@ -1477,6 +1383,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         setBusy(true, "Loading problems…");
 
+        // Read on the EDT before the worker starts.
+        final boolean unsolvedOnly = unsolvedProblemsRadio.isSelected();
+
         new SwingWorker<List<ApiModels.Problem>, Void>() {
             private String err;
 
@@ -1489,8 +1398,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         return null;
                     }
                     // Served from the cached tree (fetched once), not a network call.
-                    return new java.util.ArrayList<>(
-                            treeProblemsByAssignment.getOrDefault(assignment.id, java.util.Collections.emptyList()));
+                    return treeCache.visibleProblems(assignment.id, unsolvedOnly);
                 } catch (Exception ex) {
                     err = ErrorMessages.userMessage(ex, "Unable to load problems.");
                     return null;
@@ -1514,29 +1422,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     assignmentNode.removeAllChildren();
 
                     if (raw.isEmpty()) {
-                        assignmentNode.add(new DefaultMutableTreeNode(new Placeholder("No problems.")));
+                        String msg = unsolvedOnly ? "No unsolved problems." : "No problems.";
+                        assignmentNode.add(new DefaultMutableTreeNode(new Placeholder(msg)));
                     } else {
-                        boolean unsolvedOnly = unsolvedProblemsRadio.isSelected();
-                        int displayedCount = 0;
-
-                        // Show problems in alphabetical order by title (case-insensitive).
-                        raw.sort(ApiTree.byTitle());
-
                         for (ApiModels.Problem p : raw) {
-                            ProblemItem problem = ApiTree.problem(p);
-
-                            // Skip if filtering for unsolved and this is solved
-                            if (unsolvedOnly && problem.solved) {
-                                continue;
-                            }
-
-                            displayedCount++;
-                            assignmentNode.add(new DefaultMutableTreeNode(problem));
-                        }
-
-                        if (displayedCount == 0) {
-                            String msg = unsolvedOnly ? "No unsolved problems." : "No problems.";
-                            assignmentNode.add(new DefaultMutableTreeNode(new Placeholder(msg)));
+                            assignmentNode.add(new DefaultMutableTreeNode(ApiTree.problem(p)));
                         }
                     }
 
@@ -1728,8 +1618,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             deleteWhenDone = true;
         }
 
-        doSubmit(selectedCourse.id, selectedAssignment.id, selectedProblem,
-                selectedNode, fileToUse, deleteWhenDone);
+        doSubmit(selection.course().id, selection.assignment().id, selection.problem(),
+                selection.node(), fileToUse, deleteWhenDone);
     }
 
     /**
@@ -1798,8 +1688,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     }
                 }
                 // Reflect the final status in the inline Submission History.
-                if (selectedProblem != null && selectedProblem.id.equals(problemId)) {
-                    updateSubmissionHistory(selectedProblem);
+                if (selection.problem() != null && selection.problem().id.equals(problemId)) {
+                    updateSubmissionHistory(selection.problem());
                 }
             }
         });
@@ -1808,10 +1698,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     /** Increments the locally cached attempt count for a problem and refreshes the panel. EDT-safe. */
     private void bumpSubmissionCount(String problemId) {
         Runnable r = () -> {
-            if (selectedProblem != null && selectedProblem.id.equals(problemId)
-                    && selectedProblem.submissionCount >= 0) {
-                selectedProblem.submissionCount++;
-                updateProblemDetails(selectedProblem);
+            ProblemItem problem = selection.problem();
+            if (problem != null && problem.id.equals(problemId)
+                    && problem.submissionCount >= 0) {
+                problem.submissionCount++;
+                updateProblemDetails(problem);
             }
         };
         if (SwingUtilities.isEventDispatchThread()) r.run();
@@ -1819,19 +1710,20 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     }
 
     private boolean validateSelection() {
-        if (selectedProblem == null) { setStatus(false, "Please select a problem in the tree."); return false; }
-        if (selectedAssignment == null || selectedCourse == null) { setStatus(false, "Selection incomplete — re-select the problem."); return false; }
+        if (selection.problem() == null) { setStatus(false, "Please select a problem in the tree."); return false; }
+        if (!selection.isSubmittable()) { setStatus(false, "Selection incomplete — re-select the problem."); return false; }
         // Removed to allow submitting unsaved files - IMPORTANT
         //if (selectedFile == null || !selectedFile.exists()) { setStatus(false, "No file open. Open a file in the editor first."); return false; }
-        if (selectedProblem.attemptsLeft() == 0) {
-            setStatus(false, "Submission limit reached (" + selectedProblem.submissionCount + "/"
-                    + selectedProblem.maxSubmissions + ") for this problem.");
+        ProblemItem problem = selection.problem();
+        if (problem.attemptsLeft() == 0) {
+            setStatus(false, "Submission limit reached (" + problem.submissionCount + "/"
+                    + problem.maxSubmissions + ") for this problem.");
             return false;
         }
-        if (selectedProblem.attemptsLeft() == 1) {
+        if (problem.attemptsLeft() == 1) {
             int choice = JOptionPane.showConfirmDialog(this,
-                    "This is your LAST attempt for \"" + selectedProblem.name + "\" ("
-                    + selectedProblem.submissionCount + "/" + selectedProblem.maxSubmissions
+                    "This is your LAST attempt for \"" + problem.name + "\" ("
+                    + problem.submissionCount + "/" + problem.maxSubmissions
                     + " used).\nSubmit anyway?",
                     "Last attempt", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE);
             if (choice != JOptionPane.YES_OPTION) return false;
