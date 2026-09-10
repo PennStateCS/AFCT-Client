@@ -33,13 +33,24 @@ public class LoginWindow extends JDialog {
     // LMS iframe (Canvas etc.), so it is a first-class mode, not a fallback.
     private final JRadioButton passwordModeRadio = new JRadioButton("Email and password", true);
     private final JRadioButton tokenModeRadio = new JRadioButton("Sign-in token");
+    private final JRadioButton browserModeRadio = new JRadioButton("Web browser");
     private final JTextField tokenTF = new JTextField();
     private final JCheckBox staySignedInCheckBox =
             new JCheckBox("Stay signed in on this computer");
+    private final JCheckBox staySignedInBrowserCheckBox =
+            new JCheckBox("Stay signed in on this computer");
     private final JPanel modeCards = new JPanel(new CardLayout());
     private final LinkLabel accountLink = new LinkLabel("your AFCT account page", "");
+
+    // Browser-mode controls. The URL is shown as a matter of course, not only on
+    // error: Desktop.browse fails silently on some Linux desktops and under WSL.
+    private final JTextField browserUrlTF = new JTextField();
+    private final JButton copyUrlButton = new JButton("Copy link");
+    private final JButton cancelBrowserButton = new JButton("Cancel sign-in");
+
     private static final String CARD_PASSWORD = "password";
     private static final String CARD_TOKEN = "token";
+    private static final String CARD_BROWSER = "browser";
 
     private final JCheckBox showPasswordCheckBox =
             new JCheckBox("Show password");
@@ -73,6 +84,8 @@ public class LoginWindow extends JDialog {
         resultPane.setText("");
         passwordTF.setText("");
         tokenTF.setText("");
+        browserUrlTF.setText("");
+        copyUrlButton.setEnabled(false);
         populateFromSessionState();
         toggleInputs(true);
         setLocationRelativeTo(frame);
@@ -139,6 +152,7 @@ public class LoginWindow extends JDialog {
         modeCards.setOpaque(false);
         modeCards.add(buildPasswordCard(), CARD_PASSWORD);
         modeCards.add(buildTokenCard(), CARD_TOKEN);
+        modeCards.add(buildBrowserCard(), CARD_BROWSER);
         c.gridy++;
         panel.add(modeCards, c);
 
@@ -207,8 +221,10 @@ public class LoginWindow extends JDialog {
         ButtonGroup modeGroup = new ButtonGroup();
         modeGroup.add(passwordModeRadio);
         modeGroup.add(tokenModeRadio);
+        modeGroup.add(browserModeRadio);
         passwordModeRadio.addActionListener(e -> applyMode());
         tokenModeRadio.addActionListener(e -> applyMode());
+        browserModeRadio.addActionListener(e -> applyMode());
 
         // The account link points at whatever server the student has typed.
         DocumentListener relink = new DocumentListener() {
@@ -246,10 +262,72 @@ public class LoginWindow extends JDialog {
         tokenModeRadio.setFocusPainted(false);
         tokenModeRadio.setOpaque(false);
         c.gridx = 2;
-        c.insets = new Insets(0, 0, 0, 0);
         row.add(tokenModeRadio, c);
 
+        browserModeRadio.setFocusPainted(false);
+        browserModeRadio.setOpaque(false);
+        c.gridx = 3;
+        c.insets = new Insets(0, 0, 0, 0);
+        row.add(browserModeRadio, c);
+
         return row;
+    }
+
+    private JPanel buildBrowserCard() {
+        JPanel card = new JPanel(new GridBagLayout());
+        card.setOpaque(false);
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        c.gridy = 0;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1;
+        c.insets = new Insets(6, 0, 2, 0);
+
+        JLabel intro = new JLabel("<html>Click Login and approve the sign-in in your web browser."
+                + " Use this if you sign in through your university."
+                + " On some servers the browser may warn about the certificate first.</html>");
+        card.add(intro, c);
+
+        staySignedInBrowserCheckBox.setFocusPainted(false);
+        staySignedInBrowserCheckBox.setOpaque(false);
+        c.gridy++;
+        card.add(staySignedInBrowserCheckBox, c);
+
+        JLabel urlLabel = new JLabel("If the browser did not open, visit this link yourself:");
+        c.gridy++;
+        c.insets = new Insets(8, 0, 2, 0);
+        card.add(urlLabel, c);
+
+        browserUrlTF.setEditable(false);
+        c.gridy++;
+        c.insets = new Insets(0, 0, 2, 0);
+        card.add(browserUrlTF, c);
+
+        JPanel buttons = new JPanel(new GridBagLayout());
+        buttons.setOpaque(false);
+        GridBagConstraints b = new GridBagConstraints();
+        b.gridy = 0;
+        b.gridx = 0;
+        b.insets = new Insets(0, 0, 0, 8);
+        copyUrlButton.setEnabled(false);
+        copyUrlButton.addActionListener(e -> {
+            var selection = new java.awt.datatransfer.StringSelection(browserUrlTF.getText());
+            Toolkit.getDefaultToolkit().getSystemClipboard().setContents(selection, selection);
+        });
+        buttons.add(copyUrlButton, b);
+        b.gridx = 1;
+        b.insets = new Insets(0, 0, 0, 0);
+        cancelBrowserButton.setEnabled(false);
+        cancelBrowserButton.addActionListener(e -> sessionHandler.cancelBrowserSignIn());
+        buttons.add(cancelBrowserButton, b);
+        c.gridy++;
+        c.insets = new Insets(4, 0, 4, 0);
+        c.fill = GridBagConstraints.NONE;
+        c.anchor = GridBagConstraints.LINE_START;
+        card.add(buttons, c);
+
+        return card;
     }
 
     private JPanel buildPasswordCard() {
@@ -316,11 +394,14 @@ public class LoginWindow extends JDialog {
     }
 
     private void applyMode() {
-        boolean tokenMode = tokenModeRadio.isSelected();
-        ((CardLayout) modeCards.getLayout()).show(modeCards, tokenMode ? CARD_TOKEN : CARD_PASSWORD);
+        String card = browserModeRadio.isSelected() ? CARD_BROWSER
+                : tokenModeRadio.isSelected() ? CARD_TOKEN
+                : CARD_PASSWORD;
+        ((CardLayout) modeCards.getLayout()).show(modeCards, card);
         // Show password and Remember Me only make sense for the password form.
-        showPasswordCheckBox.setEnabled(!tokenMode);
-        rememberMeCheckBox.setEnabled(!tokenMode);
+        boolean passwordMode = passwordModeRadio.isSelected();
+        showPasswordCheckBox.setEnabled(passwordMode);
+        rememberMeCheckBox.setEnabled(passwordMode);
         pack();
     }
 
@@ -375,17 +456,22 @@ public class LoginWindow extends JDialog {
     }
 
     private void toggleInputs(boolean enabled) {
-        boolean tokenMode = tokenModeRadio.isSelected();
+        boolean passwordMode = passwordModeRadio.isSelected();
         serverTF.setEnabled(enabled);
         emailTF.setEnabled(enabled);
         passwordTF.setEnabled(enabled);
         tokenTF.setEnabled(enabled);
         staySignedInCheckBox.setEnabled(enabled);
+        staySignedInBrowserCheckBox.setEnabled(enabled);
         passwordModeRadio.setEnabled(enabled);
         tokenModeRadio.setEnabled(enabled);
-        showPasswordCheckBox.setEnabled(enabled && !tokenMode);
-        rememberMeCheckBox.setEnabled(enabled && !tokenMode);
+        browserModeRadio.setEnabled(enabled);
+        showPasswordCheckBox.setEnabled(enabled && passwordMode);
+        rememberMeCheckBox.setEnabled(enabled && passwordMode);
         loginButton.setEnabled(enabled);
+        // Cancel is the one control that must work exactly while everything else
+        // is disabled: it aborts the in-flight browser wait.
+        cancelBrowserButton.setEnabled(!enabled && browserModeRadio.isSelected());
     }
 
     // ============================================================
@@ -398,6 +484,7 @@ public class LoginWindow extends JDialog {
         final String password = new String(passwordTF.getPassword());
         final String signInToken = tokenTF.getText().trim();
         final boolean tokenMode = tokenModeRadio.isSelected();
+        final boolean browserMode = browserModeRadio.isSelected();
 
         setStatusText("Initializing connection...");
         toggleInputs(false);
@@ -409,6 +496,14 @@ public class LoginWindow extends JDialog {
                     publish("Connecting to " + server + "...");
                     Thread.sleep(100); // Brief pause so user sees status
 
+                    if (browserMode) {
+                        publish("Waiting for you to approve the sign-in in your browser...");
+                        return sessionHandler.loginWithBrowser(server, url ->
+                                SwingUtilities.invokeLater(() -> {
+                                    browserUrlTF.setText(url);
+                                    copyUrlButton.setEnabled(true);
+                                }));
+                    }
                     if (tokenMode) {
                         publish("Checking sign-in token...");
                         return sessionHandler.loginWithToken(server, signInToken);
@@ -453,6 +548,13 @@ public class LoginWindow extends JDialog {
                         if (tokenMode) {
                             if (staySignedInCheckBox.isSelected()) {
                                 sessionHandler.saveSignInToken(signInToken);
+                            } else {
+                                sessionHandler.clearSavedSignInToken();
+                            }
+                        }
+                        if (browserMode) {
+                            if (staySignedInBrowserCheckBox.isSelected()) {
+                                sessionHandler.persistCurrentTokenForStaySignedIn();
                             } else {
                                 sessionHandler.clearSavedSignInToken();
                             }

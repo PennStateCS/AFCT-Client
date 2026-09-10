@@ -319,6 +319,79 @@ public class SessionHandler {
         return false;
     }
 
+    // The in-flight browser sign-in, so the window's Cancel can reach it.
+    private volatile BrowserSignIn activeBrowserSignIn = null;
+
+    /**
+     * Browser sign-in (RFC 8252): a loopback listener, the system browser at the
+     * server's consent page, then a code-for-token exchange. Blocking for up to
+     * {@link BrowserSignIn#APPROVAL_TIMEOUT}; call from a background thread.
+     * `onAuthorizeUrl` receives the consent URL before the browser is asked to
+     * open, and always: Desktop.browse fails silently on some Linux desktops and
+     * under WSL, so the UI shows the URL with a copy control as a matter of
+     * course, not only on error.
+     */
+    public LoginResult loginWithBrowser(String serverAddress, java.util.function.Consumer<String> onAuthorizeUrl) {
+        ServerAddress address;
+        try {
+            address = ServerAddress.parse(serverAddress);
+        } catch (IllegalArgumentException ex) {
+            return getErrorResult(ex.getMessage());
+        }
+        LoginResult cleartextRefusal = refuseCleartext(address);
+        if (cleartextRefusal != null) return cleartextRefusal;
+
+        AFCTClient candidate = null;
+        try (BrowserSignIn flow = new BrowserSignIn()) {
+            this.activeBrowserSignIn = flow;
+            String url = flow.authorizeUrl(address.baseUrl(), AFCTClient.defaultDeviceName());
+            onAuthorizeUrl.accept(url);
+            try {
+                Desktop.getDesktop().browse(java.net.URI.create(url));
+            } catch (Exception ignored) {
+                // The URL is already on screen; opening it by hand is the fallback.
+            }
+
+            String code = flow.awaitCode(BrowserSignIn.APPROVAL_TIMEOUT);
+
+            candidate = new AFCTClient(address.baseUrl());
+            Map<String, Object> user = candidate.exchangeCode(code, flow.verifier(), flow.redirectUri());
+
+            this.client = candidate;
+            this.loggedIn = true;
+            Object userEmail = user != null ? user.get("email") : null;
+            this.email = userEmail != null ? String.valueOf(userEmail) : null;
+            preferences.put(PREF_SERVER, address.baseUrl());
+            return getSuccessResult();
+        } catch (SSLHandshakeException ex) {
+            this.loggedIn = false;
+            this.client = null;
+            return certificateOrError(candidate, address, ex);
+        } catch (IOException ex) {
+            this.loggedIn = false;
+            this.client = null;
+            return getErrorResult(ex.getMessage());
+        } finally {
+            this.activeBrowserSignIn = null;
+        }
+    }
+
+    /** Aborts an in-flight browser sign-in, if any; the blocked call returns an error result. */
+    public void cancelBrowserSignIn() {
+        BrowserSignIn flow = this.activeBrowserSignIn;
+        if (flow != null) flow.cancel();
+    }
+
+    /**
+     * Stores the signed-in client's current bearer token for silent sign-in, for
+     * modes (browser sign-in) where the token never passed through a text field.
+     */
+    public void persistCurrentTokenForStaySignedIn() {
+        if (client != null && client.currentToken() != null && !client.currentToken().isBlank()) {
+            saveSignInToken(client.currentToken());
+        }
+    }
+
     /** Called after a successful token sign-in; the server was already remembered there. */
     public void saveSignInToken(String tokenValue) {
         preferences.put(PREF_SIGNIN_TOKEN, tokenValue);

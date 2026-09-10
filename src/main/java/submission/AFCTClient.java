@@ -129,6 +129,100 @@ public class AFCTClient {
         return checkToken();
     }
 
+    /** What sign-in methods the server offers; see {@link #getAuthMethods()}. */
+    public record AuthMethods(boolean oidcEnabled, String oidcButtonLabel) {}
+
+    /**
+     * Asks the server what sign-in methods it offers (GET /auth/methods,
+     * unauthenticated). The client and server release separately, so a 404 means an
+     * older server, not a broken one: report password-only and carry on. Next
+     * serves HTML for an unknown route, which is why the JSON parse failure is the
+     * branch that catches it; that fallback is the compatibility contract between
+     * the two products.
+     */
+    public AuthMethods getAuthMethods() throws IOException {
+        URL url = new URL(baseUrl + API_PREFIX + "/auth/methods");
+        HttpURLConnection conn = openConnection(url);
+        conn.setConnectTimeout(connectTimeoutMs);
+        conn.setReadTimeout(readTimeoutMs);
+        conn.setRequestMethod("GET");
+
+        int status = conn.getResponseCode();
+        String body = readBody(conn);
+        if (status == 404) {
+            return new AuthMethods(false, null);
+        }
+        if (status != 200) {
+            throw httpError("GET " + API_PREFIX + "/auth/methods", status, body);
+        }
+        try {
+            JsonObject json = stringToJson(body);
+            JsonObject oidc = json.has("oidc") ? json.getAsJsonObject("oidc") : null;
+            boolean enabled = oidc != null && oidc.has("enabled") && oidc.get("enabled").getAsBoolean();
+            String label = oidc != null && oidc.has("buttonLabel") && !oidc.get("buttonLabel").isJsonNull()
+                    ? oidc.get("buttonLabel").getAsString() : null;
+            return new AuthMethods(enabled, label);
+        } catch (JsonSyntaxException | IllegalStateException ex) {
+            // An older server behind a proxy can 200 with an HTML page too.
+            return new AuthMethods(false, null);
+        }
+    }
+
+    /**
+     * Redeems a browser sign-in code (POST /auth/exchange) and stores the bearer
+     * token, completing the loopback flow that BrowserSignIn starts.
+     * Returns the user object.
+     */
+    @SuppressWarnings("unchecked")
+    public Map<String, Object> exchangeCode(String code, String codeVerifier, String redirectUri) throws IOException {
+        URL url = new URL(baseUrl + API_PREFIX + "/auth/exchange");
+        HttpURLConnection conn = openConnection(url);
+        conn.setConnectTimeout(connectTimeoutMs);
+        conn.setReadTimeout(readTimeoutMs);
+        conn.setRequestMethod("POST");
+        conn.setRequestProperty("Content-Type", "application/json");
+        conn.setDoOutput(true);
+
+        Map<String, String> payload = new java.util.HashMap<>();
+        payload.put("code", code);
+        payload.put("codeVerifier", codeVerifier);
+        payload.put("redirectUri", redirectUri);
+        try (OutputStream os = conn.getOutputStream()) {
+            os.write(MAPPER.writeValueAsBytes(payload));
+        }
+
+        int status = conn.getResponseCode();
+        String body = readBody(conn);
+        if (status == 401) {
+            throw new IOException("The sign-in could not be completed. Try signing in again.");
+        }
+        if (status == 429) {
+            String retryAfter = conn.getHeaderField("Retry-After");
+            throw new IOException("Too many attempts. Try again in "
+                    + (retryAfter != null ? retryAfter + " seconds." : "a moment."));
+        }
+        if (status != 200) {
+            throw httpError("POST " + API_PREFIX + "/auth/exchange", status, body);
+        }
+
+        Map<String, Object> res = parseJson(body, Map.class);
+        this.token = (String) res.get("token");
+        if (this.token == null || this.token.isBlank()) {
+            throw new IOException("Sign-in succeeded but no token was returned.");
+        }
+        return (Map<String, Object>) res.get("user");
+    }
+
+    /** The bearer token currently held, so "stay signed in" can store it. */
+    String currentToken() {
+        return token;
+    }
+
+    /** This machine's name, sent as the token label so its owner can tell devices apart. */
+    static String defaultDeviceName() {
+        return deviceName();
+    }
+
     /** Revokes the current token via POST /auth/logout. Best-effort. */
     public void logout() {
         if (!isAuthenticated()) return;
