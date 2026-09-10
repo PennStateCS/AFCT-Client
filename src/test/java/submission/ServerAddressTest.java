@@ -73,14 +73,25 @@ class ServerAddressTest {
 
     @Test
     void clientConstructorAcceptsCommonForms() {
-        assertDoesNotThrow(() -> new AFCTClient("http://localhost:3000", true));
-        assertDoesNotThrow(() -> new AFCTClient("https://localhost", true));
-        assertDoesNotThrow(() -> new AFCTClient("localhost:3000", true));
+        assertDoesNotThrow(() -> new AFCTClient("http://localhost:3000"));
+        assertDoesNotThrow(() -> new AFCTClient("https://localhost"));
+        assertDoesNotThrow(() -> new AFCTClient("localhost:3000"));
     }
 
     @Test
     void newClientIsNotAuthenticated() {
-        AFCTClient client = new AFCTClient("http://localhost:3000", true);
+        AFCTClient client = new AFCTClient("http://localhost:3000");
         assertFalse(client.isAuthenticated());
+    }
+
+    // ── isLoopback ───────────────────────────────────────────────────────────
+
+    @Test
+    void loopbackHostsAreRecognized() {
+        assertTrue(ServerAddress.parse("http://localhost:3000").isLoopback());
+        assertTrue(ServerAddress.parse("http://127.0.0.1:3000").isLoopback());
+        assertTrue(ServerAddress.parse("http://[::1]:3000").isLoopback());
+        assertFalse(ServerAddress.parse("http://10.0.0.1:3000").isLoopback());
+        assertFalse(ServerAddress.parse("afct.example.edu").isLoopback());
     }
 }

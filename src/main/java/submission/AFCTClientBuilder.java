@@ -9,7 +9,6 @@ public final class AFCTClientBuilder {
 
     private final String baseUrl;
 
-    private boolean insecureTls = true; // default as requested
     private Duration connectTimeout = Duration.ofSeconds(15);
     private Duration readTimeout = Duration.ofSeconds(30);
     private int maxRetries = 3;
@@ -18,11 +17,6 @@ public final class AFCTClientBuilder {
     /** @throws IllegalArgumentException when the address cannot be parsed. */
     public AFCTClientBuilder(String baseUrl) {
         this.baseUrl = ServerAddress.parse(baseUrl).baseUrl();
-    }
-
-    public AFCTClientBuilder insecureTls(boolean insecureTls) {
-        this.insecureTls = insecureTls;
-        return this;
     }
 
     public AFCTClientBuilder connectTimeoutSeconds(int seconds) {
@@ -48,7 +42,6 @@ public final class AFCTClientBuilder {
     public AFCTClient build() {
         return new AFCTClient(
                 baseUrl,
-                insecureTls,
                 connectTimeout,
                 readTimeout,
                 maxRetries,
@@ -59,10 +52,6 @@ public final class AFCTClientBuilder {
     // Package-private getters for AFCTClient constructor
     String getBaseUrl() {
         return baseUrl;
-    }
-
-    boolean isInsecureTls() {
-        return insecureTls;
     }
 
     Duration getConnectTimeout() {

@@ -26,13 +26,13 @@ public class AFCTClient {
     private String token;           // bearer token from POST /auth/login
     private int connectTimeoutMs = 15000;
     private int readTimeoutMs = 30000;
+
     /**
-     * When true, HTTPS connections skip certificate/hostname validation (self-signed
-     * servers). When false, connections use the JVM's normal trust store and will
-     * fail on an untrusted or mismatched certificate — this must be respected per
-     * connection, since a bearer token is sent over it.
+     * The trust manager from the most recent HTTPS connection, kept so a caller
+     * that caught an SSLHandshakeException can ask what was refused and show the
+     * chain. Requests on one client are sequential, so one slot is enough.
      */
-    private final boolean insecureTls;
+    private volatile PinningTrustManager lastTrust;
 
     /** Cache of problems per assignment, populated by getAssignments() (problems come embedded). */
     private final Map<String, List<Map<String, Object>>> assignmentProblemsCache = new java.util.HashMap<>();
@@ -46,23 +46,17 @@ public class AFCTClient {
     private String lastAssignmentsTimezone;
     private Instant lastAssignmentsServerTime;
 
-    /** Equivalent to {@code AFCTClient(baseUrl, true)} — kept for source compatibility. */
-    public AFCTClient(String baseUrl) {
-        this(baseUrl, true);
-    }
-
     /** @throws IllegalArgumentException when the address cannot be parsed. */
-    public AFCTClient(String baseUrl, boolean insecureTls) {
+    public AFCTClient(String baseUrl) {
         this.baseUrl = ServerAddress.parse(baseUrl).baseUrl();
-        this.insecureTls = insecureTls;
     }
 
     /**
      * Full constructor used by {@link AFCTClientBuilder}.
      */
-    AFCTClient(String baseUrl, boolean insecureTls, Duration connectTimeout, Duration readTimeout,
+    AFCTClient(String baseUrl, Duration connectTimeout, Duration readTimeout,
                int maxRetries, long baseBackoffMs) {
-        this(baseUrl, insecureTls);
+        this(baseUrl);
         this.connectTimeoutMs = (int) connectTimeout.toMillis();
         this.readTimeoutMs = (int) readTimeout.toMillis();
         // maxRetries, baseBackoffMs stored for future use
@@ -568,31 +562,39 @@ public class AFCTClient {
     private HttpURLConnection openConnection(URL url) throws IOException {
         HttpURLConnection conn = (HttpURLConnection) url.openConnection();
 
-        // Only bypass certificate/hostname validation when the user has explicitly
-        // opted into it (unchecked "Validate SSL Certificate" -> insecureTls=true),
-        // e.g. for a self-signed dev/lab server. Otherwise leave the connection on
-        // the JVM's normal trust store, since a bearer token travels over this
-        // connection and a MITM could otherwise capture it silently.
-        if (insecureTls && conn instanceof HttpsURLConnection) {
-            HttpsURLConnection https = (HttpsURLConnection) conn;
+        // Trust-on-first-use, per connection. A bearer token travels over this
+        // connection, so there is no accept-everything mode; an untrusted chain
+        // fails the handshake and the login window decides whether to pin it.
+        // The hostname verifier is scoped to pin acceptance: a self-signed CN
+        // rarely matches how the student typed the address, and the answer is
+        // "the fingerprint matched for this origin", never a blanket yes.
+        if (conn instanceof HttpsURLConnection https) {
             try {
-                javax.net.ssl.TrustManager[] trustAll = new javax.net.ssl.TrustManager[]{
-                    new javax.net.ssl.X509TrustManager() {
-                        public java.security.cert.X509Certificate[] getAcceptedIssuers() { return new java.security.cert.X509Certificate[0]; }
-                        public void checkClientTrusted(java.security.cert.X509Certificate[] c, String a) {}
-                        public void checkServerTrusted(java.security.cert.X509Certificate[] c, String a) {}
-                    }
-                };
+                PinningTrustManager trust = PinningTrustManager.forOrigin(baseUrl);
+                this.lastTrust = trust;
                 javax.net.ssl.SSLContext sc = javax.net.ssl.SSLContext.getInstance("TLS");
-                sc.init(null, trustAll, new java.security.SecureRandom());
+                sc.init(null, new javax.net.ssl.TrustManager[]{trust}, null);
                 https.setSSLSocketFactory(sc.getSocketFactory());
-                https.setHostnameVerifier((hostname, session) -> true);
+                https.setHostnameVerifier((hostname, session) ->
+                        trust.acceptedByPin()
+                                || HttpsURLConnection.getDefaultHostnameVerifier().verify(hostname, session));
             } catch (Exception e) {
-                System.err.println("[AFCTClient] Failed to apply trust-all SSL: " + e.getMessage());
+                // Leave the JVM defaults in place: strict validation, never weaker.
+                System.err.println("[AFCTClient] Failed to apply pinned trust: " + e.getMessage());
             }
         }
 
         return conn;
+    }
+
+    /**
+     * Why the most recent HTTPS handshake was refused (UNTRUSTED or CHANGED) plus
+     * the offered chain, or null when the last connection was not refused by the
+     * pinning trust manager. Ask this after catching an SSLHandshakeException.
+     */
+    public PinningTrustManager trustFailure() {
+        PinningTrustManager trust = this.lastTrust;
+        return trust != null && trust.failure() != null ? trust : null;
     }
 
     private static void writeFormField(DataOutputStream out, String name, String value, String boundary) throws IOException {

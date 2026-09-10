@@ -41,9 +41,6 @@ public class LoginWindow extends JDialog {
     private static final String CARD_PASSWORD = "password";
     private static final String CARD_TOKEN = "token";
 
-    private final JCheckBox validateSSLCheckBox =
-            new JCheckBox("Validate SSL Certificate");
-
     private final JCheckBox showPasswordCheckBox =
             new JCheckBox("Show password");
 
@@ -204,8 +201,6 @@ public class LoginWindow extends JDialog {
             }
         });
 
-        validateSSLCheckBox.setFocusPainted(false);
-        validateSSLCheckBox.setOpaque(false);
         rememberMeCheckBox.setFocusPainted(false);
         rememberMeCheckBox.setOpaque(false);
 
@@ -354,9 +349,6 @@ public class LoginWindow extends JDialog {
         row.add(showPasswordCheckBox, c);
 
         c.gridx = 1;
-        row.add(validateSSLCheckBox, c);
-
-        c.gridx = 2;
         c.insets = new Insets(0, 0, 0, 0);
         row.add(rememberMeCheckBox, c);
 
@@ -391,7 +383,6 @@ public class LoginWindow extends JDialog {
         staySignedInCheckBox.setEnabled(enabled);
         passwordModeRadio.setEnabled(enabled);
         tokenModeRadio.setEnabled(enabled);
-        validateSSLCheckBox.setEnabled(enabled);
         showPasswordCheckBox.setEnabled(enabled && !tokenMode);
         rememberMeCheckBox.setEnabled(enabled && !tokenMode);
         loginButton.setEnabled(enabled);
@@ -408,30 +399,22 @@ public class LoginWindow extends JDialog {
         final String signInToken = tokenTF.getText().trim();
         final boolean tokenMode = tokenModeRadio.isSelected();
 
-        // checkbox means "validate cert" => insecureTls = false
-        final boolean insecureTls = !validateSSLCheckBox.isSelected();
-
-        // Show which mode we're using
-        String sslMode = insecureTls ? "SSL validation: OFF" : "SSL validation: ON";
-        setStatusText("Initializing connection... (" + sslMode + ")");
+        setStatusText("Initializing connection...");
         toggleInputs(false);
 
         new SwingWorker<LoginResult, String>() {
             @Override
             protected LoginResult doInBackground() {
                 try {
-                    publish("Configuring TLS settings...");
-                    Thread.sleep(100); // Brief pause so user sees status
-
                     publish("Connecting to " + server + "...");
-                    Thread.sleep(100);
+                    Thread.sleep(100); // Brief pause so user sees status
 
                     if (tokenMode) {
                         publish("Checking sign-in token...");
-                        return sessionHandler.loginWithToken(server, signInToken, insecureTls);
+                        return sessionHandler.loginWithToken(server, signInToken);
                     }
                     publish("Authenticating user...");
-                    return sessionHandler.login(server, email, password, insecureTls);
+                    return sessionHandler.login(server, email, password);
                 } catch (Exception ex) {
                     return LoginResult.getErrorResult(
                             ErrorMessages.userMessage(ex, "Unable to reach the server. Please try again.")
@@ -476,6 +459,10 @@ public class LoginWindow extends JDialog {
                         }
 
                         dispose();
+                    } else if (result.status == LoginResult.LoginStatus.UNTRUSTED_CERT) {
+                        handleUntrustedCertificate(result);
+                    } else if (result.status == LoginResult.LoginStatus.CERT_CHANGED) {
+                        handleChangedCertificate(result);
                     } else {
                         setResultText(result.message, false);
                     }
@@ -489,6 +476,68 @@ public class LoginWindow extends JDialog {
                 }
             }
         }.execute();
+    }
+
+    // ============================================================
+    // Certificate trust
+    // ============================================================
+
+    /**
+     * First contact with a server the platform does not trust: show the certificate
+     * once and let the student decide. Trusting pins the fingerprint for this
+     * origin and retries the sign-in.
+     */
+    private void handleUntrustedCertificate(LoginResult result) {
+        java.security.cert.X509Certificate leaf = result.chain[0];
+        String fingerprint = CertificatePins.fingerprintOf(leaf);
+
+        String text = "AFCT does not recognize this server yet.\n\n"
+                + "Server: " + result.origin + "\n"
+                + "Issued to: " + leaf.getSubjectX500Principal().getName() + "\n"
+                + "Issued by: " + leaf.getIssuerX500Principal().getName() + "\n"
+                + "Valid: " + leaf.getNotBefore() + " to " + leaf.getNotAfter() + "\n"
+                + "SHA-256: " + CertificatePins.displayFingerprint(fingerprint) + "\n\n"
+                + "Many AFCT servers use a certificate they made themselves, and your\n"
+                + "instructor can confirm the SHA-256 value above. If it matches, choose\n"
+                + "Trust and AFCT will remember this server.";
+
+        int choice = JOptionPane.showOptionDialog(this, text,
+                "Trust this server?", JOptionPane.YES_NO_OPTION, JOptionPane.WARNING_MESSAGE,
+                null, new Object[]{"Trust this server", "Cancel"}, "Cancel");
+
+        if (choice == JOptionPane.YES_OPTION) {
+            sessionHandler.pinServer(result.origin, leaf);
+            attemptLogin();
+        } else {
+            setResultText("Not connected. The server was not trusted.", false);
+        }
+    }
+
+    /**
+     * The pinned fingerprint no longer matches and the platform does not vouch for
+     * the replacement (a real certificate would have been accepted silently). This
+     * is exactly what pinning exists to catch, so the default is refusal; Forget
+     * covers the legitimate case of a server reinstalled with a new self-signed
+     * certificate, and the next attempt shows the new one for approval.
+     */
+    private void handleChangedCertificate(LoginResult result) {
+        String text = "This server's certificate has CHANGED since AFCT last saw it.\n\n"
+                + "Server: " + result.origin + "\n\n"
+                + "If your instructor reinstalled or reconfigured the server, this can be\n"
+                + "normal: choose Forget this server, sign in again, and check the new\n"
+                + "certificate when it is shown. If nothing changed on the server, stop\n"
+                + "and tell your instructor; someone may be intercepting the connection.";
+
+        int choice = JOptionPane.showOptionDialog(this, text,
+                "Certificate changed", JOptionPane.YES_NO_OPTION, JOptionPane.ERROR_MESSAGE,
+                null, new Object[]{"Forget this server", "Cancel"}, "Cancel");
+
+        if (choice == JOptionPane.YES_OPTION) {
+            sessionHandler.forgetServer(result.origin);
+            setResultText("Server forgotten. Sign in again to review its current certificate.", false);
+        } else {
+            setResultText("Not connected. The changed certificate was refused.", false);
+        }
     }
 
     private void setStatusText(String message) {
@@ -518,9 +567,6 @@ public class LoginWindow extends JDialog {
     // ============================================================
 
     private void populateFromSessionState() {
-        // Load SSL validation preference
-        validateSSLCheckBox.setSelected(!sessionHandler.isInsecureTls());
-
         // The last server that actually worked, whatever sign-in mode was used.
         serverTF.setText(sessionHandler.getSavedServer());
 

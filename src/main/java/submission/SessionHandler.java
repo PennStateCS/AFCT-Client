@@ -32,7 +32,6 @@ import static submission.LoginResult.*;
 
 public class SessionHandler {
     public final Preferences preferences;
-    public final CertificateHandler certificateHandler;
     private int expireAfterDays = 7;
 
     private Instant startTime = Instant.MIN;
@@ -41,7 +40,6 @@ public class SessionHandler {
     private String token = null;
 
     private String email = null;
-    private boolean insecureTls = true; // default: skip SSL validation for self-signed certs
 
     public boolean loggedIn = false;
 
@@ -63,7 +61,6 @@ public class SessionHandler {
     public static final String PREF_PASSWORD = "password";
     public static final String PREF_PASSWORD_ENCRYPTED = "password_encrypted";
     public static final String PREF_PASSWORD_SALT = "password_salt";
-    public static final String PREF_INSECURE_TLS = "insecure_tls";
     public static final String PREF_REMEMBER_ME = "remember_me";
     // "Stay signed in on this computer" for token mode. The token is stored as-is:
     // encrypting it with key material derived from public values (the way the saved
@@ -89,21 +86,13 @@ public class SessionHandler {
 
     public SessionHandler() {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
-        this.certificateHandler = new CertificateHandler();
         this.submitWindows = new ArrayList<>();
-
-        // Load the user's last saved SSL-validation choice so the login checkbox starts
-        // in a consistent state across launches.
-        this.insecureTls = this.preferences.getBoolean(PREF_INSECURE_TLS, true);
 
         // Login GUI elements
         this.loginWindow = new LoginWindow(this);
 
-        // NOTE: we deliberately do NOT call CertificateHandler.enableCustomCertificateValidation()
-        // here. That installs a trust-all SSLContext as the JVM-wide default, which would silently
-        // disable certificate validation for every HTTPS connection regardless of the user's
-        // "Validate SSL Certificate" choice in the login window. Certificate bypass is instead
-        // applied per-connection in AFCTClient, gated on the insecureTls flag the user actually set.
+        // TLS trust is handled per connection in AFCTClient (trust-on-first-use with
+        // pinning). Nothing here may ever install a JVM-wide trust-all context.
     }
 
     public SubmitWindow createNewSubmitWindow(Environment environment) {
@@ -175,14 +164,7 @@ public class SessionHandler {
     // ============================================================
 
     public LoginResult login(String serverAddress, String userEmail, String userPassword) {
-        return login(serverAddress, userEmail, userPassword, this.insecureTls);
-    }
-
-    public LoginResult login(String serverAddress, String userEmail, String userPassword, boolean insecureTls) {
         userEmail = userEmail.trim();
-
-        this.insecureTls = insecureTls;
-        preferences.putBoolean(PREF_INSECURE_TLS, insecureTls);
 
         ServerAddress address;
         try {
@@ -190,9 +172,11 @@ public class SessionHandler {
         } catch (IllegalArgumentException ex) {
             return getErrorResult(ex.getMessage());
         }
+        LoginResult cleartextRefusal = refuseCleartext(address);
+        if (cleartextRefusal != null) return cleartextRefusal;
 
         try {
-            client = new AFCTClient(address.baseUrl(), insecureTls);
+            client = new AFCTClient(address.baseUrl());
             token = client.login(userEmail, userPassword);
             if (token != null && !token.isBlank()) {
                 // Login succeeded
@@ -216,11 +200,11 @@ public class SessionHandler {
                 return getFailureResult();
             }
         } catch (SSLHandshakeException ex) {
+            AFCTClient failed = this.client;
             this.loggedIn = false;
             this.client = null;
             preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
-            this.certificateHandler.test();
-            return getErrorResult(ex.getMessage());
+            return certificateOrError(failed, address, ex);
         } catch (IOException ex) {
             this.loggedIn = false;
             this.client = null;
@@ -230,16 +214,47 @@ public class SessionHandler {
     }
 
     /**
+     * A bearer token over cleartext has no protection at all, so plain http is
+     * refused everywhere except a server on this machine (a dev stack).
+     */
+    private static LoginResult refuseCleartext(ServerAddress address) {
+        if ("http".equals(address.scheme()) && !address.isLoopback()) {
+            return getErrorResult("This address is not secure. Use https, or http only for a server running on this computer.");
+        }
+        return null;
+    }
+
+    /**
+     * Turns a failed TLS handshake into the specific certificate result when the
+     * pinning trust manager refused it, or a plain error otherwise.
+     */
+    private static LoginResult certificateOrError(AFCTClient failedClient, ServerAddress address, SSLHandshakeException ex) {
+        PinningTrustManager trust = failedClient != null ? failedClient.trustFailure() : null;
+        if (trust != null) {
+            LoginResult.LoginStatus status = trust.failure() == PinningTrustManager.Failure.CHANGED
+                    ? LoginResult.LoginStatus.CERT_CHANGED
+                    : LoginResult.LoginStatus.UNTRUSTED_CERT;
+            return LoginResult.certificateResult(status, address.baseUrl(), trust.rejectedChain());
+        }
+        return getErrorResult(ex.getMessage());
+    }
+
+    public void pinServer(String origin, java.security.cert.X509Certificate leaf) {
+        CertificatePins.defaultStore().pin(origin, CertificatePins.fingerprintOf(leaf));
+    }
+
+    public void forgetServer(String origin) {
+        CertificatePins.defaultStore().forget(origin);
+    }
+
+    /**
      * Signs in with a token created on the web account page instead of an email and
      * password. This is the only path for a student whose AFCT session lives inside
      * an LMS iframe, so it is a first-class mode, not a fallback. Deliberately does
      * not touch the Remember Me machinery: no saved password, no expiry window.
      */
-    public LoginResult loginWithToken(String serverAddress, String tokenText, boolean insecureTls) {
+    public LoginResult loginWithToken(String serverAddress, String tokenText) {
         String tokenValue = tokenText == null ? "" : tokenText.trim();
-
-        this.insecureTls = insecureTls;
-        preferences.putBoolean(PREF_INSECURE_TLS, insecureTls);
 
         ServerAddress address;
         try {
@@ -247,12 +262,15 @@ public class SessionHandler {
         } catch (IllegalArgumentException ex) {
             return getErrorResult(ex.getMessage());
         }
+        LoginResult cleartextRefusal = refuseCleartext(address);
+        if (cleartextRefusal != null) return cleartextRefusal;
         if (tokenValue.isBlank()) {
             return getErrorResult("Sign-in token is required.");
         }
 
+        AFCTClient candidate = null;
         try {
-            AFCTClient candidate = new AFCTClient(address.baseUrl(), insecureTls);
+            candidate = new AFCTClient(address.baseUrl());
             Map<String, Object> user = candidate.loginWithToken(tokenValue);
             if (user != null) {
                 this.client = candidate;
@@ -270,8 +288,7 @@ public class SessionHandler {
         } catch (SSLHandshakeException ex) {
             this.loggedIn = false;
             this.client = null;
-            this.certificateHandler.test();
-            return getErrorResult(ex.getMessage());
+            return certificateOrError(candidate, address, ex);
         } catch (IOException ex) {
             this.loggedIn = false;
             this.client = null;
@@ -290,7 +307,7 @@ public class SessionHandler {
             return false;
         }
         LoginResult result = loginWithToken(getSavedServer(),
-                preferences.get(PREF_SIGNIN_TOKEN, ""), isInsecureTls());
+                preferences.get(PREF_SIGNIN_TOKEN, ""));
         if (result.status == LoginResult.LoginStatus.SUCCESS) {
             return true;
         }
@@ -418,10 +435,6 @@ public class SessionHandler {
             preferences.remove(PREF_PASSWORD);
         }
         return legacyPlaintext;
-    }
-
-    public boolean isInsecureTls() {
-        return preferences.getBoolean(PREF_INSECURE_TLS, true);
     }
 
     // ============================================================

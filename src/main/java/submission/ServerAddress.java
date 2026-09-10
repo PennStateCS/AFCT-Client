@@ -48,4 +48,15 @@ public record ServerAddress(String scheme, String host, int port, String baseUrl
         String baseUrl = scheme + "://" + host + (port == defaultPort ? "" : ":" + port);
         return new ServerAddress(scheme, host, port, baseUrl);
     }
+
+    /**
+     * Whether the host is this machine. localhost counts here: this gates whether
+     * plain http is tolerable for a dev server, not where a sign-in redirect may
+     * land, and banning it would break every http://localhost:3000 dev setup.
+     */
+    public boolean isLoopback() {
+        String h = host.toLowerCase();
+        return h.equals("localhost") || h.equals("127.0.0.1")
+                || h.equals("::1") || h.equals("[::1]");
+    }
 }
