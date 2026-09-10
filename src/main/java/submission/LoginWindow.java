@@ -33,6 +33,8 @@ public class LoginWindow extends JDialog {
     private final JRadioButton passwordModeRadio = new JRadioButton("Email and password", true);
     private final JRadioButton tokenModeRadio = new JRadioButton("Sign-in token");
     private final JTextField tokenTF = new JTextField();
+    private final JCheckBox staySignedInCheckBox =
+            new JCheckBox("Stay signed in on this computer");
     private final JPanel modeCards = new JPanel(new CardLayout());
     private final LinkLabel accountLink = new LinkLabel("your AFCT account page", "");
     private static final String CARD_PASSWORD = "password";
@@ -289,6 +291,14 @@ public class LoginWindow extends JDialog {
 
         card.add(labeled("Sign-in token", tokenTF), c);
 
+        // Off by default on purpose: Preferences are per OS user, so on a lab machine
+        // with a shared login a saved token would greet the next student who sits down.
+        staySignedInCheckBox.setFocusPainted(false);
+        staySignedInCheckBox.setOpaque(false);
+        c.gridy++;
+        c.insets = new Insets(2, 0, 2, 0);
+        card.add(staySignedInCheckBox, c);
+
         JPanel hint = new JPanel();
         hint.setLayout(new BoxLayout(hint, BoxLayout.PAGE_AXIS));
         hint.setOpaque(false);
@@ -380,6 +390,7 @@ public class LoginWindow extends JDialog {
         emailTF.setEnabled(enabled);
         passwordTF.setEnabled(enabled);
         tokenTF.setEnabled(enabled);
+        staySignedInCheckBox.setEnabled(enabled);
         passwordModeRadio.setEnabled(enabled);
         tokenModeRadio.setEnabled(enabled);
         validateSSLCheckBox.setEnabled(enabled);
@@ -457,6 +468,15 @@ public class LoginWindow extends JDialog {
                         if (!tokenMode && rememberMeCheckBox.isSelected()) {
                             sessionHandler.saveCredentials(server, port, email, password);
                         }
+                        // Store the token only on a successful sign-in with the box
+                        // ticked; unticked means it lives in memory for this run only.
+                        if (tokenMode) {
+                            if (staySignedInCheckBox.isSelected()) {
+                                sessionHandler.saveSignInToken(server, port, signInToken);
+                            } else {
+                                sessionHandler.clearSavedSignInToken();
+                            }
+                        }
 
                         dispose();
                     } else {
@@ -512,5 +532,16 @@ public class LoginWindow extends JDialog {
             emailTF.setText(sessionHandler.getSavedEmail());
             passwordTF.setText(sessionHandler.getSavedPassword());
         }
+
+        // A student who chose "stay signed in" lands here only when their stored token
+        // stopped working, so open on the token form. The dead token itself is never
+        // pre-filled: they need a fresh one.
+        if (sessionHandler.staySignedInPreferred()) {
+            tokenModeRadio.setSelected(true);
+            staySignedInCheckBox.setSelected(true);
+            serverTF.setText(sessionHandler.getSavedServer());
+            portTF.setText(sessionHandler.getSavedPort());
+        }
+        applyMode();
     }
 }

@@ -66,6 +66,13 @@ public class SessionHandler {
     public static final String PREF_PASSWORD_SALT = "password_salt";
     public static final String PREF_INSECURE_TLS = "insecure_tls";
     public static final String PREF_REMEMBER_ME = "remember_me";
+    // "Stay signed in on this computer" for token mode. The token is stored as-is:
+    // encrypting it with key material derived from public values (the way the saved
+    // password is) would be obfuscation, not protection. The real safeguard is that
+    // this is opt-in and off by default, because Preferences are per OS user and a
+    // lab machine with a shared login is one node for every student who sits down.
+    public static final String PREF_STAY_SIGNED_IN = "stay_signed_in";
+    public static final String PREF_SIGNIN_TOKEN = "signin_token";
     public static final String PREF_HOMEWORK = "homework";
     public static final String PREF_PROBLEM = "problem";
 
@@ -131,8 +138,11 @@ public class SessionHandler {
         boolean needToReAuth = this.client == null || !this.client.isAuthenticated();
 
         if (needToReAuth) {
-            // Remember Me now pre-fills the form only; user must explicitly log in.
-            showLoginWindowBlocking(frame, shouldAutoLogin());
+            // A stored "stay signed in" token signs in silently, with no window at all.
+            // Remember Me (password mode) only pre-fills the form; the user must log in.
+            if (!trySavedTokenSignIn()) {
+                showLoginWindowBlocking(frame, shouldAutoLogin());
+            }
         }
 
         if (this.client == null || !this.client.isAuthenticated()) {
@@ -278,12 +288,65 @@ public class SessionHandler {
         }
     }
 
+    /**
+     * Signs in with the stored "stay signed in" token without showing a window.
+     * Returns true on success. A token the server rejects is cleared, so the next
+     * login window does not retry a dead token; a network failure keeps it, since
+     * the token itself may be fine.
+     */
+    private boolean trySavedTokenSignIn() {
+        if (!hasSavedSignInToken()) {
+            return false;
+        }
+        LoginResult result = loginWithToken(getSavedServer(), getSavedPort(),
+                preferences.get(PREF_SIGNIN_TOKEN, ""), isInsecureTls());
+        if (result.status == LoginResult.LoginStatus.SUCCESS) {
+            return true;
+        }
+        if (result.status == LoginResult.LoginStatus.FAILURE) {
+            // Drop the dead token but keep the stay-signed-in flag, so the login
+            // window opens on the token form for a student who chose that mode.
+            preferences.remove(PREF_SIGNIN_TOKEN);
+        }
+        return false;
+    }
+
+    public void saveSignInToken(String serverUrl, String port, String tokenValue) {
+        // Save the server with protocol, the same way saveCredentials does, so the
+        // silent sign-in reconstructs the URL the user actually typed.
+        String trimmed = serverUrl.trim();
+        String withProtocol = (trimmed.startsWith("http://") || trimmed.startsWith("https://"))
+                ? trimmed : "https://" + trimmed;
+        preferences.put(PREF_SERVER, withProtocol);
+        preferences.put(PREF_PORT, port.trim());
+        preferences.put(PREF_SIGNIN_TOKEN, tokenValue);
+        preferences.putBoolean(PREF_STAY_SIGNED_IN, true);
+    }
+
+    public void clearSavedSignInToken() {
+        preferences.remove(PREF_SIGNIN_TOKEN);
+        preferences.putBoolean(PREF_STAY_SIGNED_IN, false);
+    }
+
+    public boolean hasSavedSignInToken() {
+        return preferences.getBoolean(PREF_STAY_SIGNED_IN, false)
+                && !preferences.get(PREF_SIGNIN_TOKEN, "").isBlank();
+    }
+
+    /** The user's last "stay signed in" choice; survives a dead token being cleared. */
+    public boolean staySignedInPreferred() {
+        return preferences.getBoolean(PREF_STAY_SIGNED_IN, false);
+    }
+
     public void logout() {
         logout(false, null);
     }
 
     public void logout(boolean forceManualReLogin, JFrame frame) {
         preferences.put(PREF_HAS_USED_SAVED_CREDS, "no");
+        // Clear the stored token before the best-effort revoke thread starts: if the
+        // revoke fails, a working token must not be left behind on this machine.
+        clearSavedSignInToken();
         this.loggedIn = false;
 
         // Revoke the bearer token server-side (best-effort, non-blocking)

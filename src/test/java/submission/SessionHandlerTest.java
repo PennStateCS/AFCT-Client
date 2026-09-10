@@ -53,6 +53,8 @@ class SessionHandlerTest {
         prefs.remove(SessionHandler.PREF_HAS_USED_SAVED_CREDS);
         prefs.remove(SessionHandler.PREF_SAVED_CREDS_EXPIRE_AT_MS);
         prefs.remove(SessionHandler.PREF_SAVED_CREDS_EXPIRE_AFTER);
+        prefs.remove(SessionHandler.PREF_STAY_SIGNED_IN);
+        prefs.remove(SessionHandler.PREF_SIGNIN_TOKEN);
         prefs.flush();
     }
 
@@ -288,6 +290,50 @@ class SessionHandlerTest {
             LoginResult r = h.handler().loginWithToken("http://192.0.2.1", "9999", "some-token", true);
             assertEquals(LoginResult.LoginStatus.ERROR, r.status,
                     "Connection failure to unreachable host must map to ERROR, got: " + r.message);
+        }
+    }
+
+    // ── Stay signed in (stored token) ────────────────────────────────────────
+
+    @Test
+    void saveSignInTokenRoundTrip() {
+        try (var h = open()) {
+            h.handler().saveSignInToken("https://10.0.0.1", "3000", "tok-123");
+            assertTrue(h.handler().hasSavedSignInToken());
+            assertTrue(h.handler().staySignedInPreferred());
+            assertEquals("https://10.0.0.1", h.handler().getSavedServer());
+            assertEquals("3000", h.handler().getSavedPort());
+        }
+    }
+
+    @Test
+    void clearSavedSignInTokenClearsTokenAndPreference() {
+        try (var h = open()) {
+            h.handler().saveSignInToken("https://10.0.0.1", "3000", "tok-123");
+            h.handler().clearSavedSignInToken();
+            assertFalse(h.handler().hasSavedSignInToken());
+            assertFalse(h.handler().staySignedInPreferred());
+        }
+    }
+
+    @Test
+    void logoutClearsSavedSignInToken() {
+        try (var h = open()) {
+            h.handler().saveSignInToken("https://10.0.0.1", "3000", "tok-123");
+            h.handler().logout();
+            assertFalse(h.handler().hasSavedSignInToken());
+        }
+    }
+
+    @Test
+    void networkFailureKeepsSavedSignInToken() {
+        // A silent sign-in that fails because the server is unreachable must keep the
+        // stored token: it may be fine, and only a server rejection means it is dead.
+        try (var h = open()) {
+            h.handler().saveSignInToken("http://192.0.2.1", "9999", "tok-123");
+            assertNull(h.handler().requireAuthenticated(null));
+            assertTrue(h.handler().hasSavedSignInToken(),
+                    "Unreachable server must not clear the stored token");
         }
     }
 
