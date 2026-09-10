@@ -224,6 +224,60 @@ public class SessionHandler {
         }
     }
 
+    /**
+     * Signs in with a token created on the web account page instead of an email and
+     * password. This is the only path for a student whose AFCT session lives inside
+     * an LMS iframe, so it is a first-class mode, not a fallback. Deliberately does
+     * not touch the Remember Me machinery: no saved password, no expiry window.
+     */
+    public LoginResult loginWithToken(String serverUrl, String portText, String tokenText, boolean insecureTls) {
+        String originalServer = serverUrl == null ? "" : serverUrl.trim();
+        boolean hasHttpScheme = originalServer.regionMatches(true, 0, "http://", 0, "http://".length());
+        boolean useHttps = !hasHttpScheme; // default to HTTPS when scheme is omitted
+
+        String host = fixUrl(originalServer);
+        portText = portText.trim();
+        String tokenValue = tokenText == null ? "" : tokenText.trim();
+
+        this.insecureTls = insecureTls;
+        preferences.putBoolean(PREF_INSECURE_TLS, insecureTls);
+
+        if (host.isBlank()) {
+            return getErrorResult("Server is required.");
+        }
+        if (tokenValue.isBlank()) {
+            return getErrorResult("Sign-in token is required.");
+        }
+
+        String fullUrl = (useHttps ? "https://" : "http://") + host + ":" + portText;
+
+        try {
+            AFCTClient candidate = new AFCTClient(fullUrl, insecureTls);
+            Map<String, Object> user = candidate.loginWithToken(tokenValue);
+            if (user != null) {
+                this.client = candidate;
+                this.loggedIn = true;
+                Object userEmail = user.get("email");
+                this.email = userEmail != null ? String.valueOf(userEmail) : null;
+                return getSuccessResult();
+            }
+            this.loggedIn = false;
+            this.client = null;
+            return new LoginResult(LoginResult.LoginStatus.FAILURE,
+                    "That token was not accepted. It may have expired or been revoked. "
+                            + "Create a new one from your AFCT account page.");
+        } catch (SSLHandshakeException ex) {
+            this.loggedIn = false;
+            this.client = null;
+            this.certificateHandler.test();
+            return getErrorResult(ex.getMessage());
+        } catch (IOException ex) {
+            this.loggedIn = false;
+            this.client = null;
+            return getErrorResult(ex.getMessage());
+        }
+    }
+
     public void logout() {
         logout(false, null);
     }

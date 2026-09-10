@@ -1,9 +1,12 @@
 package submission;
 
 import gui.Globals;
+import gui.components.LinkLabel;
 import gui.environment.Universe;
 
 import javax.swing.*;
+import javax.swing.event.DocumentEvent;
+import javax.swing.event.DocumentListener;
 import java.awt.*;
 
 import static gui.Globals.*;
@@ -23,6 +26,17 @@ public class LoginWindow extends JDialog {
     private final JTextField emailTF = new JTextField();
     private final JPasswordField passwordTF = new JPasswordField();
     private final char defaultPasswordEchoChar = passwordTF.getEchoChar();
+
+    // Two ways in: the password form, or a token created on the web account page.
+    // The token is the only path for a student whose AFCT session lives inside an
+    // LMS iframe (Canvas etc.), so it is a first-class mode, not a fallback.
+    private final JRadioButton passwordModeRadio = new JRadioButton("Email and password", true);
+    private final JRadioButton tokenModeRadio = new JRadioButton("Sign-in token");
+    private final JTextField tokenTF = new JTextField();
+    private final JPanel modeCards = new JPanel(new CardLayout());
+    private final LinkLabel accountLink = new LinkLabel("your AFCT account page", "");
+    private static final String CARD_PASSWORD = "password";
+    private static final String CARD_TOKEN = "token";
 
     private final JCheckBox validateSSLCheckBox =
             new JCheckBox("Validate SSL Certificate");
@@ -58,6 +72,7 @@ public class LoginWindow extends JDialog {
     public void displayLoginWindow(JFrame frame, boolean shouldAutoLogin) {
         resultPane.setText("");
         passwordTF.setText("");
+        tokenTF.setText("");
         populateFromSessionState();
         toggleInputs(true);
         setLocationRelativeTo(frame);
@@ -122,10 +137,13 @@ public class LoginWindow extends JDialog {
         panel.add(labeled("Port", portTF), c);
 
         c.gridy++;
-        panel.add(labeled("Email", emailTF), c);
+        panel.add(buildModeRow(), c);
 
+        modeCards.setOpaque(false);
+        modeCards.add(buildPasswordCard(), CARD_PASSWORD);
+        modeCards.add(buildTokenCard(), CARD_TOKEN);
         c.gridy++;
-        panel.add(labeled("Password", passwordTF), c);
+        panel.add(modeCards, c);
 
         // small options row (show password + SSL validation)
         c.gridy++;
@@ -191,7 +209,126 @@ public class LoginWindow extends JDialog {
         rememberMeCheckBox.setFocusPainted(false);
         rememberMeCheckBox.setOpaque(false);
 
+        ButtonGroup modeGroup = new ButtonGroup();
+        modeGroup.add(passwordModeRadio);
+        modeGroup.add(tokenModeRadio);
+        passwordModeRadio.addActionListener(e -> applyMode());
+        tokenModeRadio.addActionListener(e -> applyMode());
+
+        // The account link points at whatever server the student has typed.
+        DocumentListener relink = new DocumentListener() {
+            public void insertUpdate(DocumentEvent e) { refreshAccountLink(); }
+            public void removeUpdate(DocumentEvent e) { refreshAccountLink(); }
+            public void changedUpdate(DocumentEvent e) { refreshAccountLink(); }
+        };
+        serverTF.getDocument().addDocumentListener(relink);
+        portTF.getDocument().addDocumentListener(relink);
+        refreshAccountLink();
+
         setContentPane(outer);
+    }
+
+    private JPanel buildModeRow() {
+        JPanel row = new JPanel(new GridBagLayout());
+        row.setOpaque(false);
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridy = 0;
+        c.insets = new Insets(0, 0, 0, 12);
+        c.anchor = GridBagConstraints.LINE_START;
+
+        JLabel label = new JLabel("Sign in with");
+        boldFont(label);
+        label.setForeground(TEXT_DARK);
+
+        c.gridx = 0;
+        row.add(label, c);
+
+        passwordModeRadio.setFocusPainted(false);
+        passwordModeRadio.setOpaque(false);
+        c.gridx = 1;
+        row.add(passwordModeRadio, c);
+
+        tokenModeRadio.setFocusPainted(false);
+        tokenModeRadio.setOpaque(false);
+        c.gridx = 2;
+        c.insets = new Insets(0, 0, 0, 0);
+        row.add(tokenModeRadio, c);
+
+        return row;
+    }
+
+    private JPanel buildPasswordCard() {
+        JPanel card = new JPanel(new GridBagLayout());
+        card.setOpaque(false);
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        c.gridy = 0;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1;
+        c.insets = new Insets(6, 0, 6, 0);
+
+        card.add(labeled("Email", emailTF), c);
+        c.gridy++;
+        card.add(labeled("Password", passwordTF), c);
+
+        return card;
+    }
+
+    private JPanel buildTokenCard() {
+        JPanel card = new JPanel(new GridBagLayout());
+        card.setOpaque(false);
+
+        GridBagConstraints c = new GridBagConstraints();
+        c.gridx = 0;
+        c.gridy = 0;
+        c.fill = GridBagConstraints.HORIZONTAL;
+        c.weightx = 1;
+        c.insets = new Insets(6, 0, 6, 0);
+
+        card.add(labeled("Sign-in token", tokenTF), c);
+
+        JPanel hint = new JPanel();
+        hint.setLayout(new BoxLayout(hint, BoxLayout.PAGE_AXIS));
+        hint.setOpaque(false);
+
+        JPanel linkLine = new JPanel();
+        linkLine.setLayout(new BoxLayout(linkLine, BoxLayout.LINE_AXIS));
+        linkLine.setOpaque(false);
+        linkLine.add(new JLabel("Create one on "));
+        linkLine.add(accountLink);
+        linkLine.add(new JLabel("."));
+        linkLine.setAlignmentX(Component.LEFT_ALIGNMENT);
+        hint.add(linkLine);
+
+        JLabel ltiHint = new JLabel("If you open AFCT from Canvas or another LMS, sign in this way.");
+        ltiHint.setAlignmentX(Component.LEFT_ALIGNMENT);
+        hint.add(ltiHint);
+
+        c.gridy++;
+        c.insets = new Insets(2, 0, 6, 0);
+        card.add(hint, c);
+
+        return card;
+    }
+
+    private void applyMode() {
+        boolean tokenMode = tokenModeRadio.isSelected();
+        ((CardLayout) modeCards.getLayout()).show(modeCards, tokenMode ? CARD_TOKEN : CARD_PASSWORD);
+        // Show password and Remember Me only make sense for the password form.
+        showPasswordCheckBox.setEnabled(!tokenMode);
+        rememberMeCheckBox.setEnabled(!tokenMode);
+        pack();
+    }
+
+    private void refreshAccountLink() {
+        String server = serverTF.getText().trim();
+        boolean hasHttpScheme = server.regionMatches(true, 0, "http://", 0, "http://".length());
+        String host = AFCTClient.fixUrl(server);
+        String port = portTF.getText().trim();
+        String base = (hasHttpScheme ? "http://" : "https://") + host + (port.isEmpty() ? "" : ":" + port);
+        accountLink.update("your AFCT account page", base + "/dashboard/account");
     }
 
     private JPanel buildOptionsRow() {
@@ -236,13 +373,17 @@ public class LoginWindow extends JDialog {
     }
 
     private void toggleInputs(boolean enabled) {
+        boolean tokenMode = tokenModeRadio.isSelected();
         serverTF.setEnabled(enabled);
         portTF.setEnabled(enabled);
         emailTF.setEnabled(enabled);
         passwordTF.setEnabled(enabled);
+        tokenTF.setEnabled(enabled);
+        passwordModeRadio.setEnabled(enabled);
+        tokenModeRadio.setEnabled(enabled);
         validateSSLCheckBox.setEnabled(enabled);
-        showPasswordCheckBox.setEnabled(enabled);
-        rememberMeCheckBox.setEnabled(enabled);
+        showPasswordCheckBox.setEnabled(enabled && !tokenMode);
+        rememberMeCheckBox.setEnabled(enabled && !tokenMode);
         loginButton.setEnabled(enabled);
     }
 
@@ -255,6 +396,8 @@ public class LoginWindow extends JDialog {
         final String port = portTF.getText().trim();
         final String email = emailTF.getText().trim();
         final String password = new String(passwordTF.getPassword());
+        final String signInToken = tokenTF.getText().trim();
+        final boolean tokenMode = tokenModeRadio.isSelected();
 
         // checkbox means "validate cert" => insecureTls = false
         final boolean insecureTls = !validateSSLCheckBox.isSelected();
@@ -274,10 +417,12 @@ public class LoginWindow extends JDialog {
                     publish("Connecting to " + server + ":" + port + "...");
                     Thread.sleep(100);
 
+                    if (tokenMode) {
+                        publish("Checking sign-in token...");
+                        return sessionHandler.loginWithToken(server, port, signInToken, insecureTls);
+                    }
                     publish("Authenticating user...");
-                    LoginResult result = sessionHandler.login(server, port, email, password, insecureTls);
-
-                    return result;
+                    return sessionHandler.login(server, port, email, password, insecureTls);
                 } catch (Exception ex) {
                     return LoginResult.getErrorResult(
                             ErrorMessages.userMessage(ex, "Unable to reach the server. Please try again.")
@@ -297,8 +442,10 @@ public class LoginWindow extends JDialog {
             protected void done() {
                 try {
                     LoginResult result = get();
-                    // Respect opt-out immediately, even on failed login attempts.
-                    if (!rememberMeCheckBox.isSelected()) {
+                    // Remember Me belongs to the password form only; a token sign-in
+                    // leaves any saved credentials exactly as they were.
+                    if (!tokenMode && !rememberMeCheckBox.isSelected()) {
+                        // Respect opt-out immediately, even on failed login attempts.
                         sessionHandler.clearSavedCredentials();
                     }
 
@@ -306,7 +453,7 @@ public class LoginWindow extends JDialog {
                         setResultText(result.message, true);
 
                         // Handle Remember Me
-                        if (rememberMeCheckBox.isSelected()) {
+                        if (!tokenMode && rememberMeCheckBox.isSelected()) {
                             sessionHandler.saveCredentials(server, port, email, password);
                         }
 

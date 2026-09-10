@@ -254,4 +254,51 @@ class SessionHandlerTest {
                     "Connection failure to unreachable host must map to ERROR, got: " + r.message);
         }
     }
+
+    // ── loginWithToken() – offline error paths ───────────────────────────────
+
+    @Test
+    void tokenLoginWithEmptyServerReturnsError() {
+        try (var h = open()) {
+            LoginResult r = h.handler().loginWithToken("", "3000", "some-token", true);
+            assertEquals(LoginResult.LoginStatus.ERROR, r.status);
+            assertNotNull(r.message);
+        }
+    }
+
+    @Test
+    void tokenLoginWithBlankTokenReturnsError() {
+        try (var h = open()) {
+            LoginResult r = h.handler().loginWithToken("https://10.0.0.1", "3000", "   ", true);
+            assertEquals(LoginResult.LoginStatus.ERROR, r.status);
+        }
+    }
+
+    @Test
+    void tokenLoginWithNullTokenReturnsError() {
+        try (var h = open()) {
+            LoginResult r = h.handler().loginWithToken("https://10.0.0.1", "3000", null, true);
+            assertEquals(LoginResult.LoginStatus.ERROR, r.status);
+        }
+    }
+
+    @Test
+    void tokenLoginWithUnreachableHostReturnsErrorNotException() {
+        try (var h = open()) {
+            LoginResult r = h.handler().loginWithToken("http://192.0.2.1", "9999", "some-token", true);
+            assertEquals(LoginResult.LoginStatus.ERROR, r.status,
+                    "Connection failure to unreachable host must map to ERROR, got: " + r.message);
+        }
+    }
+
+    @Test
+    void tokenLoginFailureLeavesSavedCredentialsAlone() {
+        // A token sign-in must never disturb the password form's Remember Me state.
+        try (var h = open()) {
+            h.handler().saveCredentials("https://10.0.0.1", "3000", "a@b.com", "pw");
+            h.handler().loginWithToken("", "3000", "some-token", true);
+            assertTrue(h.handler().hasRememberMe());
+            assertEquals("pw", h.handler().getSavedPassword());
+        }
+    }
 }

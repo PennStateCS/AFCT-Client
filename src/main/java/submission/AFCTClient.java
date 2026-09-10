@@ -153,6 +153,19 @@ public class AFCTClient {
         return this.token;
     }
 
+    /**
+     * Signs in with a token the user created on the web (Account page) instead of an
+     * email and password. Validates it immediately via GET /auth/me so a bad paste
+     * fails here at the login window rather than at the first submission.
+     * Returns the user object on success, null when the server rejects the token.
+     */
+    public Map<String, Object> loginWithToken(String tokenValue) throws IOException {
+        this.token = tokenValue;
+        // checkToken clears this.token on a 401, so a rejected token leaves the
+        // client unauthenticated rather than holding a value the server refuses.
+        return checkToken();
+    }
+
     /** Revokes the current token via POST /auth/logout. Best-effort. */
     public void logout() {
         if (!isAuthenticated()) return;
