@@ -31,8 +31,11 @@ public class SessionHandler {
     // Submit windows
     private ArrayList<SubmitWindow> submitWindows;
 
-    // Login GUI elements
-    private final LoginWindow loginWindow;
+    // The login dialog, created the first time it is shown. Globals constructs a
+    // SessionHandler in its class initializer, so building the dialog here would
+    // mean any code path that touches Globals creates Swing UI — which is also a
+    // HeadlessException on a machine with no display (CI).
+    private LoginWindow loginWindow;
 
     // Preferences
     /** The last successfully used server base URL; the login window prefills from it. */
@@ -56,11 +59,16 @@ public class SessionHandler {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
         this.submitWindows = new ArrayList<>();
 
-        // Login GUI elements
-        this.loginWindow = new LoginWindow(this);
-
         // TLS trust is handled per connection in AFCTClient (trust-on-first-use with
         // pinning). Nothing here may ever install a JVM-wide trust-all context.
+    }
+
+    /** The login dialog, built on first use (always on the EDT; see the field note). */
+    private LoginWindow loginWindow() {
+        if (loginWindow == null) {
+            loginWindow = new LoginWindow(this);
+        }
+        return loginWindow;
     }
 
     public SubmitWindow createNewSubmitWindow(Environment environment) {
@@ -404,7 +412,7 @@ public class SessionHandler {
         }.execute();
 
         if (forceManualReLogin) {
-            Runnable showLogin = () -> loginWindow.displayLoginWindow(frame);
+            Runnable showLogin = () -> loginWindow().displayLoginWindow(frame);
             SwingUtilities.invokeLater(showLogin);
         }
     }
@@ -414,7 +422,7 @@ public class SessionHandler {
     // ============================================================
 
     private void showLoginWindowBlocking(JFrame frame) {
-        Runnable showLogin = () -> loginWindow.displayLoginWindow(frame);
+        Runnable showLogin = () -> loginWindow().displayLoginWindow(frame);
         if (SwingUtilities.isEventDispatchThread()) {
             showLogin.run();
             return;
