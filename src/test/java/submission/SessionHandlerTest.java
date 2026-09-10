@@ -45,13 +45,6 @@ class SessionHandlerTest {
         Preferences prefs = Preferences.userNodeForPackage(SessionHandler.class);
         prefs.remove(SessionHandler.PREF_SERVER);
         prefs.remove(SessionHandler.PREF_EMAIL);
-        prefs.remove(SessionHandler.PREF_PASSWORD);
-        prefs.remove(SessionHandler.PREF_PASSWORD_ENCRYPTED);
-        prefs.remove(SessionHandler.PREF_PASSWORD_SALT);
-        prefs.remove(SessionHandler.PREF_REMEMBER_ME);
-        prefs.remove(SessionHandler.PREF_HAS_USED_SAVED_CREDS);
-        prefs.remove(SessionHandler.PREF_SAVED_CREDS_EXPIRE_AT_MS);
-        prefs.remove(SessionHandler.PREF_SAVED_CREDS_EXPIRE_AFTER);
         prefs.remove(SessionHandler.PREF_STAY_SIGNED_IN);
         prefs.remove(SessionHandler.PREF_SIGNIN_TOKEN);
         prefs.flush();
@@ -103,100 +96,9 @@ class SessionHandlerTest {
     }
 
     @Test
-    void savedEmailDefaultsToConstant() {
+    void savedEmailDefaultsToEmpty() {
         try (var h = open()) {
-            assertEquals(SessionHandler.defaultEmail, h.handler().getSavedEmail());
-        }
-    }
-
-    @Test
-    void savedPasswordDefaultsToEmpty() {
-        try (var h = open()) {
-            assertEquals(SessionHandler.defaultPassword, h.handler().getSavedPassword());
-        }
-    }
-
-    @Test
-    void rememberMeDefaultsToFalse() {
-        try (var h = open()) {
-            assertFalse(h.handler().hasRememberMe());
-        }
-    }
-
-    // ── saveCredentials / clearSavedCredentials ──────────────────────────────
-
-    @Test
-    void saveCredentialsPersistsEmail() {
-        try (var h = open()) {
-            h.handler().saveCredentials("student@rit.edu", "pw");
-            assertEquals("student@rit.edu", h.handler().getSavedEmail());
-        }
-    }
-
-    @Test
-    void saveCredentialsPersistsPasswordRoundTrip() {
-        try (var h = open()) {
-            h.handler().saveCredentials("a@b.com", "mypassword");
-            assertEquals("mypassword", h.handler().getSavedPassword());
-        }
-    }
-
-    @Test
-    void saveCredentialsSetsRememberMe() {
-        try (var h = open()) {
-            h.handler().saveCredentials("a@b.com", "pw");
-            assertTrue(h.handler().hasRememberMe());
-        }
-    }
-
-    @Test
-    void clearSavedCredentialsClearsRememberMe() {
-        try (var h = open()) {
-            h.handler().saveCredentials("a@b.com", "pw");
-            h.handler().clearSavedCredentials();
-            assertFalse(h.handler().hasRememberMe());
-        }
-    }
-
-    @Test
-    void clearSavedCredentialsClearsPassword() {
-        try (var h = open()) {
-            h.handler().saveCredentials("a@b.com", "pw");
-            h.handler().clearSavedCredentials();
-            assertEquals(SessionHandler.defaultPassword, h.handler().getSavedPassword());
-        }
-    }
-
-    // ── Encryption round-trip ────────────────────────────────────────────────
-
-    @Test
-    void passwordEncryptDecryptRoundTrip() {
-        // Save → getSavedPassword decrypts; if values match, AES-GCM round-trip works.
-        try (var h = open()) {
-            String plain = "SuperSecret123!";
-            h.handler().saveCredentials("x@y.com", plain);
-            assertEquals(plain, h.handler().getSavedPassword());
-        }
-    }
-
-    @Test
-    void passwordEncryptedKeyIsPresentAfterSave() {
-        try (var h = open()) {
-            h.handler().saveCredentials("x@y.com", "pw");
-            Preferences prefs = h.handler().preferences;
-            String enc = prefs.get(SessionHandler.PREF_PASSWORD_ENCRYPTED, null);
-            assertNotNull(enc, "Encrypted key must be present after saveCredentials");
-            assertTrue(enc.startsWith("v2:"), "Encrypted value must use v2 format; got: " + enc);
-        }
-    }
-
-    @Test
-    void plaintextPasswordKeyIsAbsentAfterSave() {
-        try (var h = open()) {
-            h.handler().saveCredentials("x@y.com", "pw");
-            Preferences prefs = h.handler().preferences;
-            // Legacy plaintext key must NOT be written.
-            assertNull(prefs.get(SessionHandler.PREF_PASSWORD, null));
+            assertEquals("", h.handler().getSavedEmail());
         }
     }
 
@@ -360,13 +262,13 @@ class SessionHandlerTest {
     }
 
     @Test
-    void tokenLoginFailureLeavesSavedCredentialsAlone() {
-        // A token sign-in must never disturb the password form's Remember Me state.
+    void tokenLoginFailureLeavesTheStoredTokenAlone() {
+        // A failed manual token sign-in (bad server here) must not disturb a
+        // stored stay-signed-in token from an earlier session.
         try (var h = open()) {
-            h.handler().saveCredentials("a@b.com", "pw");
-            h.handler().loginWithToken("", "some-token");
-            assertTrue(h.handler().hasRememberMe());
-            assertEquals("pw", h.handler().getSavedPassword());
+            h.handler().saveSignInToken("tok-stored");
+            h.handler().loginWithToken("", "tok-typed");
+            assertTrue(h.handler().hasSavedSignInToken());
         }
     }
 }

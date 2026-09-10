@@ -55,8 +55,8 @@ public class LoginWindow extends JDialog {
     private final JCheckBox showPasswordCheckBox =
             new JCheckBox("Show password");
 
-    private final JCheckBox rememberMeCheckBox =
-            new JCheckBox("Remember Me");
+    private final JCheckBox staySignedInPasswordCheckBox =
+            new JCheckBox("Stay signed in on this computer");
 
     private final JButton loginButton = new JButton("Login");
     private final JTextPane resultPane = new JTextPane();
@@ -80,7 +80,7 @@ public class LoginWindow extends JDialog {
     // DISPLAY
     // ============================================================
 
-    public void displayLoginWindow(JFrame frame, boolean shouldAutoLogin) {
+    public void displayLoginWindow(JFrame frame) {
         resultPane.setText("");
         passwordTF.setText("");
         tokenTF.setText("");
@@ -88,14 +88,7 @@ public class LoginWindow extends JDialog {
         populateFromSessionState();
         toggleInputs(true);
         setLocationRelativeTo(frame);
-        if (shouldAutoLogin) {
-            attemptLogin();
-        }
         setVisible(true); // modal => blocks until disposed/hidden
-    }
-
-    public void displayLoginWindow(JFrame frame) {
-        displayLoginWindow(frame, false);
     }
 
     // ============================================================
@@ -209,8 +202,8 @@ public class LoginWindow extends JDialog {
             }
         });
 
-        rememberMeCheckBox.setFocusPainted(false);
-        rememberMeCheckBox.setOpaque(false);
+        staySignedInPasswordCheckBox.setFocusPainted(false);
+        staySignedInPasswordCheckBox.setOpaque(false);
 
         ButtonGroup modeGroup = new ButtonGroup();
         modeGroup.add(passwordModeRadio);
@@ -460,7 +453,7 @@ public class LoginWindow extends JDialog {
 
         c.gridx = 1;
         c.insets = new Insets(0, 0, 0, 0);
-        row.add(rememberMeCheckBox, c);
+        row.add(staySignedInPasswordCheckBox, c);
 
         return row;
     }
@@ -491,11 +484,11 @@ public class LoginWindow extends JDialog {
         tokenTF.setEnabled(enabled);
         staySignedInCheckBox.setEnabled(enabled);
         staySignedInBrowserCheckBox.setEnabled(enabled);
+        staySignedInPasswordCheckBox.setEnabled(enabled);
         passwordModeRadio.setEnabled(enabled);
         tokenModeRadio.setEnabled(enabled);
         browserModeRadio.setEnabled(enabled);
         showPasswordCheckBox.setEnabled(enabled);
-        rememberMeCheckBox.setEnabled(enabled);
         loginButton.setEnabled(enabled);
         // Cancel is the one control that must work exactly while everything else
         // is disabled: it aborts the in-flight browser wait.
@@ -558,35 +551,20 @@ public class LoginWindow extends JDialog {
             protected void done() {
                 try {
                     LoginResult result = get();
-                    // Remember Me belongs to the password form only; a token sign-in
-                    // leaves any saved credentials exactly as they were.
-                    if (!tokenMode && !rememberMeCheckBox.isSelected()) {
-                        // Respect opt-out immediately, even on failed login attempts.
-                        sessionHandler.clearSavedCredentials();
-                    }
-
                     if (result.status == LoginResult.LoginStatus.SUCCESS) {
                         setResultText(result.message, true);
 
-                        // Handle Remember Me
-                        if (!tokenMode && rememberMeCheckBox.isSelected()) {
-                            sessionHandler.saveCredentials(email, password);
-                        }
-                        // Store the token only on a successful sign-in with the box
-                        // ticked; unticked means it lives in memory for this run only.
-                        if (tokenMode) {
-                            if (staySignedInCheckBox.isSelected()) {
-                                sessionHandler.saveSignInToken(signInToken);
-                            } else {
-                                sessionHandler.clearSavedSignInToken();
-                            }
-                        }
-                        if (browserMode) {
-                            if (staySignedInBrowserCheckBox.isSelected()) {
-                                sessionHandler.persistCurrentTokenForStaySignedIn();
-                            } else {
-                                sessionHandler.clearSavedSignInToken();
-                            }
+                        // Every mode ends holding a bearer token, so "stay signed in"
+                        // works the same way for all three: store the token when the
+                        // box is ticked, otherwise it lives in memory for this run
+                        // only. The password itself is never persisted.
+                        boolean stay = tokenMode ? staySignedInCheckBox.isSelected()
+                                : browserMode ? staySignedInBrowserCheckBox.isSelected()
+                                : staySignedInPasswordCheckBox.isSelected();
+                        if (stay) {
+                            sessionHandler.persistCurrentTokenForStaySignedIn();
+                        } else {
+                            sessionHandler.clearSavedSignInToken();
                         }
 
                         dispose();
@@ -698,23 +676,17 @@ public class LoginWindow extends JDialog {
     // ============================================================
 
     private void populateFromSessionState() {
-        // The last server that actually worked, whatever sign-in mode was used.
+        // The last server and email that actually worked; never the password.
         serverTF.setText(sessionHandler.getSavedServer());
+        emailTF.setText(sessionHandler.getSavedEmail());
 
-        // Load Remember Me credentials if enabled
-        if (sessionHandler.hasRememberMe()) {
-            rememberMeCheckBox.setSelected(true);
-            emailTF.setText(sessionHandler.getSavedEmail());
-            passwordTF.setText(sessionHandler.getSavedPassword());
-        }
-
-        // A student who chose "stay signed in" lands here only when their stored token
-        // stopped working, so open on the token form. The dead token itself is never
-        // pre-filled: they need a fresh one.
-        if (sessionHandler.staySignedInPreferred()) {
-            tokenModeRadio.setSelected(true);
-            staySignedInCheckBox.setSelected(true);
-        }
+        // A student who chose "stay signed in" lands here only when their stored
+        // token stopped working, so keep the choice ticked on every form; the dead
+        // token itself is never pre-filled.
+        boolean stay = sessionHandler.staySignedInPreferred();
+        staySignedInCheckBox.setSelected(stay);
+        staySignedInBrowserCheckBox.setSelected(stay);
+        staySignedInPasswordCheckBox.setSelected(stay);
         applyMode();
     }
 }
