@@ -328,7 +328,8 @@ public class LoginWindow extends JDialog {
         String host = AFCTClient.fixUrl(server);
         String port = portTF.getText().trim();
         String base = (hasHttpScheme ? "http://" : "https://") + host + (port.isEmpty() ? "" : ":" + port);
-        accountLink.update("your AFCT account page", base + "/dashboard/account");
+        // ?tab=tokens lands directly on the App tokens tab of the account page.
+        accountLink.update("your AFCT account page", base + "/dashboard/account?tab=tokens");
     }
 
     private JPanel buildOptionsRow() {
