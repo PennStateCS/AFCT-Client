@@ -144,7 +144,7 @@ public class Main {
 			}
 		}
         Universe.curProfile.loadPreferences();
-		updater.updatePopup.showOnLoad();
+		updater().updatePopup.showOnLoad();
 
 		if (args.length >= 2) {
 			print(Arrays.toString(args));

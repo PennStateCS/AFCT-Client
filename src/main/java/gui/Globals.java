@@ -77,7 +77,17 @@ public class Globals {
     public final static Preferences preferences = Preferences.userNodeForPackage(Globals.class);
     public static ArrayList<ExtensionPopup> popups = new ArrayList<>();
 
-    public static Updater updater = new Updater();
+    // Built on first use: Updater's constructor creates its Swing popup, and this
+    // class must stay loadable with no display (its init runs from non-UI code
+    // paths, and a HeadlessException here takes every Globals user down with it).
+    private static Updater updater;
+
+    public static synchronized Updater updater() {
+        if (updater == null) {
+            updater = new Updater();
+        }
+        return updater;
+    }
 
     public static String lastCopiedString = null;
     public static Automaton lastCopiedAutomaton = null;
