@@ -271,12 +271,11 @@ public class SessionHandler {
         AFCTClient candidate = null;
         try {
             candidate = new AFCTClient(address.baseUrl());
-            Map<String, Object> user = candidate.loginWithToken(tokenValue);
+            ApiModels.User user = candidate.loginWithToken(tokenValue);
             if (user != null) {
                 this.client = candidate;
                 this.loggedIn = true;
-                Object userEmail = user.get("email");
-                this.email = userEmail != null ? String.valueOf(userEmail) : null;
+                this.email = user.email();
                 preferences.put(PREF_SERVER, address.baseUrl());
                 return getSuccessResult();
             }
@@ -355,12 +354,11 @@ public class SessionHandler {
             String code = flow.awaitCode(BrowserSignIn.APPROVAL_TIMEOUT);
 
             candidate = new AFCTClient(address.baseUrl());
-            Map<String, Object> user = candidate.exchangeCode(code, flow.verifier(), flow.redirectUri());
+            ApiModels.User user = candidate.exchangeCode(code, flow.verifier(), flow.redirectUri());
 
             this.client = candidate;
             this.loggedIn = true;
-            Object userEmail = user != null ? user.get("email") : null;
-            this.email = userEmail != null ? String.valueOf(userEmail) : null;
+            this.email = user != null ? user.email() : null;
             preferences.put(PREF_SERVER, address.baseUrl());
             return getSuccessResult();
         } catch (SSLHandshakeException ex) {

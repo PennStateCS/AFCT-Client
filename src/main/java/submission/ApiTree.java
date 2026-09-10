@@ -4,15 +4,16 @@ import java.time.Instant;
 import java.time.ZoneId;
 import java.time.format.DateTimeFormatter;
 import java.util.Comparator;
-import java.util.List;
-import java.util.Map;
 import java.util.function.Function;
 
+import static submission.ApiModels.orUnknown;
+import static submission.ApiModels.parseIsoOrNull;
+
 /**
- * Pure translation between the client API's JSON maps (the /tree payload and the
- * submission history rows) and the items the Submission Center renders. Extracted
- * from SubmitWindow so the parsing, filtering, ordering and formatting rules are
- * testable without Swing; SubmitWindow keeps only the widgets.
+ * Pure translation between the client API's typed responses (ApiModels) and the
+ * items the Submission Center renders, plus the filter, ordering and formatting
+ * rules. Extracted from SubmitWindow so all of it is testable without Swing;
+ * SubmitWindow keeps only the widgets.
  *
  * The server has already resolved everything per student before this code runs:
  * only published courses inside their start/end window arrive, assignment dates are
@@ -24,74 +25,36 @@ public final class ApiTree {
 
     private ApiTree() {}
 
-    /** Parses an ISO-8601 value, or null when missing, blank, "null", or malformed. */
-    public static Instant parseIsoOrNull(Object value) {
-        if (value == null) return null;
-        String s = String.valueOf(value);
-        if (s.isBlank() || "null".equals(s)) return null;
-        try {
-            return Instant.parse(s);
-        } catch (Exception e) {
-            return null;
-        }
+    public static CourseItem course(ApiModels.Course c) {
+        return new CourseItem(c.id(), c.name() != null ? c.name() : "Untitled Course", c.timezone());
     }
 
-    /** A number as an int, or -1 when absent or malformed (-1 means "unknown" throughout). */
-    public static int asInt(Object value) {
-        if (value instanceof Number) return ((Number) value).intValue();
-        try {
-            return Integer.parseInt(String.valueOf(value));
-        } catch (Exception e) {
-            return -1;
-        }
-    }
-
-    private static String stringOrNull(Object value) {
-        return value != null && !"null".equals(String.valueOf(value)) ? String.valueOf(value) : null;
-    }
-
-    public static CourseItem course(Map<String, Object> c) {
-        return new CourseItem(
-                String.valueOf(c.get("id")),
-                String.valueOf(c.getOrDefault("name", "Untitled Course")),
-                stringOrNull(c.get("timezone")));
-    }
-
-    public static AssignmentItem assignment(Map<String, Object> a) {
-        Object problemsObj = a.get("problems");
-        int problemCount = (problemsObj instanceof List) ? ((List<?>) problemsObj).size() : 0;
+    public static AssignmentItem assignment(ApiModels.Assignment a) {
         return new AssignmentItem(
-                String.valueOf(a.get("id")),
-                String.valueOf(a.getOrDefault("title", "Untitled Assignment")),
-                String.valueOf(a.getOrDefault("description", "")),
-                stringOrNull(a.get("dueDate")),
-                Boolean.TRUE.equals(a.get("isGroup")),
-                stringOrNull(a.get("groupName")),
-                Boolean.TRUE.equals(a.get("allowLateSubmissions")),
-                stringOrNull(a.get("lateCutoff")),
-                problemCount);
+                a.id(),
+                a.title() != null ? a.title() : "Untitled Assignment",
+                a.description() != null ? a.description() : "",
+                a.dueDate(),
+                Boolean.TRUE.equals(a.isGroup()),
+                a.groupName(),
+                Boolean.TRUE.equals(a.allowLateSubmissions()),
+                a.lateCutoff(),
+                a.problems() != null ? a.problems().size() : 0);
     }
 
-    public static ProblemItem problem(Map<String, Object> p) {
-        Object descObj = p.get("description");
-        String description = (descObj != null && !"null".equals(String.valueOf(descObj)))
-                ? String.valueOf(descObj) : "";
-        Object msObj = p.get("maxStates");
-        Integer maxStates = (msObj instanceof Number) ? ((Number) msObj).intValue() : null;
-        Object detObj = p.get("isDeterministic");
-        Boolean isDeterministic = (detObj instanceof Boolean) ? (Boolean) detObj : null;
+    public static ProblemItem problem(ApiModels.Problem p) {
         return new ProblemItem(
-                String.valueOf(p.get("id")),
-                String.valueOf(p.getOrDefault("title", "Untitled Problem")),
-                description,
-                Boolean.TRUE.equals(p.get("solved")),
-                stringOrNull(p.get("type")),
-                asInt(p.get("maxPoints")),
-                asInt(p.get("maxSubmissions")),
-                asInt(p.get("submissionCount")),
-                asInt(p.get("grade")),
-                maxStates,
-                isDeterministic);
+                p.id(),
+                p.title() != null ? p.title() : "Untitled Problem",
+                p.description() != null ? p.description() : "",
+                Boolean.TRUE.equals(p.solved()),
+                p.type(),
+                orUnknown(p.maxPoints()),
+                orUnknown(p.maxSubmissions()),
+                orUnknown(p.submissionCount()),
+                orUnknown(p.grade()),
+                p.maxStates(),
+                p.isDeterministic());
     }
 
     /**
@@ -100,27 +63,20 @@ public final class ApiTree {
      * Upcoming and past buckets. No due date, or one that fails to parse, counts as
      * not upcoming.
      */
-    public static boolean isUpcoming(Map<String, Object> assignment, Instant now) {
-        Instant due = parseIsoOrNull(assignment.get("dueDate"));
+    public static boolean isUpcoming(ApiModels.Assignment assignment, Instant now) {
+        Instant due = assignment.dueInstant();
         return due != null && due.isAfter(now);
     }
 
     /** Earliest due first; assignments without a parseable due date sort last. */
-    public static Comparator<Map<String, Object>> byDueDateNullsLast() {
-        return (x, y) -> {
-            Instant dx = parseIsoOrNull(x.get("dueDate"));
-            Instant dy = parseIsoOrNull(y.get("dueDate"));
-            if (dx == null && dy == null) return 0;
-            if (dx == null) return 1;
-            if (dy == null) return -1;
-            return dx.compareTo(dy);
-        };
+    public static Comparator<ApiModels.Assignment> byDueDateNullsLast() {
+        return Comparator.comparing(ApiModels.Assignment::dueInstant,
+                Comparator.nullsLast(Comparator.naturalOrder()));
     }
 
-    /** Alphabetical by title, case-insensitive. */
-    public static Comparator<Map<String, Object>> byTitle() {
-        return Comparator.comparing(
-                m -> String.valueOf(m.getOrDefault("title", "")),
+    /** Alphabetical by title, case-insensitive; missing titles sort first as "". */
+    public static Comparator<ApiModels.Problem> byTitle() {
+        return Comparator.comparing(p -> p.title() != null ? p.title() : "",
                 String.CASE_INSENSITIVE_ORDER);
     }
 
@@ -149,32 +105,31 @@ public final class ApiTree {
      * column after the date, because the history is the group's shared attempts and
      * any groupmate may have made one.
      */
-    public static Object[] historyRow(Map<String, Object> s, boolean group,
+    public static Object[] historyRow(ApiModels.Submission s, boolean group,
                                       Function<Instant, String> formatWhen) {
         String when = "";
-        Instant submittedAt = parseIsoOrNull(s.get("submittedAt"));
+        Instant submittedAt = parseIsoOrNull(s.submittedAt());
         if (submittedAt != null) {
             when = formatWhen.apply(submittedAt);
-        } else if (s.get("submittedAt") != null) {
-            when = String.valueOf(s.get("submittedAt"));
+        } else if (s.submittedAt() != null) {
+            when = s.submittedAt();
         }
 
-        String file = s.get("fileName") != null ? String.valueOf(s.get("fileName")) : "";
-        String status = s.get("status") != null ? String.valueOf(s.get("status")) : "";
+        String file = s.fileName() != null ? s.fileName() : "";
+        String status = s.status() != null ? s.status() : "";
 
         // Result: the evaluator verdict, blank once finished without one, and a
         // holding phrase while the submission is still queued or being graded.
         String result;
-        Object correct = s.get("correct");
-        if (correct instanceof Boolean) {
-            result = ((Boolean) correct) ? "Correct" : "Incorrect";
+        if (s.correct() != null) {
+            result = s.correct() ? "Correct" : "Incorrect";
         } else {
             result = "PENDING".equals(status) || "PROCESSING".equals(status) ? "Not evaluated yet" : "";
         }
-        String feedback = s.get("feedback") != null ? String.valueOf(s.get("feedback")) : "";
+        String feedback = s.feedback() != null ? s.feedback() : "";
 
         if (group) {
-            String member = s.get("submittedBy") != null ? String.valueOf(s.get("submittedBy")) : "";
+            String member = s.submittedBy() != null ? s.submittedBy() : "";
             return new Object[]{when, member, file, status, result, feedback};
         }
         return new Object[]{when, file, status, result, feedback};

@@ -4,37 +4,45 @@ import org.junit.jupiter.api.Test;
 
 import java.time.Instant;
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 
 import static org.junit.jupiter.api.Assertions.*;
 
 /**
- * The Submission Center's data rules, tested against maps shaped like the real
- * /tree and history payloads. The server resolves visibility, extensions and
- * grant-adjusted limits before the client ever sees them, so what is tested here
- * is that the client faithfully renders what arrived: group columns, course-zone
- * dates, the server-clock upcoming filter, and the per-student attempt cap.
+ * The Submission Center's data rules, tested against the typed API models. The
+ * server resolves visibility, extensions and grant-adjusted limits before the
+ * client ever sees them, so what is tested here is that the client faithfully
+ * renders what arrived: group columns, course-zone dates, the server-clock
+ * upcoming filter, and the per-student attempt cap.
  */
 class ApiTreeTest {
 
-    private static Map<String, Object> map(Object... kv) {
-        Map<String, Object> m = new HashMap<>();
-        for (int i = 0; i < kv.length; i += 2) m.put((String) kv[i], kv[i + 1]);
-        return m;
+    private static ApiModels.Assignment assignment(String id, String dueDate, Boolean isGroup,
+                                                   String groupName, List<ApiModels.Problem> problems) {
+        return new ApiModels.Assignment(id, "HW", "d", dueDate, null, null, null, isGroup, groupName, problems);
+    }
+
+    private static ApiModels.Problem problem(String title, Integer maxSubmissions,
+                                             Integer submissionCount, Boolean solved) {
+        return new ApiModels.Problem("p1", title, null, null, null, null, 100,
+                maxSubmissions, submissionCount, null, null, solved);
+    }
+
+    private static ApiModels.Submission submission(String submittedAt, String submittedBy,
+                                                   String status, Boolean correct) {
+        return new ApiModels.Submission("s1", status, correct, submittedAt, "dfa.jff",
+                correct != null && correct ? "ok" : null, null, submittedBy, null);
     }
 
     // ── parsing ──────────────────────────────────────────────────────────────
 
     @Test
     void groupAssignmentCarriesGroupFields() {
-        AssignmentItem a = ApiTree.assignment(map(
-                "id", "a1", "title", "HW 3", "description", "d",
-                "dueDate", "2026-09-20T03:59:00.000Z",
-                "isGroup", true, "groupName", "Team 2",
-                "allowLateSubmissions", true, "lateCutoff", "2026-09-22T03:59:00.000Z",
-                "problems", List.of(map("id", "p1"), map("id", "p2"))));
+        ApiModels.Assignment src = new ApiModels.Assignment(
+                "a1", "HW 3", "d", "2026-09-20T03:59:00.000Z", null, "2026-09-22T03:59:00.000Z",
+                true, true, "Team 2",
+                List.of(problem("P1", 3, 0, false), problem("P2", 3, 0, false)));
+        AssignmentItem a = ApiTree.assignment(src);
         assertTrue(a.isGroup);
         assertEquals("Team 2", a.groupName);
         assertTrue(a.allowLateSubmissions);
@@ -44,7 +52,7 @@ class ApiTreeTest {
 
     @Test
     void individualAssignmentHasNoGroupFields() {
-        AssignmentItem a = ApiTree.assignment(map("id", "a1", "title", "HW 1"));
+        AssignmentItem a = ApiTree.assignment(assignment("a1", null, null, null, null));
         assertFalse(a.isGroup);
         assertNull(a.groupName);
         assertNull(a.dueInstant());
@@ -52,20 +60,17 @@ class ApiTreeTest {
     }
 
     @Test
-    void jsonNullGroupNameBecomesJavaNull() {
-        // Jackson maps a JSON null to Java null, but a defensive "null" string from
-        // any stringification must not surface as a group literally named "null".
-        AssignmentItem a = ApiTree.assignment(map("id", "a1", "isGroup", true, "groupName", "null"));
-        assertNull(a.groupName);
+    void missingTitlesGetPlaceholders() {
+        assertEquals("Untitled Course",
+                ApiTree.course(new ApiModels.Course("c1", null, null, null, null, null, null, null, null)).name);
+        assertEquals("Untitled Problem", ApiTree.problem(problem(null, null, null, null)).name);
     }
 
     @Test
     void problemCarriesTheGrantAdjustedCapAsSent() {
         // maxSubmissions arrives already adjusted for this student's extra-submission
         // grants; the client must show it untouched.
-        ProblemItem p = ApiTree.problem(map(
-                "id", "p1", "title", "Problem 1", "maxSubmissions", 7,
-                "submissionCount", 5, "maxPoints", 100, "grade", 80, "solved", false));
+        ProblemItem p = ApiTree.problem(problem("Problem 1", 7, 5, false));
         assertEquals(7, p.maxSubmissions);
         assertEquals(5, p.submissionCount);
         assertEquals(2, p.attemptsLeft());
@@ -74,17 +79,10 @@ class ApiTreeTest {
 
     @Test
     void problemWithMissingNumbersReportsUnknownNotZero() {
-        ProblemItem p = ApiTree.problem(map("id", "p1", "title", "P"));
+        ProblemItem p = ApiTree.problem(problem("P", null, null, null));
         assertEquals(-1, p.maxSubmissions);
         assertEquals(-1, p.submissionCount);
         assertEquals(-1, p.attemptsLeft(), "Unknown must not read as none left");
-    }
-
-    @Test
-    void courseTimezoneNullStringBecomesNull() {
-        assertNull(ApiTree.course(map("id", "c1", "name", "X", "timezone", "null")).timezone);
-        assertEquals("America/New_York",
-                ApiTree.course(map("id", "c1", "name", "X", "timezone", "America/New_York")).timezone);
     }
 
     // ── upcoming filter and ordering ─────────────────────────────────────────
@@ -92,29 +90,32 @@ class ApiTreeTest {
     @Test
     void upcomingComparesAgainstTheGivenClock() {
         Instant serverNow = Instant.parse("2026-09-10T12:00:00Z");
-        assertTrue(ApiTree.isUpcoming(map("dueDate", "2026-09-10T12:00:01Z"), serverNow));
-        assertFalse(ApiTree.isUpcoming(map("dueDate", "2026-09-10T11:59:59Z"), serverNow));
-        assertFalse(ApiTree.isUpcoming(map("dueDate", null), serverNow));
-        assertFalse(ApiTree.isUpcoming(map("dueDate", "garbage"), serverNow));
+        assertTrue(ApiTree.isUpcoming(assignment("a", "2026-09-10T12:00:01Z", null, null, null), serverNow));
+        assertFalse(ApiTree.isUpcoming(assignment("a", "2026-09-10T11:59:59Z", null, null, null), serverNow));
+        assertFalse(ApiTree.isUpcoming(assignment("a", null, null, null, null), serverNow));
+        assertFalse(ApiTree.isUpcoming(assignment("a", "garbage", null, null, null), serverNow));
     }
 
     @Test
     void assignmentsSortEarliestDueFirstWithMissingDatesLast() {
-        List<Map<String, Object>> raw = new ArrayList<>(List.of(
-                map("id", "none", "dueDate", null),
-                map("id", "late", "dueDate", "2026-12-01T00:00:00Z"),
-                map("id", "soon", "dueDate", "2026-09-15T00:00:00Z")));
+        List<ApiModels.Assignment> raw = new ArrayList<>(List.of(
+                assignment("none", null, null, null, null),
+                assignment("late", "2026-12-01T00:00:00Z", null, null, null),
+                assignment("soon", "2026-09-15T00:00:00Z", null, null, null)));
         raw.sort(ApiTree.byDueDateNullsLast());
-        assertEquals(List.of("soon", "late", "none"), raw.stream().map(m -> m.get("id")).toList());
+        assertEquals(List.of("soon", "late", "none"),
+                raw.stream().map(ApiModels.Assignment::id).toList());
     }
 
     @Test
     void problemsSortByTitleCaseInsensitively() {
-        List<Map<String, Object>> raw = new ArrayList<>(List.of(
-                map("title", "problem B"), map("title", "Problem a"), map("title", "Problem C")));
+        List<ApiModels.Problem> raw = new ArrayList<>(List.of(
+                problem("problem B", null, null, null),
+                problem("Problem a", null, null, null),
+                problem("Problem C", null, null, null)));
         raw.sort(ApiTree.byTitle());
         assertEquals(List.of("Problem a", "problem B", "Problem C"),
-                raw.stream().map(m -> m.get("title")).toList());
+                raw.stream().map(ApiModels.Problem::title).toList());
     }
 
     // ── course-zone dates ────────────────────────────────────────────────────
@@ -141,35 +142,30 @@ class ApiTreeTest {
 
     @Test
     void groupRowGainsTheMemberColumn() {
-        Object[] row = ApiTree.historyRow(map(
-                "submittedAt", "2026-09-10T12:00:00Z", "submittedBy", "Ada Lovelace",
-                "fileName", "dfa.jff", "status", "COMPLETED", "correct", true, "feedback", "ok"),
-                true, WHEN);
+        Object[] row = ApiTree.historyRow(
+                submission("2026-09-10T12:00:00Z", "Ada Lovelace", "COMPLETED", true), true, WHEN);
         assertArrayEquals(new Object[]{
                 "@2026-09-10T12:00:00Z", "Ada Lovelace", "dfa.jff", "COMPLETED", "Correct", "ok"}, row);
     }
 
     @Test
     void individualRowHasNoMemberColumn() {
-        Object[] row = ApiTree.historyRow(map(
-                "submittedAt", "2026-09-10T12:00:00Z",
-                "fileName", "dfa.jff", "status", "COMPLETED", "correct", false),
-                false, WHEN);
+        Object[] row = ApiTree.historyRow(
+                submission("2026-09-10T12:00:00Z", null, "COMPLETED", false), false, WHEN);
         assertArrayEquals(new Object[]{
                 "@2026-09-10T12:00:00Z", "dfa.jff", "COMPLETED", "Incorrect", ""}, row);
     }
 
     @Test
     void queuedRowSaysNotEvaluatedYet() {
-        Object[] row = ApiTree.historyRow(map("status", "PENDING"), false, WHEN);
-        assertEquals("Not evaluated yet", row[3]);
-        Object[] processing = ApiTree.historyRow(map("status", "PROCESSING"), false, WHEN);
-        assertEquals("Not evaluated yet", processing[3]);
+        assertEquals("Not evaluated yet",
+                ApiTree.historyRow(submission(null, null, "PENDING", null), false, WHEN)[3]);
+        assertEquals("Not evaluated yet",
+                ApiTree.historyRow(submission(null, null, "PROCESSING", null), false, WHEN)[3]);
     }
 
     @Test
     void finishedRowWithoutVerdictLeavesResultBlank() {
-        Object[] row = ApiTree.historyRow(map("status", "FAILED"), false, WHEN);
-        assertEquals("", row[3]);
+        assertEquals("", ApiTree.historyRow(submission(null, null, "FAILED", null), false, WHEN)[3]);
     }
 }

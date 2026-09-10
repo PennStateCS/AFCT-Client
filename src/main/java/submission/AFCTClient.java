@@ -34,17 +34,12 @@ public class AFCTClient {
      */
     private volatile PinningTrustManager lastTrust;
 
-    /** Cache of problems per assignment, populated by getAssignments() (problems come embedded). */
-    private final Map<String, List<Map<String, Object>>> assignmentProblemsCache = new java.util.HashMap<>();
-
     /**
-     * The course's IANA timezone and the server's clock, as of the last getAssignments() call.
-     * dueDate/lateCutoff are UTC on the wire — callers should render them in this timezone —
-     * and serverTime lets callers compare against the server's clock instead of the local
-     * machine's, which may be skewed or in a different zone.
+     * The server's clock as of the last getTree() call. Callers compare due dates
+     * against this instead of the local machine's clock, which may be skewed or in
+     * a different zone.
      */
-    private String lastAssignmentsTimezone;
-    private Instant lastAssignmentsServerTime;
+    private Instant lastServerTime;
 
     /** @throws IllegalArgumentException when the address cannot be parsed. */
     public AFCTClient(String baseUrl) {
@@ -75,7 +70,6 @@ public class AFCTClient {
      * Logs in via POST /api/client/v1/auth/login and stores the bearer token.
      * The token has a sliding 30-day expiry; every authenticated call renews it.
      */
-    @SuppressWarnings("unchecked")
     public String login(String email, String password) throws IOException {
         URL url = new URL(baseUrl + API_PREFIX + "/auth/login");
         HttpURLConnection conn = openConnection(url);
@@ -108,8 +102,8 @@ public class AFCTClient {
             throw httpError("POST " + API_PREFIX + "/auth/login", status, body);
         }
 
-        Map<String, Object> res = parseJson(body, Map.class);
-        this.token = (String) res.get("token");
+        ApiModels.LoginResponse res = parseJson(body, ApiModels.LoginResponse.class);
+        this.token = res.token();
         if (this.token == null || this.token.isBlank()) {
             throw new IOException("Login succeeded but no token was returned.");
         }
@@ -122,7 +116,7 @@ public class AFCTClient {
      * fails here at the login window rather than at the first submission.
      * Returns the user object on success, null when the server rejects the token.
      */
-    public Map<String, Object> loginWithToken(String tokenValue) throws IOException {
+    public ApiModels.User loginWithToken(String tokenValue) throws IOException {
         this.token = tokenValue;
         // checkToken clears this.token on a 401, so a rejected token leaves the
         // client unauthenticated rather than holding a value the server refuses.
@@ -173,8 +167,7 @@ public class AFCTClient {
      * token, completing the loopback flow that BrowserSignIn starts.
      * Returns the user object.
      */
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> exchangeCode(String code, String codeVerifier, String redirectUri) throws IOException {
+    public ApiModels.User exchangeCode(String code, String codeVerifier, String redirectUri) throws IOException {
         URL url = new URL(baseUrl + API_PREFIX + "/auth/exchange");
         HttpURLConnection conn = openConnection(url);
         conn.setConnectTimeout(connectTimeoutMs);
@@ -205,12 +198,12 @@ public class AFCTClient {
             throw httpError("POST " + API_PREFIX + "/auth/exchange", status, body);
         }
 
-        Map<String, Object> res = parseJson(body, Map.class);
-        this.token = (String) res.get("token");
+        ApiModels.LoginResponse res = parseJson(body, ApiModels.LoginResponse.class);
+        this.token = res.token();
         if (this.token == null || this.token.isBlank()) {
             throw new IOException("Sign-in succeeded but no token was returned.");
         }
-        return (Map<String, Object>) res.get("user");
+        return res.user();
     }
 
     /** The bearer token currently held, so "stay signed in" can store it. */
@@ -248,8 +241,7 @@ public class AFCTClient {
      * Checks whether the stored token is still valid via GET /auth/me.
      * Returns the user object on success, null if the token is expired/revoked.
      */
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> checkToken() throws IOException {
+    public ApiModels.User checkToken() throws IOException {
         if (!isAuthenticated()) return null;
         URL url = new URL(baseUrl + API_PREFIX + "/auth/me");
         HttpURLConnection conn = openGet(url);
@@ -262,8 +254,7 @@ public class AFCTClient {
         if (status != 200) {
             throw httpError("GET " + API_PREFIX + "/auth/me", status, body);
         }
-        Map<String, Object> res = parseJson(body, Map.class);
-        return (Map<String, Object>) res.get("user");
+        return parseJson(body, ApiModels.MeResponse.class).user();
     }
 
     private static String deviceName() {
@@ -279,120 +270,16 @@ public class AFCTClient {
     }
 
     // ================================================================
-    // Courses
+    // Course tree
     // ================================================================
-    /** Courses visible to the signed-in user (derived from the token — no email needed). */
-    @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> getCourses() throws IOException {
-        ensureAuth();
-        URL url = new URL(baseUrl + API_PREFIX + "/courses");
-        HttpURLConnection conn = openGet(url);
-        int status = conn.getResponseCode();
-        String body = readBody(conn);
-
-        if (status == 401) {
-            throw handleUnauthorized("GET " + API_PREFIX + "/courses");
-        }
-        if (status != 200) {
-            throw httpError("GET " + API_PREFIX + "/courses", status, body);
-        }
-        // Response shape: { "courses": [ ... ] }
-        Map<String, Object> wrapper = parseJson(body, Map.class);
-        List<Map<String, Object>> courses = (List<Map<String, Object>>) wrapper.get("courses");
-        return courses != null ? courses : new java.util.ArrayList<>();
-    }
-
-    // ================================================================
-    // Assignments
-    // ================================================================
-    @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> getAssignments(String courseId) throws IOException {
-        ensureAuth();
-        URL url = new URL(baseUrl + API_PREFIX + "/courses/" + courseId + "/assignments");
-        HttpURLConnection conn = openGet(url);
-        int status = conn.getResponseCode();
-        String body = readBody(conn);
-
-        if (status == 401) {
-            throw handleUnauthorized("GET " + API_PREFIX + "/courses/{id}/assignments");
-        }
-        if (status != 200) {
-            throw httpError("GET " + API_PREFIX + "/courses/{id}/assignments", status, body);
-        }
-
-        // Response shape: { timezone, serverTime, assignments: [ { id, title, description,
-        //   dueDate, allowLateSubmissions, lateCutoff, problems: [...] } ] }
-        Map<String, Object> wrapper = parseJson(body, Map.class);
-        List<Map<String, Object>> assignments = (List<Map<String, Object>>) wrapper.get("assignments");
-        if (assignments == null) assignments = new java.util.ArrayList<>();
-
-        // Cache the course timezone and the server's clock so callers can render dueDate/
-        // lateCutoff correctly and run "is this upcoming" checks without trusting the
-        // local machine's clock.
-        Object tz = wrapper.get("timezone");
-        this.lastAssignmentsTimezone = tz != null ? String.valueOf(tz) : null;
-        Object serverTimeStr = wrapper.get("serverTime");
-        if (serverTimeStr != null) {
-            try {
-                this.lastAssignmentsServerTime = Instant.parse(String.valueOf(serverTimeStr));
-            } catch (Exception e) {
-                this.lastAssignmentsServerTime = null;
-            }
-        } else {
-            this.lastAssignmentsServerTime = null;
-        }
-
-        // Cache embedded problems so getProblems() can serve them without a second network call.
-        // "solved" = full marks on the problem (grade == maxPoints).
-        assignmentProblemsCache.clear();
-        for (Map<String, Object> a : assignments) {
-            String assignmentId = String.valueOf(a.get("id"));
-            List<Map<String, Object>> problems = (List<Map<String, Object>>) a.get("problems");
-            if (problems != null) {
-                List<Map<String, Object>> enriched = new java.util.ArrayList<>();
-                for (Map<String, Object> p : problems) {
-                    Map<String, Object> copy = new java.util.HashMap<>(p);
-                    Object grade = copy.get("grade");
-                    Object maxPoints = copy.get("maxPoints");
-                    boolean solved = grade instanceof Number && maxPoints instanceof Number
-                            && ((Number) grade).doubleValue() >= ((Number) maxPoints).doubleValue();
-                    copy.put("solved", solved);
-                    enriched.add(copy);
-                }
-                assignmentProblemsCache.put(assignmentId, enriched);
-            }
-        }
-
-        return assignments;
-    }
-
     /**
-     * The course's IANA timezone as of the last getAssignments() call, or null if not
-     * yet fetched. Use this to render dueDate/lateCutoff (which arrive as UTC).
+     * The caller's entire course tree in one call: every visible course, each with
+     * its assignments, each assignment with its problems. Everything is already
+     * resolved per student server-side (published/visible only, effective dates
+     * with extensions applied, grant-adjusted submission caps). Also caches the
+     * server clock for "is this upcoming" checks.
      */
-    public String getLastAssignmentsTimezone() {
-        return lastAssignmentsTimezone;
-    }
-
-    /**
-     * The server's clock as of the last getAssignments() call, or null if not yet
-     * fetched. Prefer this over Instant.now()/LocalDateTime.now() for "is this due
-     * date upcoming" checks — the docs call this out specifically so callers don't
-     * have to trust the local machine's clock.
-     */
-    public Instant getLastAssignmentsServerTime() {
-        return lastAssignmentsServerTime;
-    }
-
-    /**
-     * The caller's entire course tree in one call: every visible course, each with its
-     * assignments, each assignment with its problems. Lets the UI load once and filter
-     * locally instead of fetching per course. Returns the raw wrapper
-     * { serverTime, courses: [ { ..., assignments: [ { ..., problems: [...] } ] } ] };
-     * also caches the server clock for "is this upcoming" checks.
-     */
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> getTree() throws IOException {
+    public ApiModels.Tree getTree() throws IOException {
         ensureAuth();
         URL url = new URL(baseUrl + API_PREFIX + "/tree");
         HttpURLConnection conn = openGet(url);
@@ -406,34 +293,18 @@ public class AFCTClient {
             throw httpError("GET " + API_PREFIX + "/tree", status, body);
         }
 
-        Map<String, Object> wrapper = parseJson(body, Map.class);
-        if (wrapper == null) wrapper = new java.util.HashMap<>();
-
-        // Cache the server's clock so "upcoming" checks don't trust the local machine.
-        Object serverTimeStr = wrapper.get("serverTime");
-        if (serverTimeStr != null) {
-            try {
-                this.lastAssignmentsServerTime = Instant.parse(String.valueOf(serverTimeStr));
-            } catch (Exception e) {
-                this.lastAssignmentsServerTime = null;
-            }
-        }
-        return wrapper;
+        ApiModels.Tree tree = parseJson(body, ApiModels.Tree.class);
+        this.lastServerTime = ApiModels.parseIsoOrNull(tree.serverTime());
+        return tree;
     }
 
-    // ================================================================
-    // Problems
-    // ================================================================
-    public List<Map<String, Object>> getProblems(String assignmentId) throws IOException {
-        ensureAuth();
-
-        // Problems arrive embedded in the assignments response; there is no separate
-        // problems endpoint in the client API. getAssignments() populates this cache.
-        List<Map<String, Object>> cached = assignmentProblemsCache.get(assignmentId);
-        if (cached != null) {
-            return cached;
-        }
-        throw new IOException("Problems not loaded yet — refresh the course to reload assignments.");
+    /**
+     * The server's clock as of the last getTree() call, or null if not yet
+     * fetched. Prefer this over Instant.now() for "is this due date upcoming"
+     * checks, so the answer does not depend on the local machine's clock.
+     */
+    public Instant getLastServerTime() {
+        return lastServerTime;
     }
 
     // ================================================================
@@ -444,8 +315,7 @@ public class AFCTClient {
      * Returns { submissionId, status: "PENDING" } on 202 — poll {@link #getSubmission}
      * for the result. courseId is derived server-side from the assignment.
      */
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> createSubmission(String courseId, String assignmentId, String problemId, File file) throws IOException {
+    public ApiModels.CreateResult createSubmission(String courseId, String assignmentId, String problemId, File file) throws IOException {
         ensureAuth();
 
         String boundary = "----JavaBoundary" + System.currentTimeMillis();
@@ -481,16 +351,14 @@ public class AFCTClient {
         if (status < 200 || status >= 300) {
             throw httpError("POST " + API_PREFIX + "/submissions", status, body);
         }
-        return parseJson(body, Map.class);
+        return parseJson(body, ApiModels.CreateResult.class);
     }
 
     /**
-     * Fetches one submission's result: { id, status, correct, grade, feedback }.
-     * status moves PENDING → PROCESSING → COMPLETED | FAILED; correct/grade/feedback
-     * are null until evaluation finishes.
+     * Fetches one submission's result. status moves PENDING -> PROCESSING ->
+     * COMPLETED | FAILED; correct/grade/feedback are null until evaluation finishes.
      */
-    @SuppressWarnings("unchecked")
-    public Map<String, Object> getSubmission(String submissionId) throws IOException {
+    public ApiModels.Submission getSubmission(String submissionId) throws IOException {
         ensureAuth();
         URL url = new URL(baseUrl + API_PREFIX + "/submissions/" + submissionId);
         HttpURLConnection conn = openGet(url);
@@ -502,16 +370,15 @@ public class AFCTClient {
         if (status != 200) {
             throw httpError("GET " + API_PREFIX + "/submissions/{id}", status, body);
         }
-        return parseJson(body, Map.class);
+        return parseJson(body, ApiModels.Submission.class);
     }
 
     /**
-     * The caller's submission history for one problem, newest first. Each entry:
-     * { id, status, correct, submittedAt, fileName, feedback }. `feedback` (the
-     * evaluator witness) is null while the submission is still queued/processing.
+     * The submission history for one problem, newest first. On a group problem this
+     * is the group's shared attempts, with submittedBy naming who made each one.
+     * `feedback` (the evaluator witness) is null while queued/processing.
      */
-    @SuppressWarnings("unchecked")
-    public List<Map<String, Object>> getSubmissions(String assignmentId, String problemId) throws IOException {
+    public List<ApiModels.Submission> getSubmissions(String assignmentId, String problemId) throws IOException {
         ensureAuth();
         String query = "?assignmentId=" + java.net.URLEncoder.encode(assignmentId, StandardCharsets.UTF_8)
                 + "&problemId=" + java.net.URLEncoder.encode(problemId, StandardCharsets.UTF_8);
@@ -525,8 +392,7 @@ public class AFCTClient {
         if (status != 200) {
             throw httpError("GET " + API_PREFIX + "/submissions", status, body);
         }
-        Map<String, Object> wrapper = parseJson(body, Map.class);
-        List<Map<String, Object>> subs = (List<Map<String, Object>>) wrapper.get("submissions");
+        List<ApiModels.Submission> subs = parseJson(body, ApiModels.SubmissionList.class).submissions();
         return subs != null ? subs : new java.util.ArrayList<>();
     }
 
@@ -535,7 +401,7 @@ public class AFCTClient {
      * or the timeout elapses. Returns the last submission state seen.
      * Blocking — call from a background thread.
      */
-    public Map<String, Object> waitForResult(String submissionId, Duration timeout) throws IOException {
+    public ApiModels.Submission waitForResult(String submissionId, Duration timeout) throws IOException {
         return waitForResult(submissionId, timeout, null);
     }
 
@@ -543,14 +409,14 @@ public class AFCTClient {
      * Same as {@link #waitForResult(String, Duration)} but reports every polled state
      * to {@code onUpdate} (called on the polling thread).
      */
-    public Map<String, Object> waitForResult(String submissionId, Duration timeout,
-                                             java.util.function.Consumer<Map<String, Object>> onUpdate) throws IOException {
+    public ApiModels.Submission waitForResult(String submissionId, Duration timeout,
+                                              java.util.function.Consumer<ApiModels.Submission> onUpdate) throws IOException {
         Instant deadline = Instant.now().plus(timeout);
         long delayMs = 1000;
-        Map<String, Object> sub = getSubmission(submissionId);
+        ApiModels.Submission sub = getSubmission(submissionId);
         while (Instant.now().isBefore(deadline)) {
             if (onUpdate != null) onUpdate.accept(sub);
-            String status = String.valueOf(sub.get("status"));
+            String status = sub.status();
             if ("COMPLETED".equals(status) || "FAILED".equals(status)) {
                 return sub;
             }

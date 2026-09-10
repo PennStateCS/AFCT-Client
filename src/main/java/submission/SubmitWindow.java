@@ -140,9 +140,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // The whole course tree, fetched once (GET /api/client/v1/tree) and cached so the tree
     // builds and re-filters locally without more network calls. The lazy expanders read
     // their children from these maps; a filter toggle rebuilds the tree from them instantly.
-    private java.util.List<Map<String, Object>> treeCourseList = new java.util.ArrayList<>();
-    private final Map<String, List<Map<String, Object>>> treeAssignmentsByCourse = new java.util.HashMap<>();
-    private final Map<String, List<Map<String, Object>>> treeProblemsByAssignment = new java.util.HashMap<>();
+    private java.util.List<ApiModels.Course> treeCourseList = new java.util.ArrayList<>();
+    private final Map<String, List<ApiModels.Assignment>> treeAssignmentsByCourse = new java.util.HashMap<>();
+    private final Map<String, List<ApiModels.Problem>> treeProblemsByAssignment = new java.util.HashMap<>();
 
     public SubmitWindow(Environment environment) {
         super(baseTitle);
@@ -1254,9 +1254,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         final String assignmentId = selectedAssignment.id;
         final String problemId = problem.id;
 
-        new SwingWorker<List<Map<String, Object>>, Void>() {
+        new SwingWorker<List<ApiModels.Submission>, Void>() {
             @Override
-            protected List<Map<String, Object>> doInBackground() throws Exception {
+            protected List<ApiModels.Submission> doInBackground() throws Exception {
                 AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                 if (client == null) return null;
                 return client.getSubmissions(assignmentId, problemId);
@@ -1266,7 +1266,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             protected void done() {
                 if (seq != historyRequestSeq.get()) return; // a newer selection superseded this
                 try {
-                    List<Map<String, Object>> subs = get();
+                    List<ApiModels.Submission> subs = get();
                     if (subs == null) {
                         setHistoryStatus("Sign in to view submission history.", false);
                         return;
@@ -1280,7 +1280,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     }
 
     /** Fills the history table from the API rows (newest first) and updates the status line. */
-    private void populateSubmissionHistory(List<Map<String, Object>> subs) {
+    private void populateSubmissionHistory(List<ApiModels.Submission> subs) {
         // A group problem gains a "Group Member" column showing who submitted.
         boolean group = selectedAssignment != null && selectedAssignment.isGroup;
         submissionHistoryModel.setRowCount(0);
@@ -1297,7 +1297,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
             autoSizeSubmissionHistoryColumns();
             return;
         }
-        for (Map<String, Object> s : subs) {
+        for (ApiModels.Submission s : subs) {
             submissionHistoryModel.addRow(ApiTree.historyRow(s, group, this::formatDueDate));
         }
         int n = subs.size();
@@ -1506,11 +1506,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         setBusy(true, "Loading courses…");
 
-        new SwingWorker<Map<String, Object>, Void>() {
+        new SwingWorker<ApiModels.Tree, Void>() {
             private String err;
 
             @Override
-            protected Map<String, Object> doInBackground() {
+            protected ApiModels.Tree doInBackground() {
                 try {
                     AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) {
@@ -1534,7 +1534,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         return;
                     }
 
-                    Map<String, Object> wrapper = get();
+                    ApiModels.Tree wrapper = get();
                     if (wrapper == null) {
                         clearRestore();
                         setStatus(false, "Unable to load courses.");
@@ -1553,30 +1553,22 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         }.execute();
     }
 
-    /** Indexes the fetched tree ({ courses: [{ assignments: [{ problems: [] }] }] }) into
-     *  the per-course / per-assignment caches the lazy expanders and filters read from. */
-    @SuppressWarnings("unchecked")
-    private void cacheTree(Map<String, Object> wrapper) {
+    /** Indexes the fetched tree into the per-course / per-assignment caches the lazy
+     *  expanders and filters read from. */
+    private void cacheTree(ApiModels.Tree tree) {
         treeCourseList = new java.util.ArrayList<>();
         treeAssignmentsByCourse.clear();
         treeProblemsByAssignment.clear();
 
-        Object coursesObj = wrapper.get("courses");
-        List<Map<String, Object>> courses =
-                (coursesObj instanceof List) ? (List<Map<String, Object>>) coursesObj : new java.util.ArrayList<>();
-        for (Map<String, Object> c : courses) {
+        if (tree.courses() == null) return;
+        for (ApiModels.Course c : tree.courses()) {
             treeCourseList.add(c);
-            String courseId = String.valueOf(c.get("id"));
-            Object aObj = c.get("assignments");
-            List<Map<String, Object>> assignments =
-                    (aObj instanceof List) ? (List<Map<String, Object>>) aObj : new java.util.ArrayList<>();
-            treeAssignmentsByCourse.put(courseId, assignments);
-            for (Map<String, Object> a : assignments) {
-                String aid = String.valueOf(a.get("id"));
-                Object pObj = a.get("problems");
-                List<Map<String, Object>> problems =
-                        (pObj instanceof List) ? (List<Map<String, Object>>) pObj : new java.util.ArrayList<>();
-                treeProblemsByAssignment.put(aid, problems);
+            List<ApiModels.Assignment> assignments =
+                    c.assignments() != null ? c.assignments() : java.util.List.of();
+            treeAssignmentsByCourse.put(c.id(), assignments);
+            for (ApiModels.Assignment a : assignments) {
+                treeProblemsByAssignment.put(a.id(),
+                        a.problems() != null ? a.problems() : java.util.List.of());
             }
         }
     }
@@ -1587,7 +1579,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         clearTree();
         clearSelectionState();
 
-        for (Map<String, Object> c : treeCourseList) {
+        for (ApiModels.Course c : treeCourseList) {
             CourseItem course = ApiTree.course(c);
             DefaultMutableTreeNode courseNode = new DefaultMutableTreeNode(course);
             // Placeholder so the node shows an expand handle; children build from cache on expand.
@@ -1632,15 +1624,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         setBusy(true, "Loading assignments…");
 
-        new SwingWorker<List<Map<String, Object>>, Void>() {
+        new SwingWorker<List<ApiModels.Assignment>, Void>() {
             private String err;
-            // The server's clock as of this call (from the assignments response), used
-            // instead of the local machine's clock so "upcoming" isn't thrown off by
-            // clock skew or timezone differences. Falls back to Instant.now() if unset.
+            // The server's clock as of the tree fetch, used instead of the local
+            // machine's clock so "upcoming" isn't thrown off by clock skew or
+            // timezone differences. Falls back to Instant.now() if unset.
             private java.time.Instant serverNow;
 
             @Override
-            protected List<Map<String, Object>> doInBackground() {
+            protected List<ApiModels.Assignment> doInBackground() {
                 try {
                     AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) {
@@ -1648,7 +1640,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         return null;
                     }
                     // Served from the cached tree (fetched once); the server clock came with it.
-                    serverNow = client.getLastAssignmentsServerTime();
+                    serverNow = client.getLastServerTime();
                     return new java.util.ArrayList<>(
                             treeAssignmentsByCourse.getOrDefault(course.id, java.util.Collections.emptyList()));
                 } catch (Exception ex) {
@@ -1665,7 +1657,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         return;
                     }
 
-                    List<Map<String, Object>> raw = get();
+                    List<ApiModels.Assignment> raw = get();
                     if (raw == null) {
                         setStatus(false, "Unable to load assignments.");
                         return;
@@ -1683,7 +1675,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         // Show assignments earliest-due first; missing/unparseable dates sort last.
                         raw.sort(ApiTree.byDueDateNullsLast());
 
-                        for (Map<String, Object> a : raw) {
+                        for (ApiModels.Assignment a : raw) {
                             // The upcoming filter compares against the server's clock, not
                             // the local machine's.
                             if (upcomingOnly && !ApiTree.isUpcoming(a, now)) {
@@ -1743,11 +1735,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         setBusy(true, "Loading problems…");
 
-        new SwingWorker<List<Map<String, Object>>, Void>() {
+        new SwingWorker<List<ApiModels.Problem>, Void>() {
             private String err;
 
             @Override
-            protected List<Map<String, Object>> doInBackground() {
+            protected List<ApiModels.Problem> doInBackground() {
                 try {
                     AFCTClient client = Globals.sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) {
@@ -1771,7 +1763,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         return;
                     }
 
-                    List<Map<String, Object>> raw = get();
+                    List<ApiModels.Problem> raw = get();
                     if (raw == null) {
                         setStatus(false, "Unable to load problems.");
                         return;
@@ -1788,7 +1780,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         // Show problems in alphabetical order by title (case-insensitive).
                         raw.sort(ApiTree.byTitle());
 
-                        for (Map<String, Object> p : raw) {
+                        for (ApiModels.Problem p : raw) {
                             ProblemItem problem = ApiTree.problem(p);
 
                             // Skip if filtering for unsolved and this is solved
@@ -2008,23 +2000,23 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         log("SUBMIT_START", "course=" + qs.courseName + " assignment=" + qs.assignmentName
                 + " problem=" + qs.problemName + " file=" + qs.file.getName());
 
-        new SwingWorker<Map<String, Object>, String>() {
+        new SwingWorker<ApiModels.Submission, String>() {
             private String err;
             private volatile boolean uploadAccepted = false;
 
             @Override
-            protected Map<String, Object> doInBackground() {
+            protected ApiModels.Submission doInBackground() {
                 try {
                     AFCTClient client = sessionHandler.requireAuthenticated(Universe.frameForEnvironment(environment));
                     if (client == null) { err = "Login cancelled."; return null; }
 
                     // Upload (202 Accepted), then poll for the graded result
-                    Map<String, Object> accepted = client.createSubmission(qs.courseId, qs.assignmentId, qs.problemId, qs.file);
-                    if (accepted == null || accepted.get("submissionId") == null) {
+                    ApiModels.CreateResult accepted = client.createSubmission(qs.courseId, qs.assignmentId, qs.problemId, qs.file);
+                    if (accepted == null || accepted.submissionId() == null) {
                         err = "No submission id returned by server.";
                         return null;
                     }
-                    String submissionId = String.valueOf(accepted.get("submissionId"));
+                    String submissionId = accepted.submissionId();
                     log("SUBMIT_ACCEPTED", "submissionId=" + submissionId + " problem=" + qs.problemName);
                     uploadAccepted = true;
 
@@ -2063,22 +2055,20 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                         }
                         return;
                     }
-                    Map<String, Object> result = get();
+                    ApiModels.Submission result = get();
                     if (result == null) {
                         log("SUBMIT_FAIL", "null response");
                         setStatus(false, "Submission failed (" + qs.problemName + ") — no response from server.");
                         return;
                     }
 
-                    String id = String.valueOf(result.getOrDefault("id", "?"));
-                    String status = String.valueOf(result.get("status"));
+                    String id = result.id() != null ? result.id() : "?";
+                    String status = result.status();
                     log("SUBMIT_RESULT", "submissionId=" + id + " status=" + status
                             + " problem=" + qs.problemName);
 
                     if ("COMPLETED".equals(status)) {
-                        boolean correct = Boolean.TRUE.equals(result.get("correct"));
-                        Object feedback = result.get("feedback");
-                        if (correct) {
+                        if (Boolean.TRUE.equals(result.correct())) {
                             setStatus(true, "Correct! \"" + qs.problemName + "\" accepted (id: " + id + ")");
                             qs.problemItem.solved = true;
                             if (qs.problemNode != null) {
@@ -2086,10 +2076,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                                 model.nodeChanged(qs.problemNode);
                             }
                         } else {
-//                            String fb = (feedback != null && !"null".equals(String.valueOf(feedback)))
-//                                    ? " Counterexample: " + feedback : "";
-//                            setStatus(false, "Incorrect: \"" + qs.problemName + "\"." + fb);
-                            String fb = (feedback != null && !"null".equals(String.valueOf(feedback))) ? feedback + "" : "";
+                            String fb = result.feedback() != null ? result.feedback() : "";
                             setStatus(false, "\"" + qs.problemName + "\": " + fb);
                         }
                     } else if ("FAILED".equals(status)) {
