@@ -84,8 +84,7 @@ public class LoginWindow extends JDialog {
         resultPane.setText("");
         passwordTF.setText("");
         tokenTF.setText("");
-        browserUrlTF.setText("");
-        copyUrlButton.setEnabled(false);
+        clearBrowserUrl();
         populateFromSessionState();
         toggleInputs(true);
         setLocationRelativeTo(frame);
@@ -226,11 +225,14 @@ public class LoginWindow extends JDialog {
         tokenModeRadio.addActionListener(e -> applyMode());
         browserModeRadio.addActionListener(e -> applyMode());
 
-        // The account link points at whatever server the student has typed.
+        // The account link points at whatever server the student has typed, and a
+        // browser sign-in URL from an earlier attempt is for the OLD server, so it
+        // must not survive an address edit: copying it would open the consent page
+        // of a server the student is no longer signing in to.
         DocumentListener relink = new DocumentListener() {
-            public void insertUpdate(DocumentEvent e) { refreshAccountLink(); }
-            public void removeUpdate(DocumentEvent e) { refreshAccountLink(); }
-            public void changedUpdate(DocumentEvent e) { refreshAccountLink(); }
+            public void insertUpdate(DocumentEvent e) { serverChanged(); }
+            public void removeUpdate(DocumentEvent e) { serverChanged(); }
+            public void changedUpdate(DocumentEvent e) { serverChanged(); }
         };
         serverTF.getDocument().addDocumentListener(relink);
         refreshAccountLink();
@@ -239,38 +241,53 @@ public class LoginWindow extends JDialog {
     }
 
     private JPanel buildModeRow() {
-        JPanel row = new JPanel(new GridBagLayout());
-        row.setOpaque(false);
+        // The label sits above the radios, not beside them: four things in one row
+        // is what was stretching the whole dialog past the 360px card width.
+        JPanel radios = new JPanel(new GridBagLayout());
+        radios.setOpaque(false);
 
         GridBagConstraints c = new GridBagConstraints();
         c.gridy = 0;
-        c.insets = new Insets(0, 0, 0, 12);
+        c.insets = new Insets(0, 0, 0, 8);
         c.anchor = GridBagConstraints.LINE_START;
-
-        JLabel label = new JLabel("Sign in with");
-        boldFont(label);
-        label.setForeground(TEXT_DARK);
-
-        c.gridx = 0;
-        row.add(label, c);
 
         passwordModeRadio.setFocusPainted(false);
         passwordModeRadio.setOpaque(false);
-        c.gridx = 1;
-        row.add(passwordModeRadio, c);
+        c.gridx = 0;
+        radios.add(passwordModeRadio, c);
 
         tokenModeRadio.setFocusPainted(false);
         tokenModeRadio.setOpaque(false);
-        c.gridx = 2;
-        row.add(tokenModeRadio, c);
+        c.gridx = 1;
+        radios.add(tokenModeRadio, c);
 
         browserModeRadio.setFocusPainted(false);
         browserModeRadio.setOpaque(false);
-        c.gridx = 3;
+        c.gridx = 2;
         c.insets = new Insets(0, 0, 0, 0);
-        row.add(browserModeRadio, c);
+        radios.add(browserModeRadio, c);
 
-        return row;
+        return labeledPanel("Sign in with", radios);
+    }
+
+    private JPanel labeledPanel(String label, JComponent comp) {
+        JPanel p = new JPanel(new BorderLayout(0, 4));
+        p.setOpaque(false);
+        JLabel l = new JLabel(label);
+        boldFont(l);
+        l.setForeground(TEXT_DARK);
+        p.add(l, BorderLayout.NORTH);
+        p.add(comp, BorderLayout.CENTER);
+        return p;
+    }
+
+    /**
+     * A wrapping label. A plain html JLabel reports its unwrapped width as its
+     * preferred size, which is what stretches a pack()ed dialog; a body width
+     * makes it wrap at the card's width instead.
+     */
+    private static JLabel wrappedLabel(String text) {
+        return new JLabel("<html><body style='width:330px'>" + text + "</body></html>");
     }
 
     private JPanel buildBrowserCard() {
@@ -284,9 +301,9 @@ public class LoginWindow extends JDialog {
         c.weightx = 1;
         c.insets = new Insets(6, 0, 2, 0);
 
-        JLabel intro = new JLabel("<html>Click Login and approve the sign-in in your web browser."
+        JLabel intro = wrappedLabel("Click Login and approve the sign-in in your web browser."
                 + " Use this if you sign in through your university."
-                + " On some servers the browser may warn about the certificate first.</html>");
+                + " On some servers the browser may warn about the certificate first.");
         card.add(intro, c);
 
         staySignedInBrowserCheckBox.setFocusPainted(false);
@@ -300,6 +317,8 @@ public class LoginWindow extends JDialog {
         card.add(urlLabel, c);
 
         browserUrlTF.setEditable(false);
+        // Columns cap the preferred width; the URL scrolls within the field.
+        browserUrlTF.setColumns(24);
         c.gridy++;
         c.insets = new Insets(0, 0, 2, 0);
         card.add(browserUrlTF, c);
@@ -382,7 +401,7 @@ public class LoginWindow extends JDialog {
         linkLine.setAlignmentX(Component.LEFT_ALIGNMENT);
         hint.add(linkLine);
 
-        JLabel ltiHint = new JLabel("If you open AFCT from Canvas or another LMS, sign in this way.");
+        JLabel ltiHint = wrappedLabel("If you open AFCT from Canvas or another LMS, sign in this way.");
         ltiHint.setAlignmentX(Component.LEFT_ALIGNMENT);
         hint.add(ltiHint);
 
@@ -398,11 +417,24 @@ public class LoginWindow extends JDialog {
                 : tokenModeRadio.isSelected() ? CARD_TOKEN
                 : CARD_PASSWORD;
         ((CardLayout) modeCards.getLayout()).show(modeCards, card);
+        // A shown URL belongs to a finished or cancelled flow; its state and PKCE
+        // pair are dead, so it must not be copied later.
+        clearBrowserUrl();
         // Show password and Remember Me only make sense for the password form.
         boolean passwordMode = passwordModeRadio.isSelected();
         showPasswordCheckBox.setEnabled(passwordMode);
         rememberMeCheckBox.setEnabled(passwordMode);
         pack();
+    }
+
+    private void serverChanged() {
+        refreshAccountLink();
+        clearBrowserUrl();
+    }
+
+    private void clearBrowserUrl() {
+        browserUrlTF.setText("");
+        copyUrlButton.setEnabled(false);
     }
 
     private void refreshAccountLink() {
@@ -497,6 +529,7 @@ public class LoginWindow extends JDialog {
                     Thread.sleep(100); // Brief pause so user sees status
 
                     if (browserMode) {
+                        SwingUtilities.invokeLater(() -> clearBrowserUrl());
                         publish("Waiting for you to approve the sign-in in your browser...");
                         return sessionHandler.loginWithBrowser(server, url ->
                                 SwingUtilities.invokeLater(() -> {
