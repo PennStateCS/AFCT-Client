@@ -1,7 +1,10 @@
 package submission;
 
+import javax.swing.BorderFactory;
+import javax.swing.JButton;
 import javax.swing.UIManager;
 import java.awt.Color;
+import java.awt.Font;
 
 /**
  * The one palette for the AFCT windows (login and Submission Center). These used
@@ -23,4 +26,26 @@ final class Theme {
     static final Color DANGER_TEXT  = new Color(0xB9, 0x1C, 0x1C);
 
     private Theme() {}
+
+    /** Solid blue primary action button. */
+    static void stylePrimaryButton(JButton b) {
+        b.setBackground(ACCENT);
+        b.setForeground(Color.WHITE);
+        b.setFocusPainted(false);
+        b.setOpaque(true);
+        b.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
+        b.setFont(b.getFont().deriveFont(Font.BOLD));
+    }
+
+    /** Light-blue tinted button that complements the solid primary blue. */
+    static void styleTintedButton(JButton b) {
+        b.setBackground(SELECTION_BG);
+        b.setForeground(ACCENT);
+        b.setFocusPainted(false);
+        b.setOpaque(true);
+        b.setFont(b.getFont().deriveFont(Font.BOLD));
+        b.setBorder(BorderFactory.createCompoundBorder(
+                BorderFactory.createLineBorder(new Color(0xC7, 0xD7, 0xFB)),
+                BorderFactory.createEmptyBorder(5, 12, 5, 12)));
+    }
 }

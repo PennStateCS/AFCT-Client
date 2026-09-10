@@ -51,9 +51,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private JButton logoutBtn;
     private JButton submitBtn;
 
-    private JTextField fileTF;
-    private JButton browseBtn;
-    private JButton useOpenFileBtn;
+    private SubmissionFilePanel filePanel;
     private JLabel statusLabel;
 
     // Assignment details display
@@ -64,12 +62,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private JTextPane problemDetailsPane;
     private JScrollPane problemDetailsScroll;
 
-    // Submission history (for the selected problem)
-    private javax.swing.table.DefaultTableModel submissionHistoryModel;
-    private JTable submissionHistoryTable;
-    private final HistoryCellRenderer historyCellRenderer = new HistoryCellRenderer();
-    private JScrollPane historyScrollPane; // hidden while there are no submissions
-    private JLabel submissionHistoryStatus; // "No submissions", "Loading…", or an error
+    // Submission history (for the selected problem); see HistoryPanel.
+    private HistoryPanel historyPanel;
     private java.util.concurrent.atomic.AtomicInteger historyRequestSeq =
             new java.util.concurrent.atomic.AtomicInteger();
 
@@ -88,10 +82,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // State
     // ===============================
     private volatile boolean loading = false;
-    private File selectedFile = null;
-    // True once the user has browsed to a file, so the display stops auto-following the
-    // editor's open file. "Use open file" clears it to snap back to the open document.
-    private boolean fileManuallyChosen = false;
 
     // Refresh cooldown
     private long lastRefreshMs = 0;
@@ -106,8 +96,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     private static final DateTimeFormatter DATE_FMT  = DateTimeFormatter.ofPattern("yyyy-MM-dd");
     private static final Path LOG_DIR = Paths.get(System.getProperty("user.dir"), "logs");
 
-    // The history table's current column set (group problems add Group Member).
-    private java.util.List<HistoryColumn> currentHistoryColumns = HistoryColumn.forGroup(false);
 
     // What is selected in the tree, derived in one place; see Selection.
     private Selection selection = Selection.empty();
@@ -131,7 +119,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         wireEvents();
 
         // Listen for file changes in the environment to update filename display
-        environment.addFileChangeListener(e -> updateCurrentFileDisplay());
+        environment.addFileChangeListener(e -> filePanel.updateFromEditor());
 
         addWindowListener(new WindowAdapter() {
             @Override
@@ -172,8 +160,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         refreshBtn = new JButton("Refresh");
         logoutBtn = new JButton("Logout");
 
-        stylePrimaryButton(refreshBtn);
-        stylePrimaryButton(logoutBtn);
+        Theme.stylePrimaryButton(refreshBtn);
+        Theme.stylePrimaryButton(logoutBtn);
 
         Globals.setPointerCursor(refreshBtn);
         Globals.setPointerCursor(logoutBtn);
@@ -209,7 +197,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     private JComponent buildTreePanel() {
         JPanel left = new CardPanel(new BorderLayout(10, 10));
-        left.setBorder(cardBorder());
+        left.setBorder(CardPanel.cardBorder());
 
         // Filter panel at top
         JPanel filterPanel = new JPanel();
@@ -219,7 +207,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         JPanel filterHeaderRow = new JPanel(new FlowLayout(FlowLayout.LEFT, 5, 2));
         filterHeaderRow.setOpaque(false);
-        filterHeaderRow.add(sectionLabel("Filters"));
+        filterHeaderRow.add(CardPanel.sectionLabel("Filters"));
         filterPanel.add(filterHeaderRow);
 
         // Assignment / Problem filters in a shared grid so the columns line up.
@@ -349,7 +337,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     /** A titled card holding one read-only HTML details pane; the two details cards are twins. */
     private JPanel buildDetailsCard(String title, JTextPane pane, JScrollPane scroll, String placeholder) {
         JPanel card = new CardPanel(new GridBagLayout());
-        card.setBorder(cardBorder());
+        card.setBorder(CardPanel.cardBorder());
 
         GridBagConstraints c = new GridBagConstraints();
         c.gridx = 0;
@@ -358,7 +346,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         c.fill = GridBagConstraints.HORIZONTAL;
         c.anchor = GridBagConstraints.WEST;
         c.insets = new Insets(8, 10, 0, 10);
-        card.add(sectionLabel(title), c);
+        card.add(CardPanel.sectionLabel(title), c);
 
         c.gridy = 1;
         c.weighty = 1;
@@ -397,81 +385,13 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     }
 
     private JComponent buildHistoryCard() {
-        JPanel historyPanel = new CardPanel(new BorderLayout(0, 4));
-        // Same inner margin as the assignment/problem panels (which inset their content 8,10,8,10).
-        historyPanel.setBorder(BorderFactory.createEmptyBorder(12, 14, 12, 14));
-
-        submissionHistoryModel = new javax.swing.table.DefaultTableModel(
-                HistoryColumn.titles(currentHistoryColumns), 0) {
-            @Override
-            public boolean isCellEditable(int r, int col) { return false; }
-        };
-        submissionHistoryTable = new JTable(submissionHistoryModel);
-        submissionHistoryTable.setFillsViewportHeight(true);
-        submissionHistoryTable.getTableHeader().setReorderingAllowed(false);
-        submissionHistoryTable.setRowHeight(28);
-        submissionHistoryTable.setAutoResizeMode(JTable.AUTO_RESIZE_ALL_COLUMNS);
-        submissionHistoryTable.setBackground(Theme.CARD_BG);
-        submissionHistoryTable.setSelectionBackground(Theme.SELECTION_BG);
-        submissionHistoryTable.setSelectionForeground(Theme.TEXT_DARK);
-        submissionHistoryTable.setGridColor(Theme.CARD_BORDER);
-        // Mockup look: flat light header, roomier rows, light column/row separators.
-        submissionHistoryTable.setShowVerticalLines(true);
-        submissionHistoryTable.setShowHorizontalLines(true);
-        submissionHistoryTable.setIntercellSpacing(new Dimension(1, 1));
-        submissionHistoryTable.setDefaultRenderer(Object.class, historyCellRenderer);
-        submissionHistoryTable.addComponentListener(new java.awt.event.ComponentAdapter() {
-            @Override
-            public void componentResized(java.awt.event.ComponentEvent e) {
-                resizeHistoryRowsToFit();
-            }
-        });
-        applyHistoryColumnWidths();
-        JTableHeader historyHeader = submissionHistoryTable.getTableHeader();
-        historyHeader.setFont(historyHeader.getFont().deriveFont(Font.BOLD, 11f));
-        // Flat header: plain label with a light background and thin separator lines.
-        historyHeader.setDefaultRenderer(new javax.swing.table.DefaultTableCellRenderer() {
-            @Override
-            public Component getTableCellRendererComponent(JTable table, Object value,
-                    boolean isSelected, boolean hasFocus, int row, int column) {
-                super.getTableCellRendererComponent(table, value, false, false, row, column);
-                setHorizontalAlignment(CENTER);
-                setFont(table.getTableHeader().getFont());
-                setBackground(new Color(0xF0, 0xF2, 0xF5));
-                setForeground(Theme.TEXT_MUTED);
-                setBorder(BorderFactory.createCompoundBorder(
-                        BorderFactory.createMatteBorder(0, 0, 1, 1, Theme.CARD_BORDER),
-                        BorderFactory.createEmptyBorder(4, 8, 4, 8)));
-                return this;
-            }
-        });
-
-        submissionHistoryStatus = new JLabel("Select a problem to view its submission history.");
-        // Indent/space to line up with the placeholder text in the cards above.
-        submissionHistoryStatus.setBorder(BorderFactory.createEmptyBorder(12, 8, 4, 0));
-        // Match the italic gray placeholder text used in the assignment/problem cards.
-        submissionHistoryStatus.setForeground(new Color(0x88, 0x88, 0x88));
-        submissionHistoryStatus.setFont(submissionHistoryStatus.getFont().deriveFont(Font.ITALIC, 14f));
-
-        historyScrollPane = new JScrollPane(submissionHistoryTable);
-        historyScrollPane.setPreferredSize(new Dimension(280, 120));
-        historyScrollPane.setBorder(BorderFactory.createLineBorder(Theme.CARD_BORDER));
-        historyScrollPane.getViewport().setBackground(Theme.CARD_BG);
-        historyScrollPane.setVisible(false); // shown once there are submissions
-
-        JPanel historyNorth = new JPanel(new BorderLayout(0, 4));
-        historyNorth.setOpaque(false);
-        historyNorth.add(sectionLabel("Submission History"), BorderLayout.NORTH);
-        historyNorth.add(submissionHistoryStatus, BorderLayout.CENTER);
-
-        historyPanel.add(historyNorth, BorderLayout.NORTH);
-        historyPanel.add(historyScrollPane, BorderLayout.CENTER);
+        historyPanel = new HistoryPanel();
         return historyPanel;
     }
 
     private JComponent buildSubmissionCard() {
         JPanel submissionPanel = new CardPanel(new GridBagLayout());
-        submissionPanel.setBorder(cardBorder());
+        submissionPanel.setBorder(CardPanel.cardBorder());
 
         GridBagConstraints c3 = new GridBagConstraints();
         c3.gridx = 0;
@@ -481,60 +401,18 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         c3.insets = new Insets(8, 10, 0, 10);
 
         c3.gridy = 0;
-        submissionPanel.add(sectionLabel("Submission"), c3);
+        submissionPanel.add(CardPanel.sectionLabel("Submission"), c3);
         c3.insets = new Insets(4, 10, 0, 10);
 
-        // Current file display. Defaults to the file open in the editor; the buttons
-        // beside it let the user browse to a different file or snap back to the open one.
-        fileTF = new JTextField();
-        fileTF.setEditable(false);
-        fileTF.setMargin(new Insets(6, 10, 6, 10));
-        fileTF.setForeground(Theme.TEXT_DARK);
-        fileTF.setBackground(new Color(0xFA, 0xFB, 0xFC));
-        fileTF.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(Theme.CARD_BORDER),
-                BorderFactory.createEmptyBorder(6, 10, 6, 10)));
-        fileTF.setCursor(Cursor.getPredefinedCursor(Cursor.HAND_CURSOR));
-        fileTF.setToolTipText("The file that will be submitted. Click to browse for another.");
-        fileTF.addMouseListener(new java.awt.event.MouseAdapter() {
-            @Override
-            public void mouseClicked(java.awt.event.MouseEvent e) {
-                browseForFile();
-            }
-        });
-
-        useOpenFileBtn = new JButton("Use open file");
-        useOpenFileBtn.setToolTipText("Submit the file currently open in the editor");
-        styleTintedButton(useOpenFileBtn);
-        Globals.setPointerCursor(useOpenFileBtn);
-        useOpenFileBtn.addActionListener(e -> useOpenFile());
-
-        browseBtn = new JButton("Browse…");
-        browseBtn.setToolTipText("Choose a different file to submit");
-        styleTintedButton(browseBtn);
-        Globals.setPointerCursor(browseBtn);
-        browseBtn.addActionListener(e -> browseForFile());
-
-        JPanel fileButtons = new JPanel(new FlowLayout(FlowLayout.LEFT, 6, 0));
-        fileButtons.setOpaque(false);
-        fileButtons.add(useOpenFileBtn);
-        fileButtons.add(browseBtn);
-
-        JPanel fileRow = new JPanel(new BorderLayout(8, 0));
-        fileRow.setOpaque(false);
-        fileRow.add(fileTF, BorderLayout.CENTER);
-        fileRow.add(fileButtons, BorderLayout.EAST);
-
-        // Seed the display from the editor's open file (default source).
-        updateCurrentFileDisplay();
+        filePanel = new SubmissionFilePanel(environment, this::setTitle);
 
         c3.gridy = 1;
-        submissionPanel.add(labeled("File to Submit", fileRow), c3);
+        submissionPanel.add(labeled("File to Submit", filePanel), c3);
 
         // Submit button — full width
         submitBtn = new JButton("Submit");
         submitBtn.setPreferredSize(new Dimension(0, 38));
-        stylePrimaryButton(submitBtn);
+        Theme.stylePrimaryButton(submitBtn);
         Globals.setPointerCursor(submitBtn);
 
         c3.gridy++;
@@ -570,218 +448,6 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         p.add(l, BorderLayout.NORTH);
         p.add(comp, BorderLayout.CENTER);
         return p;
-    }
-
-    /** Subtle rounded-look card border with inner padding, matching the mockup cards. */
-    private javax.swing.border.Border cardBorder() {
-        return BorderFactory.createEmptyBorder(5, 5, 5, 5);
-    }
-
-    /** White card with rounded corners and a subtle outline, painted manually. */
-    private static class CardPanel extends JPanel {
-        private static final int ARC = 14;
-
-        CardPanel(LayoutManager lm) {
-            super(lm);
-            setOpaque(false); // we paint the rounded background ourselves
-            setBackground(Theme.CARD_BG);
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            Graphics2D g2 = (Graphics2D) g.create();
-            g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-            g2.setColor(getBackground());
-            g2.fillRoundRect(0, 0, getWidth() - 1, getHeight() - 1, ARC, ARC);
-            g2.setColor(Theme.CARD_BORDER);
-            g2.drawRoundRect(0, 0, getWidth() - 1, getHeight() - 1, ARC, ARC);
-            g2.dispose();
-            super.paintComponent(g);
-        }
-    }
-
-    /** Small all-caps blue section heading, like "SELECTED ASSIGNMENT" in the mockup. */
-    private JLabel sectionLabel(String text) {
-        JLabel l = new JLabel(text.toUpperCase(java.util.Locale.ROOT));
-        l.setFont(l.getFont().deriveFont(Font.BOLD, 13f));
-        l.setForeground(Theme.ACCENT);
-        return l;
-    }
-
-    /** Solid blue primary action button. */
-    private void stylePrimaryButton(JButton b) {
-        b.setBackground(Theme.ACCENT);
-        b.setForeground(Color.WHITE);
-        b.setFocusPainted(false);
-        b.setOpaque(true);
-        b.setBorder(BorderFactory.createEmptyBorder(8, 16, 8, 16));
-        b.setFont(b.getFont().deriveFont(Font.BOLD));
-    }
-
-    /** Light-blue tinted button that complements the solid primary blue. */
-    private void styleTintedButton(JButton b) {
-        b.setBackground(Theme.SELECTION_BG);
-        b.setForeground(Theme.ACCENT);
-        b.setFocusPainted(false);
-        b.setOpaque(true);
-        b.setFont(b.getFont().deriveFont(Font.BOLD));
-        b.setBorder(BorderFactory.createCompoundBorder(
-                BorderFactory.createLineBorder(new Color(0xC7, 0xD7, 0xFB)),
-                BorderFactory.createEmptyBorder(5, 12, 5, 12)));
-    }
-
-    /**
-     * Weights the history columns so Submitted/File get more room and Feedback a bit
-     * less. Widths are proportional (AUTO_RESIZE_ALL_COLUMNS scales them to fit).
-     */
-    private void applyHistoryColumnWidths() {
-        javax.swing.table.TableColumnModel cols = submissionHistoryTable.getColumnModel();
-        for (int i = 0; i < cols.getColumnCount() && i < currentHistoryColumns.size(); i++) {
-            cols.getColumn(i).setPreferredWidth(currentHistoryColumns.get(i).preferredWidth);
-        }
-    }
-
-    /** The column at a view index, defensively defaulting to FEEDBACK (wrapping text). */
-    private HistoryColumn historyColumnAt(int column) {
-        return column >= 0 && column < currentHistoryColumns.size()
-                ? currentHistoryColumns.get(column)
-                : HistoryColumn.FEEDBACK;
-    }
-
-    /**
-     * Fits each row to its tallest wrapped cell, measured once after the data or
-     * the table width changes. This used to happen inside the cell renderer while
-     * Swing painted, which is a re-layout loop waiting to happen.
-     */
-    private void resizeHistoryRowsToFit() {
-        JTable t = submissionHistoryTable;
-        javax.swing.JTextArea measure = new javax.swing.JTextArea();
-        measure.setLineWrap(true);
-        measure.setWrapStyleWord(true);
-        measure.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-        measure.setFont(t.getFont());
-        for (int row = 0; row < t.getRowCount(); row++) {
-            int desired = 28;
-            for (int col = 0; col < t.getColumnCount(); col++) {
-                if (!historyColumnAt(col).wraps) continue;
-                Object value = t.getValueAt(row, col);
-                String text = value == null ? "" : value.toString().trim();
-                if (text.isEmpty()) continue;
-                int colWidth = t.getColumnModel().getColumn(col).getWidth();
-                measure.setText(text);
-                measure.setSize(Math.max(1, colWidth), Short.MAX_VALUE);
-                desired = Math.max(desired, measure.getPreferredSize().height);
-            }
-            if (t.getRowHeight(row) != desired) {
-                t.setRowHeight(row, desired);
-            }
-        }
-    }
-
-    /**
-     * Cosmetic renderer for the submission-history table: padded cells, and the
-     * "Status" column drawn as a colored rounded pill (amber PENDING etc.), like the mockup.
-     */
-    private class HistoryCellRenderer extends javax.swing.table.DefaultTableCellRenderer {
-        private boolean pill;
-        private Color pillBg;
-        private Color pillFg;
-        // Wrapping renderer for the text columns so long messages fit. Display
-        // only: row heights are measured in resizeHistoryRowsToFit, never here.
-        private final JTextArea wrapArea = new JTextArea();
-
-        HistoryCellRenderer() {
-            wrapArea.setLineWrap(true);
-            wrapArea.setWrapStyleWord(true);
-            wrapArea.setOpaque(true);
-            wrapArea.setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-        }
-
-        @Override
-        public Component getTableCellRendererComponent(JTable table, Object value,
-                boolean isSelected, boolean hasFocus, int row, int column) {
-            HistoryColumn col = historyColumnAt(column);
-            String text = value == null ? "" : value.toString().trim();
-
-            if (col.wraps) {
-                wrapArea.setText(text);
-                wrapArea.setFont(table.getFont());
-                if (isSelected) {
-                    wrapArea.setBackground(table.getSelectionBackground());
-                    wrapArea.setForeground(table.getSelectionForeground());
-                } else {
-                    wrapArea.setBackground(Theme.CARD_BG);
-                    wrapArea.setForeground(Theme.TEXT_DARK);
-                }
-                // Size to the column so the wrap point matches what was measured.
-                int colWidth = table.getColumnModel().getColumn(column).getWidth();
-                wrapArea.setSize(Math.max(1, colWidth), Short.MAX_VALUE);
-
-                if (col == HistoryColumn.RESULT && !text.isEmpty()) {
-                    boldFont(wrapArea);
-                    if (text.equals("Correct")) {
-                        wrapArea.setForeground(Theme.SUCCESS_TEXT);
-                    } else if (text.equals("Incorrect")) {
-                        wrapArea.setForeground(Theme.DANGER_TEXT);
-                    }
-                }
-
-                return wrapArea;
-            }
-
-            super.getTableCellRendererComponent(table, value, isSelected, false, row, column);
-            setBorder(BorderFactory.createEmptyBorder(4, 8, 4, 8));
-            // Keep single-line cells vertically top-aligned like the wrapped feedback text.
-            setVerticalAlignment(TOP);
-            if (!isSelected) {
-                setBackground(Theme.CARD_BG);
-                setForeground(Theme.TEXT_DARK);
-            }
-
-            pill = false;
-            if (col == HistoryColumn.STATUS && !text.isEmpty()) {
-                pill = true;
-                String s = text.toLowerCase(java.util.Locale.ROOT);
-                if (s.contains("pend") || s.contains("queue") || s.contains("run")) {
-                    pillBg = new Color(0xFE, 0xF3, 0xC7); pillFg = new Color(0xB4, 0x53, 0x09); // amber
-                } else if (s.contains("grade") || s.contains("accept") || s.contains("pass")
-                        || s.contains("success") || s.contains("complete") || s.contains("solve")) {
-                    pillBg = new Color(0xDC, 0xFC, 0xE7); pillFg = Theme.SUCCESS_TEXT; // green
-                } else if (s.contains("fail") || s.contains("error") || s.contains("reject")) {
-                    pillBg = new Color(0xFE, 0xE2, 0xE2); pillFg = Theme.DANGER_TEXT; // red
-                } else {
-                    pillBg = new Color(0xE5, 0xE7, 0xEB); pillFg = Theme.TEXT_MUTED; // neutral gray
-                }
-                setForeground(pillFg);
-                setFont(getFont().deriveFont(Font.BOLD, 11f));
-            }
-            return this;
-        }
-
-        @Override
-        protected void paintComponent(Graphics g) {
-            if (pill) {
-                Graphics2D g2 = (Graphics2D) g.create();
-                g2.setRenderingHint(RenderingHints.KEY_ANTIALIASING, RenderingHints.VALUE_ANTIALIAS_ON);
-                // Clear cell background first.
-                g2.setColor(getBackground());
-                g2.fillRect(0, 0, getWidth(), getHeight());
-                // Pill behind the text.
-                FontMetrics fm = g2.getFontMetrics(getFont());
-                int textW = fm.stringWidth(getText());
-                int pillH = fm.getHeight() + 4;
-                int pillW = textW + 16;
-                // Top-aligned so it matches cells in rows made taller by wrapped feedback.
-                int y = 3;
-                g2.setColor(pillBg);
-                g2.fillRoundRect(2, y, pillW, pillH, pillH, pillH);
-                g2.setColor(pillFg);
-                g2.drawString(getText(), 10, y + 2 + fm.getAscent());
-                g2.dispose();
-            } else {
-                super.paintComponent(g);
-            }
-        }
     }
 
     private Icon createPlusMinusIcon(boolean expanded) {
@@ -987,16 +653,13 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
      */
     private void updateSubmissionHistory(ProblemItem problem) {
         final int seq = historyRequestSeq.incrementAndGet();
-        submissionHistoryModel.setRowCount(0);
-        submissionHistoryTable.setRowHeight(28); // reset per-row heights from wrapped text
-        setHistoryTableVisible(false);
 
         if (problem == null || selection.assignment() == null) {
-            setHistoryStatus("Select a problem to view its submission history.", false);
+            historyPanel.clear("Select a problem to view its submission history.");
             return;
         }
 
-        setHistoryStatus("Loading submission history…", false);
+        historyPanel.clear("Loading submission history…");
         final String assignmentId = selection.assignment().id;
         final String problemId = problem.id;
 
@@ -1014,95 +677,17 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 try {
                     List<ApiModels.Submission> subs = get();
                     if (subs == null) {
-                        setHistoryStatus("Sign in to view submission history.", false);
+                        historyPanel.showMessage("Sign in to view submission history.", false);
                         return;
                     }
-                    populateSubmissionHistory(subs);
+                    // A group problem gains a "Group Member" column showing who submitted.
+                    boolean group = selection.assignment() != null && selection.assignment().isGroup;
+                    historyPanel.populate(subs, group, SubmitWindow.this::formatDueDate);
                 } catch (Exception ex) {
-                    setHistoryStatus("Could not load submission history.", false);
+                    historyPanel.showMessage("Could not load submission history.", false);
                 }
             }
         }.execute();
-    }
-
-    /** Fills the history table from the API rows (newest first) and updates the status line. */
-    private void populateSubmissionHistory(List<ApiModels.Submission> subs) {
-        // A group problem gains a "Group Member" column showing who submitted.
-        boolean group = selection.assignment() != null && selection.assignment().isGroup;
-        submissionHistoryModel.setRowCount(0);
-        submissionHistoryTable.setRowHeight(28); // reset per-row heights from wrapped text
-        currentHistoryColumns = HistoryColumn.forGroup(group);
-        submissionHistoryModel.setColumnIdentifiers(HistoryColumn.titles(currentHistoryColumns));
-        applyHistoryColumnWidths(); // columns are rebuilt above, so re-apply widths
-
-        if (subs.isEmpty()) {
-            setHistoryStatus("No submissions yet.", false);
-            setHistoryTableVisible(false);
-            autoSizeSubmissionHistoryColumns();
-            return;
-        }
-        for (ApiModels.Submission s : subs) {
-            submissionHistoryModel.addRow(ApiTree.historyRow(s, group, this::formatDueDate));
-        }
-        int n = subs.size();
-        setHistoryStatus(n + (n == 1 ? " submission" : " submissions"), true);
-        setHistoryTableVisible(true);
-        autoSizeSubmissionHistoryColumns();
-        // Measure after the columns settle at their real widths.
-        SwingUtilities.invokeLater(this::resizeHistoryRowsToFit);
-    }
-
-    /** Shows the history table only when there are submissions to display. */
-    private void setHistoryTableVisible(boolean visible) {
-        if (historyScrollPane != null && historyScrollPane.isVisible() != visible) {
-            historyScrollPane.setVisible(visible);
-            if (historyScrollPane.getParent() != null) {
-                historyScrollPane.getParent().revalidate();
-                historyScrollPane.getParent().repaint();
-            }
-        }
-    }
-
-    /**
-     * Sets the history status line. Placeholder/info messages use the italic gray
-     * style of the other cards' placeholders; the submission count is dark text.
-     */
-    private void setHistoryStatus(String text, boolean emphasize) {
-        submissionHistoryStatus.setText(text);
-        if (emphasize) {
-            submissionHistoryStatus.setForeground(Theme.TEXT_DARK);
-            submissionHistoryStatus.setFont(submissionHistoryStatus.getFont().deriveFont(Font.PLAIN, 14f));
-        } else {
-            submissionHistoryStatus.setForeground(new Color(0x88, 0x88, 0x88));
-            submissionHistoryStatus.setFont(submissionHistoryStatus.getFont().deriveFont(Font.ITALIC, 14f));
-        }
-    }
-
-    /**
-     * Sizes each column to fit its header and cell content (with a cap so one long file
-     * name can't dominate). The last column (Feedback) is left to absorb the remaining
-     * width via AUTO_RESIZE_LAST_COLUMN.
-     */
-    private void autoSizeSubmissionHistoryColumns() {
-        JTable t = submissionHistoryTable;
-        javax.swing.table.TableColumnModel cm = t.getColumnModel();
-        int lastCol = cm.getColumnCount() - 1;
-        for (int col = 0; col < cm.getColumnCount(); col++) {
-            javax.swing.table.TableColumn tc = cm.getColumn(col);
-            javax.swing.table.TableCellRenderer hr = t.getTableHeader().getDefaultRenderer();
-            int width = hr.getTableCellRendererComponent(t, tc.getHeaderValue(), false, false, -1, col)
-                    .getPreferredSize().width;
-            for (int row = 0; row < t.getRowCount(); row++) {
-                javax.swing.table.TableCellRenderer cr = t.getCellRenderer(row, col);
-                width = Math.max(width, t.prepareRenderer(cr, row, col).getPreferredSize().width);
-            }
-            width += 14; // a little padding
-            if (col == lastCol) {
-                tc.setPreferredWidth(Math.max(width, 220)); // Feedback: roomy, then stretches
-            } else {
-                tc.setPreferredWidth(Math.min(width, 240)); // cap the fixed columns
-            }
-        }
     }
 
     private void updateAssignmentDetails(AssignmentItem assignment) {
@@ -1475,114 +1060,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
 
 
-    private void browseForFile() {
-        JFileChooser chooser = new JFileChooser();
-        // Start in the directory of the currently selected file, or user home
-        if (selectedFile != null && selectedFile.getParentFile() != null) {
-            chooser.setCurrentDirectory(selectedFile.getParentFile());
-        }
-        chooser.setDialogTitle("Choose file to submit");
-        chooser.setFileSelectionMode(JFileChooser.FILES_ONLY);
-        int result = chooser.showOpenDialog(this);
-        if (result == JFileChooser.APPROVE_OPTION) {
-            File chosen = chooser.getSelectedFile();
-            // The user picked a file explicitly: keep it, and stop auto-following the
-            // editor's open file until they choose "Use open file".
-            fileManuallyChosen = true;
-            selectedFile = chosen;
-            fileTF.setText(chosen.getName());
-            fileTF.setForeground(new Color(60, 60, 60));
-            fileTF.setToolTipText(chosen.getAbsolutePath());
-
-            // Update the window title to reflect the chosen file
-            this.setTitle(chosen.getName() + " - Submit");
-
-            refreshFileButtons();
-        }
-    }
-
-    /** Discards a browsed override and falls back to the editor's currently open file. */
-    private void useOpenFile() {
-        fileManuallyChosen = false;
-        updateCurrentFileDisplay();
-    }
-
+    @Override
     public void updateCurrentFileDisplay() {
-        // Respect a file the user browsed to; only refresh the button state for it.
-        if (fileManuallyChosen) {
-            refreshFileButtons();
-            return;
-        }
-
-        // Update the window title to reflect the chosen file
-        EnvironmentFrame frame = Universe.frameForEnvironment(this.environment);
-        this.setTitle(frame.getDescription() + " - Submit");
-
-        File envFile = environment.getFile();
-
-        // Check if file exists (saved file)
-        if (envFile != null && envFile.exists()) {
-            selectedFile = envFile;
-            fileTF.setText(envFile.getName());
-            fileTF.setForeground(new Color(60, 60, 60));
-            fileTF.setToolTipText(envFile.getAbsolutePath());
-        }
-        // Check if file is set but not saved yet (unsaved document)
-        else if (envFile != null) {
-            selectedFile = envFile;
-            // Get the display name from the environment frame
-            String displayName = getEnvironmentDisplayName();
-            fileTF.setText(displayName);
-            fileTF.setForeground(new Color(60, 60, 60));
-            fileTF.setToolTipText("Unsaved document — save it in the editor before submitting.");
-        }
-        // No file at all — show clickable prompt
-        else {
-            selectedFile = null;
-            //fileTF.setText("Click Browse to choose a file…");
-            //fileTF.setForeground(new Color(150, 150, 150));
-            //fileTF.setToolTipText("The file that will be submitted. Click to browse for another.");
-
-            fileTF.setText(frame.getDescription());
-            fileTF.setForeground(new Color(60, 60, 60));
-            fileTF.setToolTipText("Unsaved document — save it in the editor before submitting.");
-        }
-
-        refreshFileButtons();
-    }
-
-    /**
-     * Enables "Use open file" only when a browsed override is active and the editor
-     * actually has an open file to snap back to.
-     */
-    private void refreshFileButtons() {
-        if (useOpenFileBtn == null) return;
-        useOpenFileBtn.setEnabled(fileManuallyChosen && environment.getFile() != null);
-    }
-
-    private String getEnvironmentDisplayName() {
-        // Try to get the display name from the environment's frame
-        try {
-            gui.environment.EnvironmentFrame frame = gui.environment.Universe.frameForEnvironment(environment);
-            if (frame != null) {
-                String desc = frame.getDescription();
-                // Remove the dirty marker (*) if present
-                if (desc != null && desc.startsWith("*")) {
-                    desc = desc.substring(1);
-                }
-                return desc != null ? desc : "Unsaved document";
-            }
-        } catch (Exception e) {
-            // Fallback if we can't get the frame
-        }
-
-        // Fallback: try to get filename from the file object
-        File envFile = environment.getFile();
-        if (envFile != null) {
-            return envFile.getName();
-        }
-
-        return "Unsaved document";
+        filePanel.updateFromEditor();
     }
 
     // ============================================================
@@ -1597,17 +1077,18 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         // a temp file, so unsaved work submits exactly as it looks on screen.
         File fileToUse;
         boolean deleteWhenDone;
-        if (fileManuallyChosen) {
-            if (selectedFile == null || !selectedFile.exists()) {
+        File chosen = filePanel.chosenFile();
+        if (filePanel.isManuallyChosen()) {
+            if (chosen == null || !chosen.exists()) {
                 setStatus(false, "Unable to find the manually chosen file, it may have been moved or deleted.");
                 return;
             }
-            fileToUse = selectedFile;
+            fileToUse = chosen;
             deleteWhenDone = false;
         } else {
             try {
                 fileToUse = SubmissionFiles.encodeToTemp(environment,
-                        selectedFile != null ? selectedFile.getName() : null);
+                        chosen != null ? chosen.getName() : null);
             } catch (IOException e) {
                 setStatus(false, "Error creating temp file: " + e.getMessage());
                 return;
