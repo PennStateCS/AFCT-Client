@@ -422,6 +422,11 @@ public class SessionHandler {
     // ============================================================
 
     private void showLoginWindowBlocking(JFrame frame) {
+        // No display means no way to ask; behave exactly like a cancelled login.
+        // This is also what lets requireAuthenticated run under headless tests.
+        if (GraphicsEnvironment.isHeadless()) {
+            return;
+        }
         Runnable showLogin = () -> loginWindow().displayLoginWindow(frame);
         if (SwingUtilities.isEventDispatchThread()) {
             showLogin.run();
