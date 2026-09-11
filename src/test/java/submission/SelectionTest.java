@@ -13,7 +13,7 @@ class SelectionTest {
     private static final AssignmentItem ASSIGNMENT =
             new AssignmentItem("a1", "HW", "", null, false, null, false, null, 1);
     private static final ProblemItem PROBLEM =
-            new ProblemItem("p1", "P1", "", false, null, 100, 5, 0, -1, null, null);
+            new ProblemItem("p1", "P1", "", false, null, 100, 5, 0, -1, null, null, null);
 
     private static DefaultMutableTreeNode fullPathProblemNode() {
         DefaultMutableTreeNode course = new DefaultMutableTreeNode(COURSE);

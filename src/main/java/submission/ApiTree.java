@@ -54,7 +54,8 @@ public final class ApiTree {
                 orUnknown(p.submissionCount()),
                 orUnknown(p.grade()),
                 p.maxStates(),
-                p.isDeterministic());
+                p.isDeterministic(),
+                p.autograderEnabled());
     }
 
     /**
@@ -118,15 +119,27 @@ public final class ApiTree {
         String file = s.fileName() != null ? s.fileName() : "";
         String status = s.status() != null ? s.status() : "";
 
-        // Result: the evaluator verdict, blank once finished without one, and a
-        // holding phrase while the submission is still queued or being graded.
+        // Result: the evaluator verdict; a COMPLETED run without one is a problem
+        // a person grades ("not correct" and "not graded yet" are opposite things
+        // to read, matching the web's wording); a queued run gets a holding phrase.
         String result;
         if (s.correct() != null) {
             result = s.correct() ? "Correct" : "Incorrect";
+        } else if ("COMPLETED".equals(status)) {
+            result = "Not graded";
         } else {
             result = "PENDING".equals(status) || "PROCESSING".equals(status) ? "Not evaluated yet" : "";
         }
-        String feedback = s.feedback() != null ? s.feedback() : "";
+
+        // Withheld is not absent: feedbackVisible=false means feedback exists and
+        // this problem hides it from students, which deserves saying — an empty
+        // cell reads as "the system lost my feedback".
+        String feedback;
+        if (Boolean.FALSE.equals(s.feedbackVisible())) {
+            feedback = "(feedback is hidden for this problem)";
+        } else {
+            feedback = s.feedback() != null ? s.feedback() : "";
+        }
 
         if (group) {
             String member = s.submittedBy() != null ? s.submittedBy() : "";

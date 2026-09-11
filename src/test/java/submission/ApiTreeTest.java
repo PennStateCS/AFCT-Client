@@ -25,13 +25,19 @@ class ApiTreeTest {
     private static ApiModels.Problem problem(String title, Integer maxSubmissions,
                                              Integer submissionCount, Boolean solved) {
         return new ApiModels.Problem("p1", title, null, null, null, null, 100,
-                maxSubmissions, submissionCount, null, null, solved);
+                maxSubmissions, submissionCount, null, null, solved, null);
     }
 
     private static ApiModels.Submission submission(String submittedAt, String submittedBy,
                                                    String status, Boolean correct) {
         return new ApiModels.Submission("s1", status, correct, submittedAt, "dfa.jff",
                 correct != null && correct ? "ok" : null, null, submittedBy, null);
+    }
+
+    private static ApiModels.Submission withVisibility(String status, Boolean correct,
+                                                       String feedback, Boolean feedbackVisible) {
+        return new ApiModels.Submission("s1", status, correct, null, "dfa.jff",
+                feedback, feedbackVisible, null, null);
     }
 
     // ── parsing ──────────────────────────────────────────────────────────────
@@ -165,7 +171,41 @@ class ApiTreeTest {
     }
 
     @Test
-    void finishedRowWithoutVerdictLeavesResultBlank() {
+    void failedRowWithoutVerdictLeavesResultBlank() {
         assertEquals("", ApiTree.historyRow(submission(null, null, "FAILED", null), false, WHEN)[3]);
+    }
+
+    @Test
+    void manuallyGradedRowSaysNotGraded() {
+        // COMPLETED with no verdict is instructor-graded work awaiting a person,
+        // never blank and never Incorrect.
+        assertEquals("Not graded",
+                ApiTree.historyRow(submission(null, null, "COMPLETED", null), false, WHEN)[3]);
+    }
+
+    @Test
+    void withheldFeedbackSaysSoInsteadOfShowingAnEmptyCell() {
+        Object[] row = ApiTree.historyRow(
+                withVisibility("COMPLETED", false, null, false), false, WHEN);
+        assertEquals("Incorrect", row[3], "The verdict still shows on a feedback-off problem");
+        assertEquals("(feedback is hidden for this problem)", row[4]);
+    }
+
+    @Test
+    void absentFeedbackStaysBlankWhenNothingIsWithheld() {
+        // feedbackVisible=true with null feedback means the evaluator said nothing;
+        // that must NOT claim anything is hidden.
+        Object[] row = ApiTree.historyRow(
+                withVisibility("COMPLETED", true, null, true), false, WHEN);
+        assertEquals("", row[4]);
+    }
+
+    @Test
+    void manuallyGradedProblemFlagParsesThrough() {
+        ApiModels.Problem manual = new ApiModels.Problem("p1", "P", null, null, null, null,
+                100, null, null, null, null, null, false);
+        assertEquals(Boolean.FALSE, ApiTree.problem(manual).autograderEnabled);
+        assertNull(ApiTree.problem(problem("P", null, null, null)).autograderEnabled,
+                "An older server that does not send the flag leaves it unknown");
     }
 }

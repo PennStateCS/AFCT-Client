@@ -43,7 +43,9 @@ public final class ApiModels {
             Integer submissionCount,
             Integer grade,
             String status,
-            Boolean solved) {}
+            Boolean solved,
+            /** False when a person grades this problem rather than the autograder. */
+            Boolean autograderEnabled) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Assignment(

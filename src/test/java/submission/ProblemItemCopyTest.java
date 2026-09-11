@@ -8,7 +8,7 @@ import static org.junit.jupiter.api.Assertions.*;
 class ProblemItemCopyTest {
 
     private static final ProblemItem BASE =
-            new ProblemItem("p1", "P1", "d", false, "FA", 100, 5, 2, -1, 4, true);
+            new ProblemItem("p1", "P1", "d", false, "FA", 100, 5, 2, -1, 4, true, false);
 
     @Test
     void withOneMoreSubmissionOnlyChangesTheCount() {

@@ -107,6 +107,10 @@ public final class DetailsHtml {
         if (problem.isDeterministic != null) {
             sep(meta).append("Deterministic: ").append(problem.isDeterministic ? "Yes" : "No");
         }
+        if (Boolean.FALSE.equals(problem.autograderEnabled)) {
+            // Sets expectations: no instant verdict, and the check mark waits for a person.
+            sep(meta).append("Graded by your instructor");
+        }
         if (problem.maxPoints >= 0) {
             sep(meta).append("Points: ").append(problem.maxPoints);
         }

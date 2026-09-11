@@ -1133,8 +1133,16 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     }
                     case INCORRECT -> {
                         log("SUBMIT_RESULT", "submissionId=" + id + " status=INCORRECT problem=" + problemName);
+                        // Feedback can be withheld for the problem; an empty quote
+                        // after the colon would read like a glitch.
+                        String fb = outcome.feedback();
                         setStatus(false, "\"" + problemName + "\": "
-                                + (outcome.feedback() != null ? outcome.feedback() : ""));
+                                + (fb != null && !fb.isBlank() ? fb : "Incorrect."));
+                    }
+                    case NOT_GRADED -> {
+                        log("SUBMIT_RESULT", "submissionId=" + id + " status=NOT_GRADED problem=" + problemName);
+                        setStatus(true, "\"" + problemName + "\" submitted (id: " + id
+                                + ") — your instructor will grade it.");
                     }
                     case GRADING_FAILED -> {
                         log("SUBMIT_RESULT", "submissionId=" + id + " status=FAILED problem=" + problemName);

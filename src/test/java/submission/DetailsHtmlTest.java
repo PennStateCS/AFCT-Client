@@ -18,7 +18,7 @@ class DetailsHtmlTest {
 
     private static ProblemItem problem(int maxSubmissions, int submissionCount) {
         return new ProblemItem("p1", "P1", "desc", false, "FA", 100,
-                maxSubmissions, submissionCount, -1, null, null);
+                maxSubmissions, submissionCount, -1, null, null, null);
     }
 
     @Test
@@ -60,6 +60,15 @@ class DetailsHtmlTest {
         assertTrue(none.contains("#c0392b") && none.contains("(limit reached)"), none);
         assertTrue(DetailsHtml.problemDetails(problem(8, 5)).contains("#27ae60"),
                 "A grant-raised cap must move the count out of the warning colors");
+    }
+
+    @Test
+    void manuallyGradedProblemSaysSo() {
+        ProblemItem manual = new ProblemItem("p1", "P1", "d", false, "FA", 100,
+                5, 0, -1, null, null, false);
+        assertTrue(DetailsHtml.problemDetails(manual).contains("Graded by your instructor"));
+        // Autograded (true) and unknown (older server, null) both stay quiet.
+        assertFalse(DetailsHtml.problemDetails(problem(5, 0)).contains("Graded by your instructor"));
     }
 
     @Test

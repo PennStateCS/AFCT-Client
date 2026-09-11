@@ -35,6 +35,8 @@ class SubmissionTask {
         CORRECT,
         /** Graded, not accepted; {@code feedback} carries the evaluator's witness if visible. */
         INCORRECT,
+        /** Completed with no verdict: a person grades this problem, later. */
+        NOT_GRADED,
         /** The evaluator failed; the student should resubmit. */
         GRADING_FAILED,
         /** Still queued/processing when the poll timeout elapsed; history will show it. */
@@ -58,7 +60,11 @@ class SubmissionTask {
     static Outcome outcomeOf(ApiModels.Submission result) {
         String id = result.id();
         if ("COMPLETED".equals(result.status())) {
-            if (Boolean.TRUE.equals(result.correct())) {
+            if (result.correct() == null) {
+                // Not "incorrect": the autograder did not judge this one; a person will.
+                return new Outcome(Kind.NOT_GRADED, id, null, null);
+            }
+            if (result.correct()) {
                 return new Outcome(Kind.CORRECT, id, null, null);
             }
             return new Outcome(Kind.INCORRECT, id, result.feedback() != null ? result.feedback() : "", null);

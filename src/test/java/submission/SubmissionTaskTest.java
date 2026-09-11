@@ -41,11 +41,13 @@ class SubmissionTaskTest {
     }
 
     @Test
-    void completedWithoutVerdictIsIncorrectWithEmptyFeedback() {
-        // Feedback can be withheld by visibility settings; the outcome must not be null-y.
+    void completedWithoutVerdictIsNotGradedNeverIncorrect() {
+        // A person grades this problem; the autograder passing on it must not read
+        // as a failure to the student ("not correct" and "not graded yet" are
+        // opposite things to read — same rule as the web).
         SubmissionTask.Outcome o = SubmissionTask.outcomeOf(sub("COMPLETED", null, null));
-        assertEquals(SubmissionTask.Kind.INCORRECT, o.kind());
-        assertEquals("", o.feedback());
+        assertEquals(SubmissionTask.Kind.NOT_GRADED, o.kind());
+        assertEquals("s1", o.submissionId());
     }
 
     @Test

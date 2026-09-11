@@ -21,10 +21,12 @@ public final class ProblemItem {
     public final Integer maxStates;
     /** FA determinism requirement, or null when it does not apply. */
     public final Boolean isDeterministic;
+    /** False when the instructor grades this by hand; null when the server did not say. */
+    public final Boolean autograderEnabled;
 
     public ProblemItem(String id, String name, String description, boolean solved,
                        String type, int maxPoints, int maxSubmissions, int submissionCount, int grade,
-                       Integer maxStates, Boolean isDeterministic) {
+                       Integer maxStates, Boolean isDeterministic, Boolean autograderEnabled) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -36,6 +38,7 @@ public final class ProblemItem {
         this.grade = grade;
         this.maxStates = maxStates;
         this.isDeterministic = isDeterministic;
+        this.autograderEnabled = autograderEnabled;
     }
 
     /**
@@ -45,13 +48,13 @@ public final class ProblemItem {
      */
     public ProblemItem withOneMoreSubmission() {
         return new ProblemItem(id, name, description, solved, type, maxPoints,
-                maxSubmissions, submissionCount + 1, grade, maxStates, isDeterministic);
+                maxSubmissions, submissionCount + 1, grade, maxStates, isDeterministic, autograderEnabled);
     }
 
     /** A copy marked solved (a correct submission came back). */
     public ProblemItem asSolved() {
         return new ProblemItem(id, name, description, true, type, maxPoints,
-                maxSubmissions, submissionCount, grade, maxStates, isDeterministic);
+                maxSubmissions, submissionCount, grade, maxStates, isDeterministic, autograderEnabled);
     }
 
     /** The problem type's full display name, e.g. "Finite Automaton" for "FA". */
