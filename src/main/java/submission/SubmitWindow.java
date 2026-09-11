@@ -83,18 +83,15 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // ===============================
     private volatile boolean loading = false;
 
-    // Refresh cooldown
-    private long lastRefreshMs = 0;
-    private static final int REFRESH_COOLDOWN_MS = 10_000;
+    // Refresh cooldown (rule in RefreshCooldown; the countdown animation is here).
+    private final RefreshCooldown refreshCooldown = RefreshCooldown.systemClock();
     private Timer refreshCooldownTimer;
 
     // Applies the large default window size once, on the first show (see applyDefaultSize).
     private boolean defaultSizeApplied = false;
 
-    // Logging — writes to <project>/logs/submissions-YYYY-MM-DD.log
-    private static final DateTimeFormatter LOG_FMT  = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
-    private static final DateTimeFormatter DATE_FMT  = DateTimeFormatter.ofPattern("yyyy-MM-dd");
-    private static final Path LOG_DIR = Paths.get(System.getProperty("user.dir"), "logs");
+    // Submission event log; see SubmissionLog.
+    private final SubmissionLog submissionLog = SubmissionLog.inWorkingDirectory();
 
 
     // What is selected in the tree, derived in one place; see Selection.
@@ -490,18 +487,16 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
     private void wireEvents() {
         refreshBtn.addActionListener(e -> {
-            long now = System.currentTimeMillis();
-            if (now - lastRefreshMs < REFRESH_COOLDOWN_MS) {
-                long remaining = (REFRESH_COOLDOWN_MS - (now - lastRefreshMs)) / 1000;
-                setStatus(false, "Please wait " + remaining + "s before refreshing again.");
+            if (!refreshCooldown.tryRefresh()) {
+                setStatus(false, "Please wait " + refreshCooldown.remainingSeconds()
+                        + "s before refreshing again.");
                 return;
             }
-            lastRefreshMs = now;
             // Remember what is selected, and every expanded branch, so the reload can
             // return the tree to exactly the state the user left it in.
             restorer().capture(rootNode, selection.course(), selection.assignment(), selection.problem());
             refreshDialog();
-            startRefreshCooldown();
+            startRefreshCooldownAnimation();
         });
 
         logoutBtn.addActionListener(e -> {
@@ -761,13 +756,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         selectionTree.setEnabled(enabled);
         submitBtn.setEnabled(enabled);
         logoutBtn.setEnabled(enabled);
-        // Refresh respects its own cooldown — only re-enable if cooldown has expired
-        if (enabled) {
-            long elapsed = System.currentTimeMillis() - lastRefreshMs;
-            refreshBtn.setEnabled(elapsed >= REFRESH_COOLDOWN_MS);
-        } else {
-            refreshBtn.setEnabled(false);
-        }
+        // Refresh respects its own cooldown — only re-enable once it has expired.
+        refreshBtn.setEnabled(enabled && !refreshCooldown.coolingDown());
     }
 
     // ============================================================
@@ -1217,8 +1207,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // Refresh cooldown
     // ============================================================
 
-    private void startRefreshCooldown() {
-        final int cooldownSecs = REFRESH_COOLDOWN_MS / 1000;
+    private void startRefreshCooldownAnimation() {
+        final int cooldownSecs = RefreshCooldown.COOLDOWN_MS / 1000;
         refreshBtn.setEnabled(false);
         refreshBtn.setText("Refresh (" + cooldownSecs + "s)");
         if (refreshCooldownTimer != null) refreshCooldownTimer.stop();
@@ -1242,18 +1232,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
     // ============================================================
 
     private void log(String event, String detail) {
-        LocalDateTime now = LocalDateTime.now();
-        String line = "[" + now.format(LOG_FMT) + "] " + event + ": " + detail;
-        System.out.println(line);
-        try {
-            Files.createDirectories(LOG_DIR);
-            Path logFile = LOG_DIR.resolve("submissions-" + now.format(DATE_FMT) + ".log");
-            Files.writeString(logFile, line + System.lineSeparator(),
-                    StandardOpenOption.CREATE, StandardOpenOption.APPEND);
-        } catch (IOException ex) {
-            String msg = ErrorMessages.userMessage(ex, "Unable to write submission log.");
-            System.err.println("Log write failed: " + msg);
-        }
+        submissionLog.log(event, detail);
     }
 
     // ============================================================
