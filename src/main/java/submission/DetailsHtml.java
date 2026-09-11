@@ -37,9 +37,31 @@ public final class DetailsHtml {
      * already formatted, so the caller decides the timezone.
      */
     public static String assignmentDetails(AssignmentItem assignment, Function<Instant, String> formatDueDate) {
+        return assignmentDetails(assignment, formatDueDate, RichTextHtml.MATH_AS_CODE);
+    }
+
+    /**
+     * The card HTML plus the images its math rendered to; install the images as
+     * the pane document's "imageCache" property alongside the HTML.
+     */
+    public record Rendered(String html, java.util.Dictionary<java.net.URL, java.awt.Image> images) {}
+
+    public static Rendered assignmentDetailsRendered(AssignmentItem assignment,
+                                                     Function<Instant, String> formatDueDate) {
+        LatexMath math = new LatexMath();
+        return new Rendered(assignmentDetails(assignment, formatDueDate, math), math.imageCache());
+    }
+
+    public static Rendered problemDetailsRendered(ProblemItem problem) {
+        LatexMath math = new LatexMath();
+        return new Rendered(problemDetails(problem, math), math.imageCache());
+    }
+
+    static String assignmentDetails(AssignmentItem assignment, Function<Instant, String> formatDueDate,
+                                    RichTextHtml.MathHtml math) {
         String title = assignment.name != null ? assignment.name : "Untitled Assignment";
         String descriptionHtml = descriptionHtml(assignment.descriptionJson, assignment.description,
-                "No description available.");
+                "No description available.", math);
 
         StringBuilder meta = new StringBuilder();
         Instant due = assignment.dueInstant();
@@ -83,10 +105,14 @@ public final class DetailsHtml {
      * from the server, so the coloring reflects any extra submissions granted.
      */
     public static String problemDetails(ProblemItem problem) {
+        return problemDetails(problem, RichTextHtml.MATH_AS_CODE);
+    }
+
+    static String problemDetails(ProblemItem problem, RichTextHtml.MathHtml math) {
         String title = problem.name != null ? problem.name : "Untitled Problem";
 
         String descriptionHtml = descriptionHtml(problem.descriptionJson, problem.description,
-                "No description available");
+                "No description available", math);
 
         StringBuilder meta = new StringBuilder();
         String typeName = problem.typeFullName();
@@ -138,8 +164,9 @@ public final class DetailsHtml {
      * text the server always ships alongside, never as nothing.
      */
     private static String descriptionHtml(com.fasterxml.jackson.databind.JsonNode rich,
-                                          String plain, String placeholder) {
-        String richHtml = RichTextHtml.render(rich, RichTextHtml.MATH_AS_CODE);
+                                          String plain, String placeholder,
+                                          RichTextHtml.MathHtml math) {
+        String richHtml = RichTextHtml.render(rich, math);
         if (richHtml != null && !richHtml.isBlank()) {
             return "<div style='margin: 0 0 6px 0; color: #000000;'>" + richHtml + "</div>";
         }

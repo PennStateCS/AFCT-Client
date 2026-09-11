@@ -644,7 +644,11 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         if (problem == null) {
             problemDetailsPane.setText(DetailsHtml.problemPlaceholder());
         } else {
-            problemDetailsPane.setText(DetailsHtml.problemDetails(problem));
+            DetailsHtml.Rendered rendered = DetailsHtml.problemDetailsRendered(problem);
+            problemDetailsPane.setText(rendered.html());
+            // The math images the HTML refers to; HTMLEditorKit resolves the img
+            // URLs through this document property.
+            problemDetailsPane.getDocument().putProperty("imageCache", rendered.images());
             problemDetailsPane.setCaretPosition(0);
         }
         sizeDetailScrollToContent(problemDetailsScroll, problemDetailsPane, 44, 220, 1);
@@ -701,7 +705,10 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         if (assignment == null) {
             assignmentDetailsPane.setText(DetailsHtml.assignmentPlaceholder());
         } else {
-            assignmentDetailsPane.setText(DetailsHtml.assignmentDetails(assignment, this::formatDueDate));
+            DetailsHtml.Rendered rendered =
+                    DetailsHtml.assignmentDetailsRendered(assignment, this::formatDueDate);
+            assignmentDetailsPane.setText(rendered.html());
+            assignmentDetailsPane.getDocument().putProperty("imageCache", rendered.images());
             assignmentDetailsPane.setCaretPosition(0);
         }
         sizeDetailScrollToContent(assignmentDetailsScroll, assignmentDetailsPane, 44, 220, 2);
