@@ -355,6 +355,18 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         pane.setBackground(card.getBackground());
         pane.setBorder(BorderFactory.createEmptyBorder(8, 8, 8, 8));
         pane.setText(placeholder);
+        // Rich descriptions may carry links; they open in the system browser. The
+        // hrefs were validated at save time and again by the renderer.
+        pane.addHyperlinkListener(e -> {
+            if (e.getEventType() == javax.swing.event.HyperlinkEvent.EventType.ACTIVATED
+                    && e.getURL() != null) {
+                try {
+                    Desktop.getDesktop().browse(e.getURL().toURI());
+                } catch (Exception ex) {
+                    setStatus(false, "Could not open the link: " + e.getURL());
+                }
+            }
+        });
 
         scroll.setPreferredSize(new Dimension(280, 100));
         // No inner frame: the panel's titled border is the only box we want.

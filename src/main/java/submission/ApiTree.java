@@ -39,7 +39,8 @@ public final class ApiTree {
                 a.groupName(),
                 Boolean.TRUE.equals(a.allowLateSubmissions()),
                 a.lateCutoff(),
-                a.problems() != null ? a.problems().size() : 0);
+                a.problems() != null ? a.problems().size() : 0,
+                a.descriptionJson());
     }
 
     public static ProblemItem problem(ApiModels.Problem p) {
@@ -55,7 +56,8 @@ public final class ApiTree {
                 orUnknown(p.grade()),
                 p.maxStates(),
                 p.isDeterministic(),
-                p.autograderEnabled());
+                p.autograderEnabled(),
+                p.descriptionJson());
     }
 
     /**

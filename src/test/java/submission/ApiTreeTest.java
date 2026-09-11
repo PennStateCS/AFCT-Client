@@ -19,13 +19,13 @@ class ApiTreeTest {
 
     private static ApiModels.Assignment assignment(String id, String dueDate, Boolean isGroup,
                                                    String groupName, List<ApiModels.Problem> problems) {
-        return new ApiModels.Assignment(id, "HW", "d", dueDate, null, null, null, isGroup, groupName, problems);
+        return new ApiModels.Assignment(id, "HW", "d", dueDate, null, null, null, isGroup, groupName, problems, null);
     }
 
     private static ApiModels.Problem problem(String title, Integer maxSubmissions,
                                              Integer submissionCount, Boolean solved) {
         return new ApiModels.Problem("p1", title, null, null, null, null, 100,
-                maxSubmissions, submissionCount, null, null, solved, null);
+                maxSubmissions, submissionCount, null, null, solved, null, null);
     }
 
     private static ApiModels.Submission submission(String submittedAt, String submittedBy,
@@ -47,7 +47,7 @@ class ApiTreeTest {
         ApiModels.Assignment src = new ApiModels.Assignment(
                 "a1", "HW 3", "d", "2026-09-20T03:59:00.000Z", null, "2026-09-22T03:59:00.000Z",
                 true, true, "Team 2",
-                List.of(problem("P1", 3, 0, false), problem("P2", 3, 0, false)));
+                List.of(problem("P1", 3, 0, false), problem("P2", 3, 0, false)), null);
         AssignmentItem a = ApiTree.assignment(src);
         assertTrue(a.isGroup);
         assertEquals("Team 2", a.groupName);
@@ -203,7 +203,7 @@ class ApiTreeTest {
     @Test
     void manuallyGradedProblemFlagParsesThrough() {
         ApiModels.Problem manual = new ApiModels.Problem("p1", "P", null, null, null, null,
-                100, null, null, null, null, null, false);
+                100, null, null, null, null, null, false, null);
         assertEquals(Boolean.FALSE, ApiTree.problem(manual).autograderEnabled);
         assertNull(ApiTree.problem(problem("P", null, null, null)).autograderEnabled,
                 "An older server that does not send the flag leaves it unknown");

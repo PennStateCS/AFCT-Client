@@ -38,10 +38,8 @@ public final class DetailsHtml {
      */
     public static String assignmentDetails(AssignmentItem assignment, Function<Instant, String> formatDueDate) {
         String title = assignment.name != null ? assignment.name : "Untitled Assignment";
-        String description = assignment.description != null && !assignment.description.isBlank()
-                && !assignment.description.equals("null")
-                ? assignment.description
-                : "No description available.";
+        String descriptionHtml = descriptionHtml(assignment.descriptionJson, assignment.description,
+                "No description available.");
 
         StringBuilder meta = new StringBuilder();
         Instant due = assignment.dueInstant();
@@ -71,12 +69,11 @@ public final class DetailsHtml {
         return String.format(
                 "<html><body style='font-family: sans-serif; padding: 4px;'>"
                         + "<h3 style='margin: 0 0 4px 0; color: #000000;'>%s</h3>"
-                        + "<p style='margin: 0 0 6px 0; color: #555555;'>%s</p>"
-                        + "<p style='margin: 0; color: #000000;'>%s</p>"
+                        + "<p style='margin: 0 0 6px 0; color: #555555;'>%s</p>%s"
                         + "</body></html>",
                 escapeHtml(title),
                 meta,
-                escapeHtml(description));
+                descriptionHtml);
     }
 
     /**
@@ -88,14 +85,8 @@ public final class DetailsHtml {
     public static String problemDetails(ProblemItem problem) {
         String title = problem.name != null ? problem.name : "Untitled Problem";
 
-        String descriptionHtml;
-        if (problem.description != null && !problem.description.isBlank()
-                && !problem.description.equals("null")) {
-            descriptionHtml = "<p style='margin: 0 0 6px 0; color: #000000;'>"
-                    + escapeHtml(problem.description) + "</p>";
-        } else {
-            descriptionHtml = "<p style='margin: 0 0 6px 0; color: #000000;'>No description available</p>";
-        }
+        String descriptionHtml = descriptionHtml(problem.descriptionJson, problem.description,
+                "No description available");
 
         StringBuilder meta = new StringBuilder();
         String typeName = problem.typeFullName();
@@ -138,6 +129,22 @@ public final class DetailsHtml {
                 escapeHtml(title),
                 descriptionHtml,
                 metaHtml);
+    }
+
+    /**
+     * The description block: the rich source rendered when the server sent one and
+     * it parses, else the plain-text projection, else the placeholder. The plain
+     * fallback matters: an envelope from a newer format version renders as the
+     * text the server always ships alongside, never as nothing.
+     */
+    private static String descriptionHtml(com.fasterxml.jackson.databind.JsonNode rich,
+                                          String plain, String placeholder) {
+        String richHtml = RichTextHtml.render(rich, RichTextHtml.MATH_AS_CODE);
+        if (richHtml != null && !richHtml.isBlank()) {
+            return "<div style='margin: 0 0 6px 0; color: #000000;'>" + richHtml + "</div>";
+        }
+        String text = plain != null && !plain.isBlank() && !plain.equals("null") ? plain : placeholder;
+        return "<p style='margin: 0 0 6px 0; color: #000000;'>" + escapeHtml(text) + "</p>";
     }
 
     private static StringBuilder sep(StringBuilder meta) {

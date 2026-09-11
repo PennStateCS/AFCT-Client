@@ -20,14 +20,17 @@ public final class AssignmentItem {
     public final String lateCutoff;
     /** Number of problems in this assignment (from the embedded problems list). */
     public final int problemCount;
+    /** The rich description source, or null when the description is plain text. */
+    public final com.fasterxml.jackson.databind.JsonNode descriptionJson;
 
     public AssignmentItem(String id, String name, String description, String dueDate) {
-        this(id, name, description, dueDate, false, null, false, null, 0);
+        this(id, name, description, dueDate, false, null, false, null, 0, null);
     }
 
     public AssignmentItem(String id, String name, String description, String dueDate,
                           boolean isGroup, String groupName, boolean allowLateSubmissions,
-                          String lateCutoff, int problemCount) {
+                          String lateCutoff, int problemCount,
+                          com.fasterxml.jackson.databind.JsonNode descriptionJson) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -37,6 +40,7 @@ public final class AssignmentItem {
         this.allowLateSubmissions = allowLateSubmissions;
         this.lateCutoff = lateCutoff;
         this.problemCount = problemCount;
+        this.descriptionJson = descriptionJson;
     }
 
     /** Parses {@link #dueDate} as an Instant, or null if missing/unparseable. */

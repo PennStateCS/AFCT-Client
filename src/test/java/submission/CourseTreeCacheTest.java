@@ -12,11 +12,11 @@ class CourseTreeCacheTest {
 
     private static ApiModels.Problem problem(String title, Boolean solved) {
         return new ApiModels.Problem("p-" + title, title, null, null, null, null,
-                100, null, null, null, null, solved, null);
+                100, null, null, null, null, solved, null, null);
     }
 
     private static ApiModels.Assignment assignment(String id, String due, List<ApiModels.Problem> problems) {
-        return new ApiModels.Assignment(id, id, null, due, null, null, null, null, null, problems);
+        return new ApiModels.Assignment(id, id, null, due, null, null, null, null, null, problems, null);
     }
 
     private static ApiModels.Course course(String id, List<ApiModels.Assignment> assignments) {

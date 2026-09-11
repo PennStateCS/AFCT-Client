@@ -23,10 +23,13 @@ public final class ProblemItem {
     public final Boolean isDeterministic;
     /** False when the instructor grades this by hand; null when the server did not say. */
     public final Boolean autograderEnabled;
+    /** The rich description source, or null when the description is plain text. */
+    public final com.fasterxml.jackson.databind.JsonNode descriptionJson;
 
     public ProblemItem(String id, String name, String description, boolean solved,
                        String type, int maxPoints, int maxSubmissions, int submissionCount, int grade,
-                       Integer maxStates, Boolean isDeterministic, Boolean autograderEnabled) {
+                       Integer maxStates, Boolean isDeterministic, Boolean autograderEnabled,
+                       com.fasterxml.jackson.databind.JsonNode descriptionJson) {
         this.id = id;
         this.name = name;
         this.description = description;
@@ -39,6 +42,7 @@ public final class ProblemItem {
         this.maxStates = maxStates;
         this.isDeterministic = isDeterministic;
         this.autograderEnabled = autograderEnabled;
+        this.descriptionJson = descriptionJson;
     }
 
     /**
@@ -48,13 +52,15 @@ public final class ProblemItem {
      */
     public ProblemItem withOneMoreSubmission() {
         return new ProblemItem(id, name, description, solved, type, maxPoints,
-                maxSubmissions, submissionCount + 1, grade, maxStates, isDeterministic, autograderEnabled);
+                maxSubmissions, submissionCount + 1, grade, maxStates, isDeterministic, autograderEnabled,
+                descriptionJson);
     }
 
     /** A copy marked solved (a correct submission came back). */
     public ProblemItem asSolved() {
         return new ProblemItem(id, name, description, true, type, maxPoints,
-                maxSubmissions, submissionCount, grade, maxStates, isDeterministic, autograderEnabled);
+                maxSubmissions, submissionCount, grade, maxStates, isDeterministic, autograderEnabled,
+                descriptionJson);
     }
 
     /** The problem type's full display name, e.g. "Finite Automaton" for "FA". */

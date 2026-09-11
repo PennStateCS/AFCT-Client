@@ -12,7 +12,7 @@ class ProblemItemTest {
     private ProblemItem make(String id, String name, boolean solved,
                              int maxSubmissions, int submissionCount) {
         return new ProblemItem(id, name, "desc", solved,
-                "FA", 100, maxSubmissions, submissionCount, -1, null, null, null);
+                "FA", 100, maxSubmissions, submissionCount, -1, null, null, null, null);
     }
 
     // ── toString ─────────────────────────────────────────────────────────────

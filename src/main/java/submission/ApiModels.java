@@ -1,6 +1,7 @@
 package submission;
 
 import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.databind.JsonNode;
 
 import java.time.Instant;
 import java.util.List;
@@ -45,7 +46,9 @@ public final class ApiModels {
             String status,
             Boolean solved,
             /** False when a person grades this problem rather than the autograder. */
-            Boolean autograderEnabled) {}
+            Boolean autograderEnabled,
+            /** The rich source (validated TipTap envelope), null for plain text. */
+            JsonNode descriptionJson) {}
 
     @JsonIgnoreProperties(ignoreUnknown = true)
     public record Assignment(
@@ -59,7 +62,9 @@ public final class ApiModels {
             Boolean allowLateSubmissions,
             Boolean isGroup,
             String groupName,
-            List<Problem> problems) {
+            List<Problem> problems,
+            /** The rich source (validated TipTap envelope), null for plain text. */
+            JsonNode descriptionJson) {
 
         public Instant dueInstant() {
             return parseIsoOrNull(dueDate);
