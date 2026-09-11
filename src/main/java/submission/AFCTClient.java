@@ -12,7 +12,6 @@ import java.time.Duration;
 import java.time.Instant;
 import java.util.List;
 import java.util.Map;
-import java.util.prefs.Preferences;
 
 import static gui.Globals.stringToJson;
 
@@ -44,23 +43,6 @@ public class AFCTClient {
     /** @throws IllegalArgumentException when the address cannot be parsed. */
     public AFCTClient(String baseUrl) {
         this.baseUrl = ServerAddress.parse(baseUrl).baseUrl();
-    }
-
-    /**
-     * Full constructor used by {@link AFCTClientBuilder}.
-     */
-    AFCTClient(String baseUrl, Duration connectTimeout, Duration readTimeout,
-               int maxRetries, long baseBackoffMs) {
-        this(baseUrl);
-        this.connectTimeoutMs = (int) connectTimeout.toMillis();
-        this.readTimeoutMs = (int) readTimeout.toMillis();
-        // maxRetries, baseBackoffMs stored for future use
-    }
-
-    public AFCTClient timeouts(int connectMs, int readMs) {
-        this.connectTimeoutMs = connectMs;
-        this.readTimeoutMs = readMs;
-        return this;
     }
 
     // ================================================================

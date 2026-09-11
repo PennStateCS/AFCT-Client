@@ -2,14 +2,12 @@ package submission;
 
 
 import gui.environment.Environment;
-import gui.environment.Universe;
 
 import javax.net.ssl.SSLHandshakeException;
 import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
-import java.time.Instant;
 import java.util.ArrayList;
 import java.util.prefs.Preferences;
 
@@ -20,12 +18,8 @@ public class SessionHandler {
     public final Preferences preferences;
     private final SessionPrefs prefs;
 
-    private Instant startTime = Instant.MIN;
-
     private AFCTClient client = null;
     private String token = null;
-
-    private String email = null;
 
     public boolean loggedIn = false;
 
@@ -68,21 +62,6 @@ public class SessionHandler {
         return submitWindow;
     }
 
-    public void displayLoginThenSubmission(SubmitWindow submitWindowToShow, Environment environment) {
-        AFCTClient authenticated = requireAuthenticated(Universe.frameForEnvironment(environment));
-        if (authenticated != null && authenticated.isAuthenticated()) {
-            submitWindowToShow.displaySubmitWindow();
-        }
-    }
-
-    public void updateStartTime() {
-        startTime = Instant.now();
-    }
-
-    public void clearStartTime() {
-        startTime = Instant.MIN;
-    }
-
     /**
      * Returns the authenticated client, triggering a login window if not authenticated.
      * Returns null if the user cancelled login.
@@ -104,14 +83,6 @@ public class SessionHandler {
             return null;
         }
         return this.client;
-    }
-
-
-    /**
-     * Returns the stored user email address, or null if none saved.
-     */
-    public String getUserEmail() {
-        return email;
     }
 
     // ============================================================
@@ -136,7 +107,6 @@ public class SessionHandler {
             if (token != null && !token.isBlank()) {
                 // Login succeeded
                 this.loggedIn = true;
-                this.email = userEmail;
                 // Remember the last server and email that actually worked; the
                 // login window prefills from them. Never the password: "stay
                 // signed in" keeps the bearer token instead.
@@ -223,7 +193,6 @@ public class SessionHandler {
             if (user != null) {
                 this.client = candidate;
                 this.loggedIn = true;
-                this.email = user.email();
                 prefs.rememberServer(address.baseUrl());
                 return getSuccessResult();
             }
@@ -304,7 +273,6 @@ public class SessionHandler {
 
             this.client = candidate;
             this.loggedIn = true;
-            this.email = user != null ? user.email() : null;
             prefs.rememberServer(address.baseUrl());
             return getSuccessResult();
         } catch (SSLHandshakeException ex) {

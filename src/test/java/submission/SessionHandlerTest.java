@@ -71,13 +71,6 @@ class SessionHandlerTest {
     }
 
     @Test
-    void newHandlerHasNullEmail() {
-        try (var h = open()) {
-            assertNull(h.handler().getUserEmail());
-        }
-    }
-
-    @Test
     void requireAuthenticatedReturnsNullWhenNotLoggedIn() {
         try (var h = open()) {
             // No login attempted – must return null and not block.
