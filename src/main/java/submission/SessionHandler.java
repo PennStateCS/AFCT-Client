@@ -18,6 +18,7 @@ import static submission.LoginResult.*;
 
 public class SessionHandler {
     public final Preferences preferences;
+    private final SessionPrefs prefs;
 
     private Instant startTime = Instant.MIN;
 
@@ -37,24 +38,16 @@ public class SessionHandler {
     // HeadlessException on a machine with no display (CI).
     private LoginWindow loginWindow;
 
-    // Preferences
-    /** The last successfully used server base URL; the login window prefills from it. */
-    public static final String PREF_SERVER = "server";
-    public static final String PREF_EMAIL = "email";
-    // "Stay signed in on this computer" for token mode. The token is stored as-is:
-    // encrypting it with key material derived from public values (the way the saved
-    // password is) would be obfuscation, not protection. The real safeguard is that
-    // this is opt-in and off by default, because Preferences are per OS user and a
-    // lab machine with a shared login is one node for every student who sits down.
-    public static final String PREF_STAY_SIGNED_IN = "stay_signed_in";
-    public static final String PREF_SIGNIN_TOKEN = "signin_token";
-
-    // Deliberately empty before first use: prefilling a development address
-    // taught people to trust whatever was in the box.
-    public static final String defaultServer = "";
+    // What is remembered between runs lives in SessionPrefs; the key constants
+    // stay visible here for the tests' cleanup.
+    public static final String PREF_SERVER = SessionPrefs.PREF_SERVER;
+    public static final String PREF_EMAIL = SessionPrefs.PREF_EMAIL;
+    public static final String PREF_STAY_SIGNED_IN = SessionPrefs.PREF_STAY_SIGNED_IN;
+    public static final String PREF_SIGNIN_TOKEN = SessionPrefs.PREF_SIGNIN_TOKEN;
 
     public SessionHandler() {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
+        this.prefs = new SessionPrefs(preferences);
         this.submitWindows = new ArrayList<>();
 
         // TLS trust is handled per connection in AFCTClient (trust-on-first-use with
@@ -147,8 +140,8 @@ public class SessionHandler {
                 // Remember the last server and email that actually worked; the
                 // login window prefills from them. Never the password: "stay
                 // signed in" keeps the bearer token instead.
-                preferences.put(PREF_SERVER, address.baseUrl());
-                preferences.put(PREF_EMAIL, userEmail);
+                prefs.rememberServer(address.baseUrl());
+                prefs.rememberEmail(userEmail);
                 return getSuccessResult();
             } else {
                 // Login failed
@@ -231,7 +224,7 @@ public class SessionHandler {
                 this.client = candidate;
                 this.loggedIn = true;
                 this.email = user.email();
-                preferences.put(PREF_SERVER, address.baseUrl());
+                prefs.rememberServer(address.baseUrl());
                 return getSuccessResult();
             }
             this.loggedIn = false;
@@ -260,15 +253,13 @@ public class SessionHandler {
         if (!hasSavedSignInToken()) {
             return false;
         }
-        LoginResult result = loginWithToken(getSavedServer(),
-                preferences.get(PREF_SIGNIN_TOKEN, ""));
+        LoginResult result = loginWithToken(getSavedServer(), prefs.storedSignInToken());
         if (result.status == LoginResult.LoginStatus.SUCCESS) {
             return true;
         }
         if (result.status == LoginResult.LoginStatus.FAILURE) {
-            // Drop the dead token but keep the stay-signed-in flag, so the login
-            // window opens on the token form for a student who chose that mode.
-            preferences.remove(PREF_SIGNIN_TOKEN);
+            // Drop the dead token but keep the stay-signed-in choice ticked.
+            prefs.dropDeadToken();
         }
         return false;
     }
@@ -314,7 +305,7 @@ public class SessionHandler {
             this.client = candidate;
             this.loggedIn = true;
             this.email = user != null ? user.email() : null;
-            preferences.put(PREF_SERVER, address.baseUrl());
+            prefs.rememberServer(address.baseUrl());
             return getSuccessResult();
         } catch (SSLHandshakeException ex) {
             this.loggedIn = false;
@@ -347,33 +338,30 @@ public class SessionHandler {
 
     /** Called after a successful token sign-in; the server was already remembered there. */
     public void saveSignInToken(String tokenValue) {
-        preferences.put(PREF_SIGNIN_TOKEN, tokenValue);
-        preferences.putBoolean(PREF_STAY_SIGNED_IN, true);
+        prefs.storeSignInToken(tokenValue);
     }
 
     public void clearSavedSignInToken() {
-        preferences.remove(PREF_SIGNIN_TOKEN);
-        preferences.putBoolean(PREF_STAY_SIGNED_IN, false);
+        prefs.clearSignInToken();
     }
 
     /** The last server that signed in successfully, in any mode; "" before the first. */
     public String getSavedServer() {
-        return preferences.get(PREF_SERVER, defaultServer);
+        return prefs.savedServer();
     }
 
     /** The last email that signed in successfully with a password; "" before the first. */
     public String getSavedEmail() {
-        return preferences.get(PREF_EMAIL, "");
+        return prefs.savedEmail();
     }
 
     public boolean hasSavedSignInToken() {
-        return preferences.getBoolean(PREF_STAY_SIGNED_IN, false)
-                && !preferences.get(PREF_SIGNIN_TOKEN, "").isBlank();
+        return prefs.hasStoredSignInToken();
     }
 
     /** The user's last "stay signed in" choice; survives a dead token being cleared. */
     public boolean staySignedInPreferred() {
-        return preferences.getBoolean(PREF_STAY_SIGNED_IN, false);
+        return prefs.staySignedInPreferred();
     }
 
     public void logout() {
