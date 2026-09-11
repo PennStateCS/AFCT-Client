@@ -1115,7 +1115,8 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                 // The attempt is consumed the moment the server accepts the upload.
                 log("SUBMIT_ACCEPTED", "submissionId=" + submissionId + " problem=" + problemName);
                 submitBtn.setEnabled(true);
-                bumpSubmissionCount(problemId);
+                replaceProblemItem(problemNode, item ->
+                        item.submissionCount >= 0 ? item.withOneMoreSubmission() : item);
                 setStatus(true, "\"" + problemName + "\" submitted — grading in the background. "
                         + "Its result will appear in Submission History.");
             }
@@ -1128,10 +1129,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     case CORRECT -> {
                         log("SUBMIT_RESULT", "submissionId=" + id + " status=CORRECT problem=" + problemName);
                         setStatus(true, "Correct! \"" + problemName + "\" accepted (id: " + id + ")");
-                        problem.solved = true;
-                        if (problemNode != null) {
-                            ((DefaultTreeModel) selectionTree.getModel()).nodeChanged(problemNode);
-                        }
+                        replaceProblemItem(problemNode, ProblemItem::asSolved);
                     }
                     case INCORRECT -> {
                         log("SUBMIT_RESULT", "submissionId=" + id + " status=INCORRECT problem=" + problemName);
@@ -1166,18 +1164,25 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
         });
     }
 
-    /** Increments the locally cached attempt count for a problem and refreshes the panel. EDT-safe. */
-    private void bumpSubmissionCount(String problemId) {
-        Runnable r = () -> {
-            ProblemItem problem = selection.problem();
-            if (problem != null && problem.id.equals(problemId)
-                    && problem.submissionCount >= 0) {
-                problem.submissionCount++;
-                updateProblemDetails(problem);
-            }
-        };
-        if (SwingUtilities.isEventDispatchThread()) r.run();
-        else SwingUtilities.invokeLater(r);
+    /**
+     * Swaps a tree node's ProblemItem for an updated copy (items are immutable)
+     * and refreshes whatever shows it: the tree row and, when the node is the
+     * current selection, the details card. EDT-only (both callers are listener
+     * callbacks delivered on the EDT).
+     */
+    private void replaceProblemItem(DefaultMutableTreeNode problemNode,
+                                    java.util.function.UnaryOperator<ProblemItem> change) {
+        if (problemNode == null || !(problemNode.getUserObject() instanceof ProblemItem item)) {
+            return;
+        }
+        ProblemItem updated = change.apply(item);
+        if (updated == item) return;
+        problemNode.setUserObject(updated);
+        ((DefaultTreeModel) selectionTree.getModel()).nodeChanged(problemNode);
+        if (selection.node() == problemNode) {
+            selection = Selection.fromNode(problemNode);
+            updateProblemDetails(updated);
+        }
     }
 
     private boolean validateSelection() {

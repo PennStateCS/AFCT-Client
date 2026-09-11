@@ -8,14 +8,14 @@ public final class ProblemItem {
     public final String id;
     public final String name;
     public final String description;
-    public boolean solved; // For unsolved filter
+    public final boolean solved; // For unsolved filter
 
     // Metadata from the client API (-1 / null when not provided)
     public final String type;          // e.g. "FA", "PDA", "TM"
     public final int maxPoints;
     public final int maxSubmissions;   // 0 or -1 = unlimited/unknown
     public final int grade;            // -1 until graded
-    public int submissionCount;        // mutable: bumped locally after a successful submit
+    public final int submissionCount;
 
     /** FA/PDA state cap, or null when the problem sets no cap. */
     public final Integer maxStates;
@@ -36,6 +36,22 @@ public final class ProblemItem {
         this.grade = grade;
         this.maxStates = maxStates;
         this.isDeterministic = isDeterministic;
+    }
+
+    /**
+     * A copy reflecting one more used attempt. Items are immutable: a change is a
+     * new item swapped into the tree node, so a stale reference can never show a
+     * different count than the tree it came from.
+     */
+    public ProblemItem withOneMoreSubmission() {
+        return new ProblemItem(id, name, description, solved, type, maxPoints,
+                maxSubmissions, submissionCount + 1, grade, maxStates, isDeterministic);
+    }
+
+    /** A copy marked solved (a correct submission came back). */
+    public ProblemItem asSolved() {
+        return new ProblemItem(id, name, description, true, type, maxPoints,
+                maxSubmissions, submissionCount, grade, maxStates, isDeterministic);
     }
 
     /** The problem type's full display name, e.g. "Finite Automaton" for "FA". */
