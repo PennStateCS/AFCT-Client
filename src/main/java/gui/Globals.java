@@ -48,11 +48,6 @@ public class Globals {
     }
     public static final String JUST_NAME = "AFCT ";
     public final static String APP_NAME = (JUST_NAME + currentVersion).trim();
-
-    private static String implementationVersion() {
-        String v = Globals.class.getPackage().getImplementationVersion();
-        return v == null ? "" : "v" + v;
-    }
     public static final String APP_URL = "https://www.cs.rit.edu/~afct";
     public static final String LATEST_RELEASE_PATH = "/client/";
     public static String JAR_PATH = "TODO";
