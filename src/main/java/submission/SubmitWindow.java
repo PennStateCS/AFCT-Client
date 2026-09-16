@@ -515,7 +515,7 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
 
         logoutBtn.addActionListener(e -> {
             dispose();
-            sessionHandler.logout(true, Universe.frameForEnvironment(environment));
+            sessionHandler.logout(true, environment);
         });
 
         submitBtn.addActionListener(e -> attemptSubmit());

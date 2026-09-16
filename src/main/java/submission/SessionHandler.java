@@ -344,7 +344,7 @@ public class SessionHandler {
         logout(false, null);
     }
 
-    public void logout(boolean forceManualReLogin, JFrame frame) {
+    public void logout(boolean forceManualReLogin, Environment environment) {
         // Clear the stored token before the best-effort revoke thread starts: if the
         // revoke fails, a working token must not be left behind on this machine.
         clearSavedSignInToken();
@@ -374,7 +374,7 @@ public class SessionHandler {
         }.execute();
 
         if (forceManualReLogin) {
-            Runnable showLogin = () -> loginWindow().displayLoginWindow(frame);
+            Runnable showLogin = () -> loginWindow().displayLoginWindowThenSubmissionCenter(environment);
             SwingUtilities.invokeLater(showLogin);
         }
     }

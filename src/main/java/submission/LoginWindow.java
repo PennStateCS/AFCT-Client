@@ -1,6 +1,8 @@
 package submission;
 
 import gui.Globals;
+import gui.environment.Environment;
+import gui.environment.Universe;
 
 import javax.swing.*;
 import javax.swing.event.DocumentEvent;
@@ -8,6 +10,7 @@ import javax.swing.event.DocumentListener;
 import java.awt.*;
 
 import static gui.Globals.*;
+import static gui.action.SubmitAction.testAuthThenShowSubmitWindow;
 
 /**
  * The sign-in dialog: one server address, three ways in. Each way is its own
@@ -67,6 +70,17 @@ public class LoginWindow extends JDialog {
         toggleInputs(true);
         setLocationRelativeTo(frame);
         setVisible(true); // modal => blocks until disposed/hidden
+    }
+
+    public void displayLoginWindowThenSubmissionCenter(Environment environment) {
+        JFrame frame = null;
+        if (environment != null) {
+            frame = Universe.frameForEnvironment(environment);
+        }
+        displayLoginWindow(frame);
+        if (environment != null) {
+            testAuthThenShowSubmitWindow(environment);
+        }
     }
 
     // ============================================================
