@@ -207,7 +207,7 @@ public class UpdatePopup implements ExtensionPopup {
 
                     while (result.status == Status.ERROR) {
                         try {
-                            result = updater.downloadApp(frame, latestFile);
+                            result = Globals.updater().downloadApp(frame, latestFile);
                         } catch (IOException e) {
                             String message;
                             if (e instanceof NoRouteToHostException) {

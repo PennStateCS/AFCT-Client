@@ -95,6 +95,14 @@
             <version>2.17.2</version>
         </dependency>
 
+        <!-- Typesets the LaTeX in rich problem/assignment descriptions (GPL with
+             the linking exception, like GeoGebra ships it). -->
+        <dependency>
+            <groupId>org.scilab.forge</groupId>
+            <artifactId>jlatexmath</artifactId>
+            <version>1.0.7</version>
+        </dependency>
+
         <dependency>
             <groupId>org.junit.jupiter</groupId>
             <artifactId>junit-jupiter</artifactId>

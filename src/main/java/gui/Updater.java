@@ -204,7 +204,7 @@ public class Updater {
 
         @Override
         public void actionPerformed(ActionEvent e) {
-            updater.updatePopup.showPopup();
+            Globals.updater().updatePopup.showPopup();
         }
     }
 }

@@ -16,4 +16,11 @@ public final class ErrorMessages {
         }
         return message;
     }
+
+    public static String userMessageWithPrefix(String prefix, Throwable throwable, String fallback) {
+        if (throwable == null) {
+            return fallback;
+        }
+        return userMessage(prefix + throwable.getMessage(), fallback);
+    }
 }

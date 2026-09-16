@@ -33,16 +33,28 @@ import static java.lang.Math.floor;
  */
 public class Globals {
     public static String testingPath = "src\\main\\resources";
-    public final static String currentVersion = "v" + Globals.class.getPackage().getImplementationVersion();
+    // The manifest only exists in a packaged jar; from the IDE it is null, and
+    // "AFCT vnull" in a title bar is worse than no version at all.
+    public final static String currentVersion = resolveCurrentVersion();
+    private static String resolveCurrentVersion() {
+        String version = Globals.class.getPackage().getImplementationVersion();
+        if (version == null || version.isBlank()) {
+            version = AboutBox.AFCT_VERSION;
+        }
+        if (version == null || version.isBlank()) {
+            return "";
+        }
+        return version.startsWith("v") ? version : "v" + version;
+    }
     public static final String JUST_NAME = "AFCT ";
-    public final static String APP_NAME = JUST_NAME + currentVersion;
+    public final static String APP_NAME = (JUST_NAME + currentVersion).trim();
     public static final String APP_URL = "https://www.cs.rit.edu/~afct";
     public static final String LATEST_RELEASE_PATH = "/client/";
     public static String JAR_PATH = "TODO";
     public static String JAR_NAME = "afct-client.jar";
     public static String AFCT_DATA_FOLDER_NAME = "AFCT-Data";
     public static String PREFERENCES_FILE_NAME = "AFCT-Preferences.xml";
-    public static String FILE_CREATED_WITH_STRING = "Created with AFCT " + currentVersion + " (based on JFLAP " + gui.AboutBox.VERSION + ")";
+    public static String FILE_CREATED_WITH_STRING = "Created with AFCT " + currentVersion + " (based on JFLAP " + gui.AboutBox.JFLAP_VERSION + ")";
 
     private static final String htmlProperty = "html.disable";
     public final static String UPDATE = "UPDATE";
@@ -70,7 +82,17 @@ public class Globals {
     public final static Preferences preferences = Preferences.userNodeForPackage(Globals.class);
     public static ArrayList<ExtensionPopup> popups = new ArrayList<>();
 
-    public static Updater updater = new Updater();
+    // Built on first use: Updater's constructor creates its Swing popup, and this
+    // class must stay loadable with no display (its init runs from non-UI code
+    // paths, and a HeadlessException here takes every Globals user down with it).
+    private static Updater updater;
+
+    public static synchronized Updater updater() {
+        if (updater == null) {
+            updater = new Updater();
+        }
+        return updater;
+    }
 
     public static String lastCopiedString = null;
     public static Automaton lastCopiedAutomaton = null;
