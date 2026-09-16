@@ -1,10 +1,16 @@
 name: Release
 
-# Cut a release by pushing a version tag:
-#   git tag v1.6.8 && git push origin v1.6.8
-#
-# That builds the tagged commit on three machines and opens a GitHub Release holding a
+# Builds a tagged commit on three machines and opens a GitHub Release holding a
 # Windows installer, two macOS disk images (Apple Silicon and Intel), and the plain jar.
+#
+# Two ways in, both through a version tag:
+#
+#   - The "Cut a release" workflow bumps the pom, tags, and starts this by API. That is
+#     the normal route; RELEASING.md walks through it. It dispatches rather than relying
+#     on its tag push, because pushes made with the built-in GITHUB_TOKEN never trigger
+#     other workflows.
+#   - Pushing a tag by hand still works exactly as before:
+#       git tag v1.6.8 && git push origin v1.6.8
 #
 # Ordinary merges to main do NOT trigger this. CI keeps running on them; a release is a
 # separate, deliberate act, and the tag is what makes it.
@@ -16,6 +22,9 @@ on:
   push:
     tags:
       - 'v*'
+  # For "Cut a release", which runs this on the tag it just pushed. Everything below
+  # reads the tag from the ref, so a dispatched run and a pushed-tag run are identical.
+  workflow_dispatch:
 
 permissions:
   # Creating a release is the only privileged thing here. No packages, no security events:
@@ -38,6 +47,14 @@ jobs:
       # The version the installers stamp into themselves. See the step that computes it.
       app_version: ${{ steps.version.outputs.app_version }}
     steps:
+      # workflow_dispatch will happily run on a branch, and then "main" would be treated
+      # as a version number everywhere below. Only a tag names a release.
+      - name: Must be started on a tag
+        if: github.ref_type != 'tag'
+        run: |
+          echo "::error::This was started on '${GITHUB_REF_NAME}', which is not a tag. Use the 'Cut a release' workflow instead."
+          exit 1
+
       - name: Check out
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
 

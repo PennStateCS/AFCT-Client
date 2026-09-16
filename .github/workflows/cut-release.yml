@@ -1,0 +1,165 @@
+name: Cut a release
+
+# The release button. Run it from the Actions tab, type the new version number, and it
+# does the rest: updates <version> in pom.xml, commits that to main, waits for CI to
+# pass on the new commit, pushes the tag, and starts the Release workflow.
+#
+# This replaces the old routine of editing pom.xml by hand, opening a pull request for
+# it, and typing the tag commands yourself. RELEASING.md walks through using it.
+#
+# Why the workflow starts CI and the release itself rather than letting the push do it:
+# events caused by the built-in GITHUB_TOKEN never trigger other workflows (GitHub's
+# guard against workflows looping forever), so the bump commit and the tag this pushes
+# are invisible to `on: push`. Dispatching by API is not an event caused by a push, so
+# it goes through - and it means no personal access token to create, store, or rotate.
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: 'The new version number, plain digits, e.g. 1.6.9'
+        required: true
+        type: string
+      suffix:
+        description: 'Only for a test release: a label like rc1, published as a pre-release'
+        required: false
+        default: ''
+        type: string
+
+permissions:
+  # contents to push the bump commit and the tag; actions to start CI and Release.
+  contents: write
+  actions: write
+
+# Two people cutting releases at once would race each other over pom.xml and main.
+# Queue the second behind the first instead.
+concurrency:
+  group: cut-release
+  cancel-in-progress: false
+
+jobs:
+  cut:
+    name: bump, tag, and hand over to Release
+    runs-on: ubuntu-latest
+    timeout-minutes: 40
+    steps:
+      # The version must be plain numbers because it goes in the pom and the installers;
+      # anything pre-release belongs in the suffix, which only ever touches the tag name.
+      - name: Check the inputs
+        env:
+          VERSION: ${{ inputs.version }}
+          SUFFIX: ${{ inputs.suffix }}
+        run: |
+          set -euo pipefail
+          if ! echo "${VERSION}" | grep -Eq '^[0-9]+\.[0-9]+\.[0-9]+$'; then
+            echo "::error::'${VERSION}' is not a version number. Use three plain numbers, like 1.6.9."
+            echo "For a test release, put the label (rc1) in the suffix box, not the version."
+            exit 1
+          fi
+          if [ -n "${SUFFIX}" ] && ! echo "${SUFFIX}" | grep -Eq '^[A-Za-z0-9][A-Za-z0-9.]*$'; then
+            echo "::error::'${SUFFIX}' is not a usable suffix. Letters, numbers and dots only, like rc1."
+            exit 1
+          fi
+          # Refuse to run against anything but main: a release cut from a branch would
+          # publish code that was never merged.
+          if [ "${GITHUB_REF}" != "refs/heads/main" ]; then
+            echo "::error::Run this from main (it was started on ${GITHUB_REF_NAME})."
+            exit 1
+          fi
+
+      - name: Check out main
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+
+      # Before touching anything: a tag that already exists means this version was
+      # already released, or somebody is halfway through releasing it.
+      - name: The tag must not exist yet
+        env:
+          VERSION: ${{ inputs.version }}
+          SUFFIX: ${{ inputs.suffix }}
+        run: |
+          set -euo pipefail
+          tag="v${VERSION}${SUFFIX:+-${SUFFIX}}"
+          if git ls-remote --exit-code origin "refs/tags/${tag}" >/dev/null 2>&1; then
+            echo "::error::${tag} already exists. Pick the next number, or delete the old tag first (see RELEASING.md)."
+            exit 1
+          fi
+          echo "TAG=${tag}" >> "$GITHUB_ENV"
+
+      - name: Set up Java 21
+        uses: actions/setup-java@dd06d9cba3e5552c54d9f8ea23572deb30010f7c # v6.0.0
+        with:
+          distribution: temurin
+          java-version: '21'
+          cache: maven
+
+      # versions:set rather than sed, so it can only ever change the project's own
+      # <version> and not a dependency's. If the pom already says the right number
+      # (a re-run after a CI failure, or a test release of the current version),
+      # there is nothing to commit and this quietly moves on.
+      - name: Update the pom version and push it to main
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          set -euo pipefail
+          pom=$(python3 -c "import xml.etree.ElementTree as ET; print(ET.parse('pom.xml').getroot().find('{http://maven.apache.org/POM/4.0.0}version').text.strip())")
+          if [ "${pom}" = "${VERSION}" ]; then
+            echo "pom.xml already says ${VERSION}; nothing to change."
+            exit 0
+          fi
+          mvn -B --no-transfer-progress versions:set -DnewVersion="${VERSION}" -DgenerateBackupPoms=false
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add pom.xml
+          git commit -m "Release ${VERSION}: bump the pom version"
+          git push origin main
+
+      # Release refuses any commit without a green CI run (see release.yml), and it is
+      # right to. The bump commit is new, and pushes from this workflow do not trigger
+      # CI on their own, so start a run and wait for its answer. CI takes a few
+      # minutes; the loop allows twenty-five before giving up.
+      - name: Wait for CI to pass on the release commit
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha=$(git rev-parse HEAD)
+          echo "Waiting for a green CI run on ${sha}."
+          dispatched=0
+          for attempt in $(seq 1 50); do
+            runs=$(gh api "repos/${GITHUB_REPOSITORY}/actions/workflows/ci.yml/runs?head_sha=${sha}" \
+              --jq '.workflow_runs | map({status: .status, conclusion: .conclusion})')
+            total=$(echo "${runs}" | jq 'length')
+            passed=$(echo "${runs}" | jq '[.[] | select(.conclusion == "success")] | length')
+            settled=$(echo "${runs}" | jq '[.[] | select(.status == "completed")] | length')
+            if [ "${passed}" -ge 1 ]; then
+              echo "CI passed for ${sha}."
+              exit 0
+            fi
+            # Every run this commit has is finished and none of them passed. Waiting
+            # longer will not change the answer.
+            if [ "${total}" -gt 0 ] && [ "${settled}" -eq "${total}" ]; then
+              echo "::error::CI did not pass for ${sha}. Nothing was tagged and nothing was published."
+              echo "Fix main, then run this workflow again with the same version number."
+              exit 1
+            fi
+            # No run yet: start one. Once is enough; after that, just wait for it.
+            if [ "${total}" -eq 0 ] && [ "${dispatched}" -eq 0 ]; then
+              echo "No CI run for this commit yet; starting one."
+              gh workflow run ci.yml --ref main
+              dispatched=1
+            fi
+            sleep 30
+          done
+          echo "::error::Gave up waiting for CI after 25 minutes. Check the Actions tab, then run this workflow again."
+          exit 1
+
+      # Only now, with the pom right and CI green, does the tag exist. A failure
+      # anywhere above leaves at worst a version bump on main, which is harmless.
+      - name: Tag it and start the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          git tag "${TAG}"
+          git push origin "refs/tags/${TAG}"
+          gh workflow run release.yml --ref "${TAG}"
+          echo "Started the Release workflow for ${TAG}. Watch it in the Actions tab."
