@@ -7,11 +7,13 @@ name: Cut a release
 # This replaces the old routine of editing pom.xml by hand, opening a pull request for
 # it, and typing the tag commands yourself. RELEASING.md walks through using it.
 #
-# Why the workflow starts CI and the release itself rather than letting the push do it:
-# events caused by the built-in GITHUB_TOKEN never trigger other workflows (GitHub's
-# guard against workflows looping forever), so the bump commit and the tag this pushes
-# are invisible to `on: push`. Dispatching by API is not an event caused by a push, so
-# it goes through - and it means no personal access token to create, store, or rotate.
+# Pushes here use a deploy key (the CUT_RELEASE_DEPLOY_KEY secret) rather than the
+# built-in GITHUB_TOKEN, for two reasons. The ruleset on main requires a pull request
+# and only bypass actors are exempt; GitHub would not accept the Actions app as a
+# bypass actor for this repository, but it accepts deploy keys, and a key held only by
+# this workflow is a narrower hole than exempting every workflow at once. And unlike
+# GITHUB_TOKEN pushes, deploy-key pushes trigger workflows normally, so the bump
+# commit starts CI and the tag starts Release with no API dispatch needed.
 on:
   workflow_dispatch:
     inputs:
@@ -26,8 +28,9 @@ on:
         type: string
 
 permissions:
-  # contents to push the bump commit and the tag; actions to start CI and Release.
-  contents: write
+  # Pushes go over SSH with the deploy key, so contents only needs read. actions is
+  # for the fallback that starts a CI run when a commit has none.
+  contents: read
   actions: write
 
 # Two people cutting releases at once would race each other over pom.xml and main.
@@ -66,8 +69,13 @@ jobs:
             exit 1
           fi
 
+      # The ssh-key makes every later `git push` in this job go out over SSH as the
+      # deploy key: that is what bypasses the pull-request rule on main, and what makes
+      # the pushed commit and tag trigger CI and Release like a human push would.
       - name: Check out main
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v5
+        with:
+          ssh-key: ${{ secrets.CUT_RELEASE_DEPLOY_KEY }}
 
       # Before touching anything: a tag that already exists means this version was
       # already released, or somebody is halfway through releasing it.
@@ -113,9 +121,10 @@ jobs:
           git push origin main
 
       # Release refuses any commit without a green CI run (see release.yml), and it is
-      # right to. The bump commit is new, and pushes from this workflow do not trigger
-      # CI on their own, so start a run and wait for its answer. CI takes a few
-      # minutes; the loop allows twenty-five before giving up.
+      # right to. The bump commit is new; its push starts CI on its own, so this mostly
+      # just waits for the answer. The dispatch below is a fallback for the commit that
+      # arrives here without a run: a re-run after a failure, or a pom that was already
+      # right. CI takes a few minutes; the loop allows twenty-five before giving up.
       - name: Wait for CI to pass on the release commit
         env:
           GH_TOKEN: ${{ github.token }}
@@ -154,12 +163,10 @@ jobs:
 
       # Only now, with the pom right and CI green, does the tag exist. A failure
       # anywhere above leaves at worst a version bump on main, which is harmless.
-      - name: Tag it and start the release
-        env:
-          GH_TOKEN: ${{ github.token }}
+      # The push is enough: it is a deploy-key push, so the tag triggers Release itself.
+      - name: Tag it
         run: |
           set -euo pipefail
           git tag "${TAG}"
           git push origin "refs/tags/${TAG}"
-          gh workflow run release.yml --ref "${TAG}"
-          echo "Started the Release workflow for ${TAG}. Watch it in the Actions tab."
+          echo "Pushed ${TAG}; the Release workflow starts from it. Watch it in the Actions tab."

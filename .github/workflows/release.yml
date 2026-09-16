@@ -5,10 +5,9 @@ name: Release
 #
 # Two ways in, both through a version tag:
 #
-#   - The "Cut a release" workflow bumps the pom, tags, and starts this by API. That is
-#     the normal route; RELEASING.md walks through it. It dispatches rather than relying
-#     on its tag push, because pushes made with the built-in GITHUB_TOKEN never trigger
-#     other workflows.
+#   - The "Cut a release" workflow bumps the pom and pushes the tag with its deploy
+#     key, and that push triggers this like any other. That is the normal route;
+#     RELEASING.md walks through it.
 #   - Pushing a tag by hand still works exactly as before:
 #       git tag v1.6.8 && git push origin v1.6.8
 #
@@ -22,7 +21,7 @@ on:
   push:
     tags:
       - 'v*'
-  # For "Cut a release", which runs this on the tag it just pushed. Everything below
+  # For re-running a release on an existing tag from the Actions tab. Everything below
   # reads the tag from the ref, so a dispatched run and a pushed-tag run are identical.
   workflow_dispatch:
 
