@@ -4,7 +4,8 @@ A release is a version of the client that other people can download. It appears 
 [Releases page](https://github.com/PennStateCS/AFCT-Client/releases), and anyone can download it
 without a GitHub account.
 
-You create a release by creating a **tag**, which is a label on one commit that says "this is version 1.6.8".
+Releasing is one button. You type the new version number, and a workflow does everything else:
+it updates `pom.xml`, waits for the checks to pass, tags the commit, and builds the installers.
 
 ## Before you start
 
@@ -14,62 +15,44 @@ tick next to the newest commit on the
 
 ## Step 1: choose the new version number
 
-Look at `pom.xml` near the top:
-
-```xml
-<version>1.6.8</version>
-```
-
-The version has three numbers. Pick the new one like this:
+Look at the current version on the [Releases page](https://github.com/PennStateCS/AFCT-Client/releases)
+or in `pom.xml` near the top. The version has three numbers. Pick the new one like this:
 
 - Fixed a bug, nothing else changed: increase the **last** number. 1.6.8 becomes 1.6.9.
 - Added something new: increase the **middle** number and set the last to zero. 1.6.8 becomes 1.7.0.
 - Changed something big, so old habits no longer work: increase the **first** number. 1.6.8 becomes 2.0.0.
 
-## Step 2: update the version in `pom.xml`
+## Step 2: press the button
 
-Edit that line so it holds your new number, then open a pull request with just that change and
-merge it once the checks pass.
+1. Open the [Actions tab](https://github.com/PennStateCS/AFCT-Client/actions).
+2. Click **Cut a release** in the list on the left.
+3. Click the **Run workflow** button on the right.
+4. Type the new version number, plain digits only: `1.6.9`. Leave the suffix box empty.
+5. Click the green **Run workflow**.
 
-This step is easy to forget, and it matters. The version number gets written inside the program
-itself, so if you skip it the release would say one thing and contain another. The release refuses
-to build if you forget, so nothing bad can happen, but you will have to come back and do it.
+That is the whole release. The workflow now:
 
-## Step 3: get the latest `main` and check it passed
+1. updates `<version>` in `pom.xml` and commits that straight to `main` (no pull request needed;
+   the commit changes nothing but the number),
+2. runs the checks on that commit and waits for them to pass,
+3. creates the tag (`v1.6.9`) and pushes it,
+4. starts the **Release** build.
 
-```bash
-git checkout main
-git pull
-```
+If anything goes wrong before the tag is made, nothing is tagged and nothing is published.
 
-Then open the [Actions tab](https://github.com/PennStateCS/AFCT-Client/actions) and check that the
-newest run on `main` finished with a green tick. If it is still running, wait for it.
+## Step 3: watch it build
 
-## Step 4: create the tag and push it
-
-The tag is the version number with a `v` in front of it. For version 1.6.8 the tag is `v1.6.8`.
-
-```bash
-git tag v1.6.8
-git push origin v1.6.8
-```
-
-That is the whole release. You do not need a pull request for a tag.
-
-## Step 5: watch it build
-
-Open the [Actions tab](https://github.com/PennStateCS/AFCT-Client/actions). A run called
-**Release** starts within a few seconds. It takes roughly ten minutes, because the installers are
-built on three different machines.
-
-It builds on three machines at once, one for each thing people download:
+Stay on the [Actions tab](https://github.com/PennStateCS/AFCT-Client/actions). First **Cut a
+release** runs (a few minutes, most of it waiting for the checks), then a run called **Release**
+starts. That one takes roughly ten minutes, because the installers are built on three different
+machines at once, one for each thing people download:
 
 | File | For |
 | --- | --- |
-| `AFCT-Client-1.6.8-windows.exe` | Windows |
-| `AFCT-Client-1.6.8-macos-apple-silicon.dmg` | Macs made from late 2020 onwards |
-| `AFCT-Client-1.6.8-macos-intel.dmg` | Older Intel Macs |
-| `afct-client-v1.6.8.jar` | Anyone who would rather run it with their own Java |
+| `AFCT-Client-1.6.9-windows.exe` | Windows |
+| `AFCT-Client-1.6.9-macos-apple-silicon.dmg` | Macs made from late 2020 onwards |
+| `AFCT-Client-1.6.9-macos-intel.dmg` | Older Intel Macs |
+| `afct-client-v1.6.9.jar` | Anyone who would rather run it with their own Java |
 
 When it finishes, your new release is on the
 [Releases page](https://github.com/PennStateCS/AFCT-Client/releases) with all four attached and a
@@ -93,42 +76,36 @@ Windows and an Apple Developer account for macOS, so it is a purchasing question
 programming one. Until then, tell students to expect the warning, because a student who is not
 expecting it will reasonably assume the download is broken.
 
-## If the release fails
+## If it fails
 
-The release checks two things before it builds anything. If either one fails, nothing is
-published, so there is nothing to clean up. Open the failed run in the Actions tab and read the
-step marked in red.
+Open the failed run in the Actions tab and read the step marked in red. The likely ones:
 
-**"No successful CI run for ... so this tag is not releasable."**
+**"CI did not pass for ..."** — the checks failed on `main`, so nothing was tagged and nothing
+was published. The version bump in `pom.xml` is already on `main` and is harmless. Fix whatever
+broke the checks, then run **Cut a release** again with the **same** version number; it will see
+the pom is already right and carry on from there.
 
-You tagged a commit whose checks never passed, or never ran at all. To fix it:
+**"v1.6.9 already exists."** — this version was already released, or someone started releasing
+it. Check the [Releases page](https://github.com/PennStateCS/AFCT-Client/releases). If the old
+attempt is broken and never got downloaded, remove the tag (see below) and run the workflow
+again; otherwise pick the next number.
 
-1. Remove the tag (see below).
-2. Make sure the checks pass on `main`.
-3. Tag again.
-
-**"Tag v1.7.0 does not match the pom version 1.6.8."**
-
-You skipped step 2, or the number in the tag is not the number in `pom.xml`. To fix it:
-
-1. Remove the tag (see below).
-2. Update `<version>` in `pom.xml` to match, through a pull request as usual.
-3. Tag again once that is merged.
+**The Release run failed after the tag was made.** — fix the cause, remove the tag (see below),
+and press the button again with the same number.
 
 ### Removing a tag
 
-If you tagged the wrong thing, remove the tag and start again:
-
 ```bash
-git tag -d v1.6.8
-git push origin --delete v1.6.8
+git fetch --tags
+git tag -d v1.6.9
+git push origin --delete v1.6.9
 ```
 
 If a release was already published, delete it on the
 [Releases page](https://github.com/PennStateCS/AFCT-Client/releases) as well, or run:
 
 ```bash
-gh release delete v1.6.8
+gh release delete v1.6.9
 ```
 
 Try not to remove a release other people have already downloaded. If a version turns out to be
@@ -137,18 +114,25 @@ one disappear.
 
 ## Test releases
 
-To try a release without it looking like the finished thing, put a dash and a label on the end of
-the version. You do **not** need to change `pom.xml` for this: the check only compares the numbers,
-so a pom saying 1.6.8 accepts both `v1.6.8` and `v1.6.8-rc1`.
-
-```bash
-git tag v1.6.8-rc1
-git push origin v1.6.8-rc1
-```
-
-Anything with a dash in it is published as a **pre-release**. It appears on the Releases page
-marked clearly, and it does not become the version people land on when they visit that page.
+To try a release without it looking like the finished thing, run **Cut a release** with the same
+version number and something like `rc1` in the **suffix** box. The tag becomes `v1.6.9-rc1`, and
+anything with a suffix is published as a **pre-release**: it appears on the Releases page marked
+clearly, and it does not become the version people land on when they visit that page.
 
 This is the way to check that the installers actually build before you cut the real release, and
 it is worth doing the first time, or any time the build changes. Delete the test release and its
 tag afterwards.
+
+## Doing it by hand
+
+The button is just a workflow around the same tag mechanism as before, so the manual route still
+works if you ever need it: update `<version>` in `pom.xml` through a pull request, make sure the
+checks passed on `main`, then:
+
+```bash
+git tag v1.6.9
+git push origin v1.6.9
+```
+
+The Release build refuses to run if the tag does not match the pom, or if the tagged commit never
+passed the checks, so the worst a mistake can do is a red run in the Actions tab.
