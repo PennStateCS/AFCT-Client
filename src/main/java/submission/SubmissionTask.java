@@ -3,8 +3,11 @@ package submission;
 import javax.swing.JFrame;
 import javax.swing.SwingWorker;
 import java.io.File;
+import java.net.UnknownHostException;
 import java.time.Duration;
 import java.util.List;
+
+import static submission.SessionHandler.CANT_CONNECT_TO_SERVER_MESSAGE;
 
 /**
  * One submission from upload through the grading poll, separated from the
@@ -106,6 +109,9 @@ class SubmissionTask {
                         return new Outcome(Kind.RESULT_FETCH_FAILED, submissionId, null,
                                 ErrorMessages.userMessage(ex, "The result could not be fetched."));
                     }
+                } catch (UnknownHostException ex) {
+                    return Outcome.error(Kind.UPLOAD_FAILED,
+                            ErrorMessages.userMessageWithPrefix(CANT_CONNECT_TO_SERVER_MESSAGE, ex, "Unexpected submission error."));
                 } catch (Exception ex) {
                     return Outcome.error(Kind.UPLOAD_FAILED,
                             ErrorMessages.userMessage(ex, "Unexpected submission error."));

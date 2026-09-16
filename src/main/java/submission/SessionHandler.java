@@ -8,6 +8,7 @@ import javax.swing.*;
 import java.awt.*;
 import java.io.IOException;
 import java.lang.reflect.InvocationTargetException;
+import java.net.UnknownHostException;
 import java.util.ArrayList;
 import java.util.prefs.Preferences;
 
@@ -38,6 +39,9 @@ public class SessionHandler {
     public static final String PREF_EMAIL = SessionPrefs.PREF_EMAIL;
     public static final String PREF_STAY_SIGNED_IN = SessionPrefs.PREF_STAY_SIGNED_IN;
     public static final String PREF_SIGNIN_TOKEN = SessionPrefs.PREF_SIGNIN_TOKEN;
+
+    // Message strings
+    public static final String CANT_CONNECT_TO_SERVER_MESSAGE = "We can't connect to the server at ";
 
     public SessionHandler() {
         this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
@@ -124,6 +128,10 @@ public class SessionHandler {
             this.loggedIn = false;
             this.client = null;
             return certificateOrError(failed, address, ex);
+        } catch (UnknownHostException ex) {
+            this.loggedIn = false;
+            this.client = null;
+            return getErrorResultWithPrefix(CANT_CONNECT_TO_SERVER_MESSAGE, ex);
         } catch (IOException ex) {
             this.loggedIn = false;
             this.client = null;

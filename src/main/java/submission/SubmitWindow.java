@@ -22,6 +22,7 @@ import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
 import java.io.IOException;
+import java.net.UnknownHostException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -33,6 +34,7 @@ import java.util.List;
 import java.util.Map;
 
 import static gui.Globals.*;
+import static submission.SessionHandler.CANT_CONNECT_TO_SERVER_MESSAGE;
 
 public class SubmitWindow extends JFrame implements SubmissionGUI {
 
@@ -802,6 +804,9 @@ public class SubmitWindow extends JFrame implements SubmissionGUI {
                     }
                     // One call returns every course with its assignments and problems.
                     return client.getTree();
+                } catch (UnknownHostException ex) {
+                    err = ErrorMessages.userMessageWithPrefix(CANT_CONNECT_TO_SERVER_MESSAGE, ex, "Unable to load courses.");
+                    return null;
                 } catch (Exception ex) {
                     err = ErrorMessages.userMessage(ex, "Unable to load courses.");
                     return null;
