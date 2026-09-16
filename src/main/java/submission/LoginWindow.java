@@ -245,6 +245,11 @@ public class LoginWindow extends JDialog {
         // A shown URL belongs to a finished or cancelled flow; its state and PKCE
         // pair are dead, so it must not be copied later.
         browserPanel.clearUrl();
+        if (browserModeRadio.isSelected()) {
+            loginButton.setText("Login in Browser");
+        } else {
+            loginButton.setText("Login");
+        }
         pack();
     }
 
