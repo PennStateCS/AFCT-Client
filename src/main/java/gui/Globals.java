@@ -35,7 +35,17 @@ public class Globals {
     public static String testingPath = "src\\main\\resources";
     // The manifest only exists in a packaged jar; from the IDE it is null, and
     // "AFCT vnull" in a title bar is worse than no version at all.
-    public final static String currentVersion = implementationVersion();
+    public final static String currentVersion = resolveCurrentVersion();
+    private static String resolveCurrentVersion() {
+        String version = Globals.class.getPackage().getImplementationVersion();
+        if (version == null || version.isBlank()) {
+            version = AboutBox.AFCT_VERSION;
+        }
+        if (version == null || version.isBlank()) {
+            return "";
+        }
+        return version.startsWith("v") ? version : "v" + version;
+    }
     public static final String JUST_NAME = "AFCT ";
     public final static String APP_NAME = (JUST_NAME + currentVersion).trim();
 
@@ -49,7 +59,7 @@ public class Globals {
     public static String JAR_NAME = "afct-client.jar";
     public static String AFCT_DATA_FOLDER_NAME = "AFCT-Data";
     public static String PREFERENCES_FILE_NAME = "AFCT-Preferences.xml";
-    public static String FILE_CREATED_WITH_STRING = "Created with AFCT " + currentVersion + " (based on JFLAP " + gui.AboutBox.VERSION + ")";
+    public static String FILE_CREATED_WITH_STRING = "Created with AFCT " + currentVersion + " (based on JFLAP " + gui.AboutBox.JFLAP_VERSION + ")";
 
     private static final String htmlProperty = "html.disable";
     public final static String UPDATE = "UPDATE";
