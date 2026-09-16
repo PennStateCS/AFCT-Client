@@ -26,6 +26,7 @@ import automata.pda.PushdownAutomaton;
 import automata.mealy.MealyMachine;
 import automata.Automaton;
 import automata.graph.*;
+import gui.environment.AutomatonEnvironment;
 import gui.environment.Environment;
 
 /**
@@ -78,7 +79,8 @@ public class LayoutAlgorithmAction extends AutomatonAction {
 		algorithm = algm;
 	}
 	
-	public void actionPerformed(ActionEvent e) {		
+	public void actionPerformed(ActionEvent e) {
+		((AutomatonEnvironment) automaton.getEnvironmentFrame().getEnvironment()).saveStatus();
 		double vertexBuffer;
 		if (automaton instanceof TuringMachine)
 			vertexBuffer = 80 * ((TuringMachine) automaton).tapes();

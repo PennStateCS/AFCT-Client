@@ -25,6 +25,7 @@ import javax.swing.JOptionPane;
 
 import automata.Automaton;
 import automata.graph.AutomatonGraph;
+import gui.environment.AutomatonEnvironment;
 
 /**
  * Action that allows for the current automaton layout to be saved and possibly restored later.
@@ -70,6 +71,7 @@ public class LayoutStorageAction extends AutomatonAction {
 			private static final long serialVersionUID = 1L;
 
 			public void actionPerformed(ActionEvent e) {
+				((AutomatonEnvironment) automaton.getEnvironmentFrame().getEnvironment()).saveStatus();
 				graph.moveAutomatonStates();				
 			}
 		};

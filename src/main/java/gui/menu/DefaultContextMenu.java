@@ -65,6 +65,7 @@ public class DefaultContextMenu extends ContextMenu implements ActionListener {
                 drawer.shouldDrawStateLabels(item.isSelected());
                 break;
             case layoutGraph_TEXT:
+                ((AutomatonEnvironment) drawer.getAutomaton().getEnvironmentFrame().getEnvironment()).saveStatus();
                 AutomatonGraph g = new AutomatonGraph(drawer.getAutomaton());
                 LayoutAlgorithm alg = new GEMLayoutAlgorithm();
                 alg.layout(g, null);
