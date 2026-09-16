@@ -59,13 +59,14 @@ public class BrowserSignIn implements AutoCloseable {
         server.createContext("/callback", exchange -> {
             Map<String, String> params = parseQuery(exchange.getRequestURI().getRawQuery());
             String response;
+            Exception exceptionOnComplete = null;
             if (!state.equals(params.get("state"))) {
                 // Anything a local process throws at this port with the wrong state
                 // is ignored outright; the flow keeps waiting for the real redirect.
                 response = "This sign-in response was not expected. Return to AFCT and try again.";
             } else if (params.containsKey("error")) {
                 response = "Sign-in was not completed. You can close this tab.";
-                code.completeExceptionally(new IOException("The sign-in was declined in the browser."));
+                exceptionOnComplete = new IOException("The sign-in was declined in the browser.");
             } else if (params.get("code") != null && !params.get("code").isBlank()) {
                 response = "Signed in. You can close this tab and return to AFCT.";
                 code.complete(params.get("code"));
@@ -78,6 +79,9 @@ public class BrowserSignIn implements AutoCloseable {
             exchange.sendResponseHeaders(200, body.length);
             try (OutputStream out = exchange.getResponseBody()) {
                 out.write(body);
+            }
+            if (exceptionOnComplete != null) {
+                code.completeExceptionally(exceptionOnComplete);
             }
         });
         server.start();
