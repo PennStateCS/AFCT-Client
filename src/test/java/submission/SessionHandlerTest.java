@@ -20,6 +20,10 @@ import static org.junit.jupiter.api.Assertions.*;
  * Tests that need a live AFCT server are skipped here (network calls are
  * never made). Those belong in integration / end-to-end tests run against
  * a real or stub server.
+ *
+ * Every handler here remembers in a test-only preferences node, never the
+ * client's real one, so a test run on a developer's machine leaves their
+ * saved server, email and stay-signed-in token alone.
  */
 class SessionHandlerTest {
 
@@ -35,19 +39,17 @@ class SessionHandlerTest {
         }
     }
 
+    private final Preferences node = Preferences.userRoot().node("afct-client-test-session-handler");
+
     private Harness open() {
         MockedConstruction<LoginWindow> mock =
                 Mockito.mockConstruction(LoginWindow.class);
-        return new Harness(mock, new SessionHandler());
+        return new Harness(mock, new SessionHandler(node));
     }
 
     private void wipePrefs() throws BackingStoreException {
-        Preferences prefs = Preferences.userNodeForPackage(SessionHandler.class);
-        prefs.remove(SessionHandler.PREF_SERVER);
-        prefs.remove(SessionHandler.PREF_EMAIL);
-        prefs.remove(SessionHandler.PREF_STAY_SIGNED_IN);
-        prefs.remove(SessionHandler.PREF_SIGNIN_TOKEN);
-        prefs.flush();
+        node.clear();
+        node.flush();
     }
 
     /** Wipe the test-node preferences before/after each test so runs don't bleed into each other. */

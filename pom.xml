@@ -212,7 +212,7 @@
                 <artifactId>maven-surefire-plugin</artifactId>
                 <version>3.2.5</version>
                 <configuration>
-                    <argLine>-Dnet.bytebuddy.experimental=true</argLine>
+                    <argLine>-Dnet.bytebuddy.experimental=true -Djava.awt.headless=true</argLine>
                 </configuration>
             </plugin>
         </plugins>

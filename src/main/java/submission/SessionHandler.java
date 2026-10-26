@@ -44,7 +44,12 @@ public class SessionHandler {
     public static final String CANT_CONNECT_TO_SERVER_MESSAGE = "We can't connect to the server at ";
 
     public SessionHandler() {
-        this.preferences = Preferences.userNodeForPackage(SessionHandler.class);
+        this(Preferences.userNodeForPackage(SessionHandler.class));
+    }
+
+    /** Remembers between runs in the given node; tests pass their own so they never touch the user's sign-in. */
+    SessionHandler(Preferences preferences) {
+        this.preferences = preferences;
         this.prefs = new SessionPrefs(preferences);
         this.submitWindows = new ArrayList<>();
 
